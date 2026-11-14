@@ -75,7 +75,7 @@ describe('Schedule Simplification & Dashboard Reorganization', () => {
         packages: [{ package_id: 'pkg_1', student_id: 'stu_101', classes_purchased: 10, consumed_classes: 2 }],
       });
 
-      const linkAlert = alerts.find((a) => a.studentId === 'stu_101' && a.targetSection === 'meeting-links');
+      const linkAlert = alerts.find((a) => a.studentId === 'stu_101' && a.targetSection === 'students');
       expect(linkAlert).toBeDefined();
       expect(linkAlert?.reason).toBe('Meeting link not configured');
       expect(linkAlert?.actionLabel).toBe('Configure Link');
@@ -94,7 +94,7 @@ describe('Schedule Simplification & Dashboard Reorganization', () => {
         packages: [{ package_id: 'pkg_1', student_id: 'stu_101', classes_purchased: 10, consumed_classes: 2 }],
       });
 
-      const linkAlert = alerts.find((a) => a.studentId === 'stu_101' && a.targetSection === 'meeting-links');
+      const linkAlert = alerts.find((a) => a.studentId === 'stu_101' && a.targetSection === 'students');
       expect(linkAlert).toBeUndefined();
     });
   });

@@ -12,6 +12,8 @@ const NoteRepository = require('../../02-backend/apps-script/notes/NoteRepositor
 // @ts-ignore
 const ClassService = require('../../02-backend/apps-script/classes/ClassService.gs');
 // @ts-ignore
+const ClassRepository = require('../../02-backend/apps-script/classes/ClassRepository.gs');
+// @ts-ignore
 const PackageService = require('../../02-backend/apps-script/packages/PackageService.gs');
 
 describe('Audit Findings Fixes: Migration Safety, Payment Ops, Notes & Class Deductions', () => {
@@ -21,16 +23,16 @@ describe('Audit Findings Fixes: Migration Safety, Payment Ops, Notes & Class Ded
   function setupFullSpreadsheet(): MockSpreadsheet {
     const ss = new MockSpreadsheet();
     ss.insertSheet('Students').rows = [
-      ['student_id', 'student_name', 'parent_name', 'parent_phone', 'student_phone', 'parent_email', 'student_email', 'subject', 'status']
+      ['student_id', 'student_name', 'parent_name', 'parent_phone', 'parent_email', 'student_phone', 'student_email', 'subject', 'status', 'primary_meeting_link']
     ];
     ss.insertSheet('Packages').rows = [
-      ['package_id', 'student_id', 'student_name', 'plan_type', 'currency', 'package_price', 'per_class', 'classes_purchased', 'start_date', 'end_date', 'next_due_date']
+      ['student_id', 'student_name', 'plan_type', 'currency', 'package_price', 'per_class', 'classes_purchased', 'start_date', 'end_date', 'next_due_date', 'class_duration', 'class_schedule']
     ];
     ss.insertSheet('Payments').rows = [
       ['student_id', 'student_name', 'payment_date', 'amount', 'currency', 'in_inr']
     ];
     ss.insertSheet('ClassSessions').rows = [
-      ['class_session_id', 'student_id', 'class_date', 'scheduled_start', 'scheduled_end', 'attendance_status', 'session_status', 'cancellation_reason', 'deduct_class']
+      ['student_id', 'student_name', 'schedule_date', 'schedule_time', 'attendance_status', 'session_status', 'deduct_class', 'cancellation_reason', 'session_notes']
     ];
     ss.insertSheet('MeetingLinks').rows = [
       ['student_id', 'student_name', 'meeting_link_1', 'meeting_link_2']
@@ -197,38 +199,30 @@ describe('Audit Findings Fixes: Migration Safety, Payment Ops, Notes & Class Ded
     });
   });
 
-  describe('3. Student Notes Updates & Multiple Notes Support', () => {
-    it('supports multiple notes per student and rejects ambiguous updates safely', () => {
-      const noteSheet = spreadsheet.getSheetByName('StudentNotes')!;
-      noteSheet.rows = [
-        ['student_id', 'student_name', 'note_date', 'note_text', 'follow_up_date'],
-        ['stu_note_01', 'Alice', '2026-03-01', 'First lesson went well', '2026-03-10'],
-        ['stu_note_01', 'Alice', '2026-03-08', 'Second lesson homework assigned', '2026-03-15']
-      ];
-
-      // Multiple notes queried for student
-      const notes = NoteRepository.Notes_getByStudentId(spreadsheet, 'stu_note_01');
-      expect(notes.length).toBe(2);
-
-      // Updating by student_id alone when multiple notes exist is rejected as ambiguous
-      expect(() => {
-        NoteRepository.Notes_update(spreadsheet, 'stu_note_01', { note_text: 'Overwritten text' });
-      }).toThrow(/Ambiguous note update rejected/);
-
-      // None of the notes were corrupted
-      expect(noteSheet.rows[1][3]).toBe('First lesson went well');
-      expect(noteSheet.rows[2][3]).toBe('Second lesson homework assigned');
-
-      // Unambiguous update targeting specific note text succeeds
-      const singleUpdate = NoteRepository.Notes_update(spreadsheet, {
+  describe('3. Class Session Notes & Per-Session Context', () => {
+    it('supports session_notes on ClassSessions and updates safely', () => {
+      const c1 = ClassService.Classes_schedule(spreadsheet, {
         student_id: 'stu_note_01',
-        note_date: '2026-03-01',
-        note_text: 'First lesson went well'
-      }, { note_text: 'First lesson went exceptionally well' });
+        scheduled_start: '2026-03-01T10:00:00Z',
+        scheduled_end: '2026-03-01T11:00:00Z',
+        session_notes: 'First lesson went well'
+      }, actor);
 
-      expect(singleUpdate.note_text).toBe('First lesson went exceptionally well');
-      expect(noteSheet.rows[1][3]).toBe('First lesson went exceptionally well');
-      expect(noteSheet.rows[2][3]).toBe('Second lesson homework assigned');
+      expect(c1.success).toBe(true);
+      expect(c1.data.session_notes).toBe('First lesson went well');
+
+      // Update session notes
+      const updateRes = ClassService.Classes_update(spreadsheet, {
+        class_session_id: c1.data.class_session_id,
+        session_notes: 'First lesson went exceptionally well. Homework assigned.'
+      }, actor);
+
+      expect(updateRes.success).toBe(true);
+      expect(updateRes.data.session_notes).toBe('First lesson went exceptionally well. Homework assigned.');
+
+      const sessions = ClassRepository.Classes_getAll(spreadsheet).filter((s: any) => s.student_id === 'stu_note_01');
+      expect(sessions.length).toBe(1);
+      expect(sessions[0].session_notes).toBe('First lesson went exceptionally well. Homework assigned.');
     });
   });
 
@@ -296,17 +290,17 @@ describe('Audit Findings Fixes: Migration Safety, Payment Ops, Notes & Class Ded
 
       const pkgSheet = spreadsheet.getSheetByName('Packages')!;
       // Package 1: 5 classes, starts Jan 1
-      pkgSheet.rows.push(['pkg_01', 'stu_pkg_01', 'Bob', 'PACKAGE', 'INR', 5000, 1000, 5, '2026-01-01', '2026-02-01', '']);
+      pkgSheet.rows.push(['stu_pkg_01', 'Bob', 'PACKAGE', 'INR', 5000, 1000, 5, '2026-01-01', '2026-02-01', '', 60, '']);
       // Package 2: 5 classes, starts Feb 1
-      pkgSheet.rows.push(['pkg_02', 'stu_pkg_01', 'Bob', 'PACKAGE', 'INR', 5000, 1000, 5, '2026-02-01', '2026-03-01', '']);
+      pkgSheet.rows.push(['stu_pkg_01', 'Bob', 'PACKAGE', 'INR', 5000, 1000, 5, '2026-02-01', '2026-03-01', '', 60, '']);
       // Package 3: 0 classes (or blank)
-      pkgSheet.rows.push(['pkg_03', 'stu_pkg_01', 'Bob', 'PACKAGE', 'INR', 0, 0, 0, '2026-03-01', '2026-04-01', '']);
+      pkgSheet.rows.push(['stu_pkg_01', 'Bob', 'PACKAGE', 'INR', 0, 0, 0, '2026-03-01', '2026-04-01', '', 60, '']);
 
       const clsSheet = spreadsheet.getSheetByName('ClassSessions')!;
       // 7 attended sessions for Bob
       for (let i = 1; i <= 7; i++) {
         clsSheet.rows.push([
-          `sess_${i}`, 'stu_pkg_01', `2026-01-0${i}`, `2026-01-0${i}T10:00:00Z`, `2026-01-0${i}T11:00:00Z`, 'ATTENDED', 'COMPLETED', '', true
+          'stu_pkg_01', 'Bob', `2026-01-0${i}`, '10:00', 'ATTENDED', 'COMPLETED', true, '', ''
         ]);
       }
 

@@ -213,40 +213,15 @@
 
 ---
 
-### 4.7 Meeting Links Domain
+### 4.7 Retired Operations (MeetingLinks & StudentNotes)
 
-#### `meetingLinks.list`
-- **Description:** Lists student meeting links from `MeetingLinks` sheet.
-- **Payload:** `{ student_id?: string }`.
-- **Returns:** Array of `MeetingLink` objects (`student_id, student_name, meeting_link_1, meeting_link_2`).
-
-#### `meetingLinks.create` / `meetingLinks.update`
-- **Description:** Upserts primary and secondary meeting links for a student.
-- **Payload:** `{ student_id: string, student_name?: string, meeting_link_1: string, meeting_link_2?: string }`.
-- **Returns:** Updated `MeetingLink` record.
-
-#### `meetingLinks.deactivate`
-- **Description:** Clears links for a student slot.
-- **Payload:** `{ student_id: string, slot?: 1 | 2 }`.
-- **Returns:** Updated `MeetingLink` record.
+The standalone `meetingLinks.*` and `notes.*` operational domains are retired:
+- **Meeting Links:** Replaced by `Students.primary_meeting_link`. Managed via `students.create`, `students.update`, and `students.getById` / `students.list`.
+- **Student Notes:** Replaced by `ClassSessions.session_notes`. Managed via `classes.schedule`, `classes.update`, and `classes.list`.
 
 ---
 
-### 4.8 Student Notes Domain
-
-#### `notes.list`
-- **Description:** Lists student notes from `StudentNotes` sheet.
-- **Payload:** `{ student_id?: string }`.
-- **Returns:** Array of `StudentNote` records (`student_id, student_name, note_date, note_text, follow_up_date`).
-
-#### `notes.create`
-- **Description:** Appends a new pedagogical note to `StudentNotes`.
-- **Payload:** `{ student_id: string, student_name?: string, note_date?: string, note_text: string, follow_up_date?: string }`.
-- **Returns:** Created note record.
-
----
-
-### 4.9 Reports & Dashboard Domain
+### 4.8 Reports & Dashboard Domain
 
 #### `dashboard.overview`
 - **Description:** Returns high-level metrics for dashboard cards.

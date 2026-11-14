@@ -143,14 +143,13 @@ describe('Permanent, Consistent Student IDs and Lifecycle Integrity', () => {
     expect(payRes.success).toBe(true);
     expect(payRes.data.student_id).toBe(sid);
 
-    // Meeting link creation references immutable sid
-    const linkRes = MeetingLinkService.MeetingLinks_create(spreadsheet, {
-      student_id: sid,
-      meeting_link_1: 'https://meet.google.com/abc-defg-hij',
-      meeting_link_2: ''
+    // Primary meeting link update references immutable sid
+    const linkRes = StudentService.Students_update(spreadsheet, sid, {
+      primary_meeting_link: 'https://meet.google.com/abc-defg-hij',
     }, actor);
     expect(linkRes.success).toBe(true);
     expect(linkRes.data.student_id).toBe(sid);
+    expect(linkRes.data.primary_meeting_link).toBe('https://meet.google.com/abc-defg-hij');
 
     // Class scheduling references immutable sid
     const classRes = ClassService.Classes_schedule(spreadsheet, {

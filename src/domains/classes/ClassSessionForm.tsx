@@ -39,6 +39,7 @@ export const ClassSessionForm: React.FC<ClassSessionFormProps> = ({
     endTime,
   } = useClassScheduling(initialStudentId, token);
 
+  const [sessionNotes, setSessionNotes] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,6 +72,7 @@ export const ClassSessionForm: React.FC<ClassSessionFormProps> = ({
       scheduled_start: startDt.toISOString(),
       scheduled_end: endDt.toISOString(),
       duration_minutes: durationMinutes,
+      session_notes: sessionNotes.trim() || undefined,
     });
   };
 
@@ -107,6 +109,17 @@ export const ClassSessionForm: React.FC<ClassSessionFormProps> = ({
           </span>
         </FormField>
       </div>
+
+      <FormField label="Session Notes">
+        <textarea
+          className={formStyles.textarea}
+          value={sessionNotes}
+          onChange={(e) => setSessionNotes(e.target.value)}
+          placeholder="e.g. Lesson plan, coverage remarks, or cancellation context"
+          rows={2}
+          aria-label="Session Notes"
+        />
+      </FormField>
 
       <div style={{ padding: '8px 12px', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border-subtle)', fontSize: 'var(--font-size-xs)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>

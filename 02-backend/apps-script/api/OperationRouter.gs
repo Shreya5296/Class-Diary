@@ -37,8 +37,6 @@ function _bootstrapAppsScriptHandlers(regObj, errors) {
     { n: 'registerClassOperations', f: typeof registerClassOperations === 'function' ? registerClassOperations : null },
     { n: 'registerFeeOperations', f: typeof registerFeeOperations === 'function' ? registerFeeOperations : null },
     { n: 'registerReportOperations', f: typeof registerReportOperations === 'function' ? registerReportOperations : null },
-    { n: 'registerMeetingLinkOperations', f: typeof registerMeetingLinkOperations === 'function' ? registerMeetingLinkOperations : null },
-    { n: 'registerNoteOperations', f: typeof registerNoteOperations === 'function' ? registerNoteOperations : null },
     { n: 'registerClassScheduleOperations', f: typeof registerClassScheduleOperations === 'function' ? registerClassScheduleOperations : null }
   ];
   for (var i = 0; i < fns.length; i++) {
@@ -62,8 +60,6 @@ function _bootstrapNodeHandlers(regObj, errors) {
     ['registerClassOperations', '../classes/ClassHandlers.gs'],
     ['registerFeeOperations', '../fees/FeeHandlers.gs'],
     ['registerReportOperations', '../reports/ReportHandlers.gs'],
-    ['registerMeetingLinkOperations', '../meeting-links/MeetingLinkHandlers.gs'],
-    ['registerNoteOperations', '../notes/NoteHandlers.gs'],
     ['registerClassScheduleOperations', '../classes/ClassScheduleHandlers.gs']
   ];
   for (var i = 0; i < mods.length; i++) {

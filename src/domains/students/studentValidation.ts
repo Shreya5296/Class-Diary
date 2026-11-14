@@ -55,6 +55,11 @@ export function validateStudentInput(input: Partial<StudentInput>): ValidationRe
     errors.status = 'Status must be ACTIVE, INACTIVE, or ARCHIVED';
   }
 
+  const meetingLink = input.primary_meeting_link !== undefined ? String(input.primary_meeting_link).trim() : '';
+  if (meetingLink && !/^https?:\/\/[^\s]+$/i.test(meetingLink)) {
+    errors.primary_meeting_link = 'Invalid meeting link URL format.';
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors,

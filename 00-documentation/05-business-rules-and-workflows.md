@@ -168,15 +168,16 @@ Every calendar slot is classified into one of three visual categories:
 
 ---
 
-## 8. Meeting Links & Student Notes
+## 8. Primary Meeting Links & Class Session Notes
 
-### 8.1 Meeting Links
-- Each student has up to two meeting links stored in `MeetingLinks`:
-  - `meeting_link_1`: Primary meeting link (typically Google Meet).
-  - `meeting_link_2`: Secondary or backup meeting link (typically Zoom).
-- Automated platform detection classifies URLs and applies platform badges.
-- One-click button launches the room; copy action provides subtle visual confirmation.
+### 8.1 Primary Meeting Link
+- Each student has exactly one primary meeting link stored directly in `Students.primary_meeting_link`.
+- Managed directly through the Students page (during student creation, row expansion, and edit modal).
+- Automated platform detection classifies URLs and applies platform badges (Google Meet, Zoom, etc.).
+- There is no secondary meeting link or separate Meeting Links management interface.
 
-### 8.2 Student Notes
-- Stored in `StudentNotes`: `student_id, student_name, note_date, note_text, follow_up_date`.
-- Allows pedagogical notes, student progress tracking, and scheduled follow-up dates displayed on the dashboard.
+### 8.2 Class Session Notes
+- Stored directly in `ClassSessions.session_notes` for each individual class session.
+- Allows recording what was taught, story or topic covered, concepts or values discussed, and pedagogical remarks.
+- Provides contextual remarks for cancellations alongside the structured `cancellation_reason`.
+- Viewable and editable from the Class Schedule table via the dedicated session notes modal.

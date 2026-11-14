@@ -82,7 +82,7 @@ describe('Fix Student Data, Class Generation, Calendar Accuracy, Fee Dates, and 
   });
 
   describe('Change 5: Canonical ClassSessions Schema', () => {
-    it('matches canonical 8-column schema (schedule_date, schedule_time, etc.)', () => {
+    it('matches canonical 9-column schema (schedule_date, schedule_time, etc.)', () => {
       const headers = SHEET_SCHEMAS[SHEET_NAMES.CLASS_SESSIONS];
       expect(headers).toEqual([
         'student_id',
@@ -91,8 +91,9 @@ describe('Fix Student Data, Class Generation, Calendar Accuracy, Fee Dates, and 
         'schedule_time',
         'attendance_status',
         'session_status',
-        'cancellation_reason',
         'deduct_class',
+        'cancellation_reason',
+        'session_notes',
       ]);
     });
   });

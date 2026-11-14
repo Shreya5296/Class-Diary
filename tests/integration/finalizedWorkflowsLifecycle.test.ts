@@ -327,53 +327,52 @@ describe('Finalized 6-Table End-to-End User Workflows Verification', () => {
   });
 
   // Workflow 7: Meeting Links & Student Notes
-  it('7. verifies meeting links creation and student notes logging', () => {
+  it('7. verifies primary meeting link on student and session notes in class sessions (4-table canonical datastore)', () => {
+    // A. Create & Query Student with Primary Meeting Link (10-col Students table)
     const stuRes = StudentService.Students_create(spreadsheet, {
       student_name: 'Devansh Jain',
       parent_name: 'Alok Jain',
       parent_phone: '+91 95555 66666',
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      primary_meeting_link: 'https://meet.google.com/abc-defg-hij'
     }, adminActor);
     expect(stuRes.success).toBe(true);
     const stuId = stuRes.data.student_id;
 
-    // A. Create & Query Meeting Links (4-col flat structure)
-    const linkRes = MeetingLinkService.MeetingLinks_create(spreadsheet, {
-      student_id: stuId,
-      student_name: 'Devansh Jain',
-      meeting_link_1: 'https://meet.google.com/abc-defg-hij',
-      meeting_link_2: 'https://meet.google.com/xyz-uvwx-rst'
+    const stuRecord = StudentService.Students_getById(spreadsheet, stuId);
+    expect(stuRecord).toBeDefined();
+    expect(stuRecord.primary_meeting_link).toBe('https://meet.google.com/abc-defg-hij');
+
+    // Update primary meeting link
+    const updRes = StudentService.Students_update(spreadsheet, stuId, {
+      primary_meeting_link: 'https://meet.google.com/new-meeting-room'
     }, adminActor);
-    expect(linkRes.success).toBe(true);
+    expect(updRes.success).toBe(true);
+    expect(StudentService.Students_getById(spreadsheet, stuId).primary_meeting_link).toBe('https://meet.google.com/new-meeting-room');
 
-    const links = MeetingLinkRepository.MeetingLinks_getByStudentId(spreadsheet, stuId);
-    expect(links).toBeDefined();
-    expect(links.meeting_link_1).toBe('https://meet.google.com/abc-defg-hij');
-    expect(links.meeting_link_2).toBe('https://meet.google.com/xyz-uvwx-rst');
-
-    // B. Append Multiple Student Notes (5-col structure)
-    const note1 = NoteService.Notes_create(spreadsheet, {
+    // B. Schedule Class Session with Session Notes (9-col ClassSessions table)
+    const schedRes = ClassService.Classes_schedule(spreadsheet, {
       student_id: stuId,
-      student_name: 'Devansh Jain',
-      note_date: '2026-03-01',
-      note_text: 'Diagnostic evaluation: Strong in algebra, needs trigonometry reinforcement.',
-      follow_up_date: '2026-03-15'
+      schedule_date: '2026-03-01',
+      schedule_time: '17:00',
+      duration_minutes: 60,
+      session_notes: 'Diagnostic evaluation: Strong in algebra, needs trigonometry reinforcement.'
     }, adminActor);
-    expect(note1.success).toBe(true);
+    expect(schedRes.success).toBe(true);
 
-    const note2 = NoteService.Notes_create(spreadsheet, {
-      student_id: stuId,
-      student_name: 'Devansh Jain',
-      note_date: '2026-03-15',
-      note_text: 'Trigonometry module 1 completed successfully.',
-      follow_up_date: '2026-03-30'
+    const allSessions = ClassRepository.Classes_getAll(spreadsheet);
+    const matchedSession = allSessions.find((c: any) => c.student_id === stuId);
+    expect(matchedSession).toBeDefined();
+    expect(matchedSession.session_notes).toContain('Diagnostic evaluation');
+
+    // Update attendance and verify session_notes is preserved
+    const attRes = ClassService.Classes_complete(spreadsheet, {
+      session_id: matchedSession.class_session_id || matchedSession.session_id,
+      attendance_status: 'PRESENT'
     }, adminActor);
-    expect(note2.success).toBe(true);
-
-    const studentNotes = NoteRepository.Notes_getByStudentId(spreadsheet, stuId);
-    expect(studentNotes.length).toBe(2);
-    expect(studentNotes[0].note_text).toContain('Diagnostic evaluation');
-    expect(studentNotes[1].note_text).toContain('Trigonometry module 1');
+    expect(attRes.success).toBe(true);
+    expect(attRes.data.attendance_status).toBe('PRESENT');
+    expect(attRes.data.session_notes).toContain('Diagnostic evaluation');
   });
 
   // Workflow 8: Dashboard Metrics & Financial Reports

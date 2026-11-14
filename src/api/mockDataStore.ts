@@ -1,6 +1,6 @@
 import { ApiResponse } from './apiResponse';
 import {
-  MOCK_STUDENTS, MOCK_FEES, MOCK_PAYMENTS, MOCK_CLASSES, MOCK_LINKS,
+  MOCK_STUDENTS, MOCK_FEES, MOCK_PAYMENTS, MOCK_CLASSES,
   MOCK_PACKAGES, MOCK_NOTES, MOCK_SCHEDULES, createMockStudent,
   updateMockPackage, scheduleMockClass,
 } from './mockDataInitial';
@@ -8,8 +8,7 @@ import {
   handleMockClassRecordAttendance,
   handleMockClassCancel,
   handleMockClassRestoreCredit,
-  upsertMockMeetingLink,
-  deleteMockMeetingLink,
+  handleMockClassUpdate,
 } from './mockClassOperations';
 import { handleMockRenewal } from './mockRenewalOperations';
 
@@ -37,6 +36,7 @@ export function handleMockApiRequest<T>(operation: string, payload: Record<strin
       if (!p.student_phone && ex.student_phone) delete p.student_phone;
       if (!p.student_email && ex.student_email) delete p.student_email;
       if (!p.notes && (ex as Record<string, unknown>).notes) delete p.notes;
+      if (p.primary_meeting_link !== undefined) ex.primary_meeting_link = String(p.primary_meeting_link).trim();
       Object.assign(ex, p);
     }
     return { ok: true, data: (ex || { ...MOCK_STUDENTS[0], ...payload }) as T, meta };
@@ -63,19 +63,8 @@ export function handleMockApiRequest<T>(operation: string, payload: Record<strin
   if (operation === 'classes.restoreCredit') {
     return { ok: true, data: handleMockClassRestoreCredit(payload) as T, meta };
   }
-  if (operation === 'meetingLinks.list') {
-    const sid = payload.student_id as string | undefined;
-    return { ok: true, data: (sid ? MOCK_LINKS.filter(l => l.student_id === sid) : MOCK_LINKS) as T, meta };
-  }
-  if (operation === 'meetingLinks.create' || operation === 'meetingLinks.update') {
-    const ex = upsertMockMeetingLink(payload);
-    return { ok: true, data: ex as T, meta };
-  }
-  if (operation === 'meetingLinks.delete' || operation === 'meetingLinks.deactivate') {
-    const sid = String(payload.student_id || payload.studentId || '');
-    const rawField = payload.field || (payload.slot === 2 || payload.slot === 'secondary' ? 'meeting_link_2' : 'meeting_link_1');
-    const ex = deleteMockMeetingLink(sid, String(rawField));
-    return { ok: true, data: ex as T, meta };
+  if (operation === 'classes.update') {
+    return { ok: true, data: handleMockClassUpdate(payload) as T, meta };
   }
   if (operation === 'packages.list') return { ok: true, data: MOCK_PACKAGES as T, meta };
   if (operation === 'packages.update') return { ok: true, data: updateMockPackage(payload) as T, meta };

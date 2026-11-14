@@ -23,13 +23,11 @@ A feature is not done merely because its UI exists or its happy path executes. I
 
 ## 3. Data Integrity and Google Sheets Schema
 
-- [x] The Google Spreadsheet contains **strictly the six canonical tables**:
-  1. `Students` (9 cols)
+- [x] The Google Spreadsheet contains **strictly the four canonical tables**:
+  1. `Students` (10 cols, includes `primary_meeting_link`)
   2. `Packages` (12 cols)
   3. `Payments` (6 cols)
-  4. `ClassSessions` (8 cols)
-  5. `MeetingLinks` (4 cols)
-  6. `StudentNotes` (5 cols)
+  4. `ClassSessions` (9 cols, includes `session_notes`)
 - [x] No `package_id` in `Packages`; keyed by `student_id`.
 - [x] No `session_id` or stored end-time in `ClassSessions`; keyed by `student_id__schedule_date__schedule_time` (or row index); duration loaded from `Packages.class_duration`.
 - [x] Dynamic header mapping via `HeaderMapper.gs` avoids reliance on hardcoded column letters.

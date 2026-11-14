@@ -97,7 +97,7 @@ function runStudentIdMigration(spreadsheet) {
     }
 
     var stats = { students: updateColumnWithMap(stuSheet, stuCol, mapping) };
-    var cascadeSheets = ['Packages', 'Payments', 'ClassSessions', 'MeetingLinks', 'StudentNotes', 'ClassSchedules'];
+    var cascadeSheets = ['Packages', 'Payments', 'ClassSessions', 'ClassSchedules'];
     for (var s = 0; s < cascadeSheets.length; s++) {
       var sh = ss.getSheetByName(cascadeSheets[s]);
       if (sh) { var cIdx = findColIndex(sh, 'student_id'); if (cIdx > 0) stats[cascadeSheets[s]] = updateColumnWithMap(sh, cIdx, mapping); }

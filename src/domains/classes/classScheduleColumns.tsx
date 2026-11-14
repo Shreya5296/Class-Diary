@@ -4,41 +4,32 @@ import { AttendanceControl } from './AttendanceControl';
 import { Button } from '../../components/buttons/Button';
 import { SessionProgress } from './sessionProgressCalculator';
 import { getSessionStatusStyle } from './sessionStatusStyles';
-import {
-  getSessionDate,
-  getSessionDuration,
-  formatSessionTimeRange,
-  isSessionOnDate,
-} from './sessionTimeNormalizer';
+import { getSessionDate, getSessionDuration, formatSessionTimeRange, isSessionOnDate } from './sessionTimeNormalizer';
 
 export function formatClassDate(rawDate?: string): string {
   if (!rawDate) return '—';
   try {
     const clean = String(rawDate).trim();
-    const d = clean.length === 10
-      ? new Date(`${clean}T12:00:00Z`)
-      : new Date(clean.replace(/T\s+(\d:)/, 'T0$1'));
+    const d = clean.length === 10 ? new Date(`${clean}T12:00:00Z`) : new Date(clean.replace(/T\s+(\d:)/, 'T0$1'));
     if (isNaN(d.getTime())) return clean;
-    return new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
-    }).format(d);
+    return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(d);
   } catch { return String(rawDate); }
 }
 
 export function buildClassScheduleColumns(params: {
-  todayKey: string;
-  nowMs: number;
+  todayKey: string; nowMs: number;
   getStudentConsumedClasses: (id: string) => { consumed: number; purchased: number };
-  getStudentMeetingLink: (id: string) => { meeting_link_1?: string; meeting_link_2?: string } | undefined;
+  getStudentMeetingLink: (id: string) => any;
   getProgress?: (session: ClassSession) => SessionProgress | undefined;
   handleUpdateStatus: (sessionId: string, outcome: string) => Promise<void>;
   handleRestore: (sessionId: string) => Promise<void>;
+  onEditNotes?: (session: ClassSession) => void;
 }): Column<ClassSession>[] {
-  const { todayKey, nowMs, getStudentConsumedClasses, getStudentMeetingLink, getProgress, handleUpdateStatus, handleRestore } = params;
+  const { todayKey, nowMs, getStudentConsumedClasses, getStudentMeetingLink, getProgress, handleUpdateStatus, handleRestore, onEditNotes } = params;
 
   return [
     {
-      key: 'student', header: 'Student', width: '18%',
+      key: 'student', header: 'Student', width: '16%',
       render: (c) => (
         <div>
           <span style={{ fontWeight: 600, color: 'var(--color-text-main)', fontSize: 'var(--font-size-sm)', display: 'block' }}>
@@ -51,7 +42,7 @@ export function buildClassScheduleColumns(params: {
       ),
     },
     {
-      key: 'date', header: 'Weekday & Date', width: '17%',
+      key: 'date', header: 'Weekday & Date', width: '15%',
       render: (c) => (
         <span style={{ fontWeight: 600, color: 'var(--color-text-main)', fontSize: 'var(--font-size-sm)' }}>
           {formatClassDate(c.schedule_date || c.class_date || c.scheduled_start)}
@@ -59,30 +50,24 @@ export function buildClassScheduleColumns(params: {
       ),
     },
     {
-      key: 'start_time', header: 'Class Time', width: '15%',
-      render: (c) => {
-        const dur = getSessionDuration(c);
-        const timeDisplay = formatSessionTimeRange(c);
-        return (
-          <div>
-            <span style={{ fontWeight: 600, color: 'var(--color-text-main)', fontSize: 'var(--font-size-sm)', display: 'block' }}>
-              {timeDisplay}
-            </span>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{dur} min</span>
-          </div>
-        );
-      },
+      key: 'start_time', header: 'Class Time', width: '13%',
+      render: (c) => (
+        <div>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-main)', fontSize: 'var(--font-size-sm)', display: 'block' }}>
+            {formatSessionTimeRange(c)}
+          </span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>{getSessionDuration(c)} min</span>
+        </div>
+      ),
     },
     {
-      key: 'consumed', header: 'Consumed / Purchased', width: '14%',
+      key: 'consumed', header: 'Consumed / Purchased', width: '13%',
       render: (c) => {
         const prog = getProgress ? getProgress(c) : undefined;
         if (prog) {
           return (
             <div>
-              <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-main)', fontVariantNumeric: 'tabular-nums' }}>
-                {prog.display}
-              </span>
+              <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-main)', fontVariantNumeric: 'tabular-nums' }}>{prog.display}</span>
               <span style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)' }}>{prog.remainingDisplay}</span>
             </div>
           );
@@ -98,7 +83,7 @@ export function buildClassScheduleColumns(params: {
       },
     },
     {
-      key: 'join', header: 'Join Class', width: '12%',
+      key: 'join', header: 'Join Class', width: '11%',
       render: (c) => {
         const isToday = isSessionOnDate(c, todayKey);
         const raw = c.scheduled_start || c.start_time;
@@ -107,7 +92,7 @@ export function buildClassScheduleColumns(params: {
         const isPast = sessionDateKey < todayKey || (isToday && d ? d.getTime() < nowMs : false);
         const statusCfg = getSessionStatusStyle(c.session_status || c.status, c.attendance_status);
         const linkObj = getStudentMeetingLink(c.student_id);
-        const joinUrl = c.meeting_url || linkObj?.meeting_link_1 || linkObj?.meeting_link_2;
+        const joinUrl = c.meeting_url || (typeof linkObj === 'string' ? linkObj : (linkObj?.primary_meeting_link || linkObj?.meeting_link_1 || linkObj?.meeting_link_2));
 
         if (isToday && statusCfg.category === 'UPCOMING' && joinUrl) {
           return (
@@ -122,7 +107,29 @@ export function buildClassScheduleColumns(params: {
       },
     },
     {
-      key: 'attendance', header: 'Attendance', width: '24%',
+      key: 'notes', header: 'Session Notes', width: '15%',
+      render: (c) => {
+        const text = c.session_notes || c.notes || '';
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              style={{
+                fontSize: 'var(--font-size-xs)', color: text ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                fontStyle: text ? 'normal' : 'italic', maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}
+              title={text || 'No session notes'}
+            >
+              {text || 'No notes'}
+            </span>
+            {onEditNotes && (
+              <Button variant="ghost" size="sm" onClick={() => onEditNotes(c)} aria-label="Edit session notes">✎</Button>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'attendance', header: 'Attendance', width: '17%',
       render: (c) => (
         <AttendanceControl
           status={c.status}

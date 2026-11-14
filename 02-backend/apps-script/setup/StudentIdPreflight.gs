@@ -62,7 +62,7 @@ function runStudentIdMigrationPreflight(spreadsheet) {
   var validIdSet = {};
   for (var s = 0; s < students.length; s++) validIdSet[students[s].student_id] = true;
 
-  var depSheets = ['Packages', 'Payments', 'ClassSessions', 'MeetingLinks', 'StudentNotes', 'ClassSchedules'];
+  var depSheets = ['Packages', 'Payments', 'ClassSessions'];
   var depRefCounts = {};
   var dangling = {};
 

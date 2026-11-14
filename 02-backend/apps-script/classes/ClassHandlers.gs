@@ -24,6 +24,7 @@ function registerClassOperations(router) {
       copy.start_time = c.schedule_time || c.start_time;
       copy.status = c.session_status || 'SCHEDULED';
       copy.duration_minutes = Number(c.duration_minutes) || 60;
+      copy.session_notes = c.session_notes || '';
       return copy;
     });
 

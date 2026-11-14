@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { AttendanceStatus, ClassSession } from './classTypes';
 import { recordAttendance, restoreCredit } from './classApi';
@@ -10,9 +10,11 @@ import { toInputDateFormat } from '../../lib/dateFormat';
 import { buildClassScheduleColumns } from './classScheduleColumns';
 import { buildSessionProgressMap } from './sessionProgressCalculator';
 import { getSessionStatusStyle } from './sessionStatusStyles';
+import { EditSessionNotesModal } from './EditSessionNotesModal';
 
 export const ClassSchedule: React.FC<{ studentId?: string; onRefreshTrigger?: number }> = ({ studentId }) => {
   const { token } = useAuth();
+  const [notesSession, setNotesSession] = useState<ClassSession | null>(null);
   const {
     sessions, packages, loading, refetch, getStudentConsumedClasses, getStudentMeetingLink,
   } = useClassScheduleData(studentId, token);
@@ -39,6 +41,7 @@ export const ClassSchedule: React.FC<{ studentId?: string; onRefreshTrigger?: nu
   const columns = buildClassScheduleColumns({
     todayKey, nowMs, getStudentConsumedClasses, getStudentMeetingLink, getProgress,
     handleUpdateStatus, handleRestore,
+    onEditNotes: (s) => setNotesSession(s),
   });
 
   if (loading) return <LoadingState message="Loading class schedule…" />;
@@ -56,5 +59,18 @@ export const ClassSchedule: React.FC<{ studentId?: string; onRefreshTrigger?: nu
     return statusCfg.rowBg !== 'transparent' ? { backgroundColor: statusCfg.rowBg } : undefined;
   };
 
-  return <DataTable fixedLayout minWidth="920px" columns={columns} data={sessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />;
+  return (
+    <>
+      <DataTable fixedLayout minWidth="920px" columns={columns} data={sessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />
+      {notesSession && (
+        <EditSessionNotesModal
+          session={notesSession}
+          token={token}
+          isOpen={Boolean(notesSession)}
+          onClose={() => setNotesSession(null)}
+          onSaved={refetch}
+        />
+      )}
+    </>
+  );
 };

@@ -342,17 +342,11 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
     }, adminActor);
     expect(voidFee.success).toBe(true);
 
-    // Meeting Links
-    const mlRes = MeetingLinkService.MeetingLinks_create(spreadsheet, {
-      student_id: sid, meeting_link_1: 'https://meet.google.com/test-audit-safety'
+    // Student primary meeting link update
+    const updateStu = StudentService.Students_update(spreadsheet, sid, {
+      primary_meeting_link: 'https://meet.google.com/test-audit-safety'
     }, adminActor);
-    expect(mlRes.success).toBe(true);
-
-    // Notes
-    const noteRes = NoteService.Notes_create(spreadsheet, {
-      student_id: sid, note_text: 'Student completed first Physics assessment with 95% score.'
-    }, adminActor);
-    expect(noteRes.success).toBe(true);
+    expect(updateStu.success).toBe(true);
 
     // Archive and reactivate student
     const archiveRes = StudentService.Students_archive(spreadsheet, sid, adminActor);
@@ -360,6 +354,13 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
 
     const reactivateRes = StudentService.Students_reactivate(spreadsheet, sid, adminActor);
     expect(reactivateRes.success).toBe(true);
+
+    // Schedule class with session notes
+    const sessWithNotes = ClassService.Classes_schedule(spreadsheet, {
+      student_id: sid, scheduled_start: '2026-11-26T14:00:00Z', scheduled_end: '2026-11-26T15:00:00Z',
+      session_notes: 'Student completed first Physics assessment with 95% score.'
+    }, adminActor);
+    expect(sessWithNotes.success).toBe(true);
 
     expect(spreadsheet.getSheetByName('AuditLog')).toBeNull();
   });
@@ -398,12 +399,13 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
       student_id: sid, scheduled_start: '2026-11-25T14:00:00Z', scheduled_end: '2026-11-25T15:00:00Z'
     }, adminActor);
 
-    NoteService.Notes_create(spreadsheet, {
-      student_id: sid, note_text: 'Zero audit queries confirmed.'
+    StudentService.Students_update(spreadsheet, sid, {
+      primary_meeting_link: 'https://meet.google.com/zero-audit-test'
     }, adminActor);
 
-    MeetingLinkService.MeetingLinks_create(spreadsheet, {
-      student_id: sid, meeting_link_1: 'https://meet.google.com/zero-audit-test'
+    ClassService.Classes_schedule(spreadsheet, {
+      student_id: sid, scheduled_start: '2026-11-26T14:00:00Z', scheduled_end: '2026-11-26T15:00:00Z',
+      session_notes: 'Zero audit queries confirmed.'
     }, adminActor);
 
     // Verify AuditLog was never queried

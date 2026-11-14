@@ -93,3 +93,16 @@ export async function restoreCredit(
   );
   return response.data!;
 }
+
+export async function updateSessionNotes(
+  sessionId: string,
+  sessionNotes: string,
+  token?: string | null
+): Promise<ClassSession> {
+  const response = await sendApiRequest<ClassSession>(
+    'classes.update',
+    { session_id: sessionId, session_notes: sessionNotes },
+    { token }
+  );
+  return response.data!;
+}

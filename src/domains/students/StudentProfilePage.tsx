@@ -6,11 +6,9 @@ import { StudentSummary } from './StudentSummary';
 import { Button } from '../../components/buttons/Button';
 import { ConfirmDialog } from '../../components/overlays/ConfirmDialog';
 import { ArrowLeftIcon } from '../../components/icons/ActionIcons';
-import { StudentNotes } from '../notes/StudentNotes';
 import { PackageList } from '../packages/PackageList';
 import { FeeObligationList } from '../fees/FeeObligationList';
 import { ClassSchedule } from '../classes/ClassSchedule';
-import { MeetingLinkList } from '../meeting-links/MeetingLinkList';
 import { fetchFeeObligations } from '../fees/feeApi';
 import { fetchPayments } from '../payments/paymentApi';
 import { calculateStudentCredits, CurrencyCreditSummary } from '../fees/creditCalculator';
@@ -23,7 +21,7 @@ export interface StudentProfilePageProps {
   onUpdate?: (updated: Student) => void;
 }
 
-type TabType = 'packages' | 'fees' | 'classes' | 'meeting-links' | 'notes';
+type TabType = 'packages' | 'fees' | 'classes';
 
 export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
   student, onBack, onEdit, onRenew, onUpdate,
@@ -46,8 +44,6 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
     { id: 'packages', label: 'Packages & Balances' },
     { id: 'fees', label: 'Fee Obligations' },
     { id: 'classes', label: 'Classes & Attendance' },
-    { id: 'meeting-links', label: 'Meeting Links' },
-    { id: 'notes', label: 'Student Notes' },
   ];
 
   const handleToggleArchive = async () => {
@@ -125,8 +121,6 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
         {activeTab === 'packages' && <PackageList studentId={student.student_id} onRenew={onRenew} />}
         {activeTab === 'fees' && <FeeObligationList studentId={student.student_id} />}
         {activeTab === 'classes' && <ClassSchedule studentId={student.student_id} />}
-        {activeTab === 'meeting-links' && <MeetingLinkList studentId={student.student_id} />}
-        {activeTab === 'notes' && <StudentNotes studentId={student.student_id} />}
       </div>
 
       <ConfirmDialog

@@ -130,14 +130,13 @@ The application uses a persistent two-panel shell (`AppShell.tsx`):
 
 ---
 
-### 3.6 Meeting Links (`MeetingLinksPage.tsx`)
-- **Student Meeting Links Table (`MeetingLinkTable.tsx`):**
-  - Student Name.
-  - Primary Meeting Link (Google Meet badge, clickable room button, copy button).
-  - Secondary Meeting Link (Zoom / custom badge, clickable room button, copy button).
-  - Actions: Edit links or delete slot link.
-- **Add / Edit Modal (`MeetingLinkModal.tsx`):**
-  - Student selection, Primary Room URL, Secondary Room URL with scheme validation.
+### 3.6 Primary Meeting Link Management (Integrated into Students)
+- The standalone Meeting Links page has been eliminated.
+- Primary meeting link is managed directly on the Students page (`EditStudentLinksSection.tsx`):
+  - Single "Primary Meeting Link" input field with real-time platform preview and scheme validation.
+  - Rendered with platform badge and copy action via `MeetingLinkButton.tsx`.
+  - Empty state clearly indicated when no link is configured.
+  - Stored directly in `Students.primary_meeting_link`.
 
 ---
 

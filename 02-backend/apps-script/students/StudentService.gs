@@ -81,6 +81,7 @@ function Students_enrich(s) {
   copy.status = String(s.status || s.student_status || 'ACTIVE').trim().toUpperCase();
   copy.student_status = copy.status;
   copy.notes = s.notes || '';
+  copy.primary_meeting_link = s.primary_meeting_link || s.meeting_link || '';
   return copy;
 }
 
@@ -98,6 +99,7 @@ function Students_create(spreadsheet, data, actor) {
     rawSubject = String(rawSubject || '').trim();
   }
   var rawNotes = data.notes !== undefined ? String(data.notes).trim() : (data.internal_summary !== undefined ? String(data.internal_summary).trim() : '');
+  var rawMeetingLink = data.primary_meeting_link !== undefined ? String(data.primary_meeting_link).trim() : (data.meeting_link !== undefined ? String(data.meeting_link).trim() : '');
 
   var normalized = {
     student_name: String(rawName || '').trim(),
@@ -108,7 +110,8 @@ function Students_create(spreadsheet, data, actor) {
     student_email: String(rawStudentEmail || '').trim(),
     subject: rawSubject,
     status: data.status ? String(data.status).trim().toUpperCase() : (data.student_status ? String(data.student_status).trim().toUpperCase() : 'ACTIVE'),
-    notes: rawNotes
+    notes: rawNotes,
+    primary_meeting_link: rawMeetingLink
   };
 
   var v = _stuVal.validateStudentInput(normalized, false);
@@ -139,6 +142,7 @@ function Students_create(spreadsheet, data, actor) {
       subject: normalized.subject,
       status: normalized.status,
       notes: normalized.notes,
+      primary_meeting_link: normalized.primary_meeting_link,
       created_at: now,
       updated_at: now,
       archived_at: ''
@@ -200,7 +204,7 @@ function Students_update(spreadsheet, studentId, updates, actor) {
   var safeUpdates = {};
   var allowedFields = [
     'student_name', 'parent_name', 'parent_phone', 'student_phone',
-    'parent_email', 'student_email', 'subject', 'status', 'notes'
+    'parent_email', 'student_email', 'subject', 'status', 'notes', 'primary_meeting_link'
   ];
 
   for (var i = 0; i < allowedFields.length; i++) {

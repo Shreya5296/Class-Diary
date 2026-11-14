@@ -53,12 +53,27 @@
   - Standardized date column number formatting to `dd/MM/yyyy` across all sheets.
   - Ensured backend `HeaderMapper.gs` normalizes between spreadsheet `dd/MM/yyyy` and ISO `YYYY-MM-DD`.
 
+### 2.5 Milestone 5: Four-Table Simplification Migration
+- **Problem:** `MeetingLinks` and `StudentNotes` existed as separate tables, causing fragmented updates and redundant UI.
+- **Migration Script:** `FourTableMigration.gs` (`runFourTableMigration`).
+- **Execution Result:**
+  1. **`Students` (10 columns):**
+     - Target headers: `student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status, primary_meeting_link`.
+     - Migrated student meeting links from `MeetingLinks.meeting_link_1` (or `meeting_link_2`) into `primary_meeting_link`.
+  2. **`ClassSessions` (9 columns):**
+     - Target headers: `student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason, session_notes`.
+     - Migrated historical notes matching student and class date into `session_notes`.
+     - Preserved unmatched notes in `_Archived_Historical_Notes`.
+  3. **Verification & Cleanup:**
+     - Verified exact target schemas, row counts, and non-empty data before removing legacy `MeetingLinks` and `StudentNotes` tabs.
+     - Preserved pre-migration backups: `_Backup_PreFourTable_*`.
+
 ---
 
 ## 3. Schema Validation Rules (`SchemaValidator.gs`)
 
 During bootstrapping or integrity checks:
-1. Verifies that all six canonical tables exist.
+1. Verifies that all four canonical tables exist (`Students`, `Packages`, `Payments`, `ClassSessions`).
 2. Checks that Row 1 headers exactly match expected canonical headers.
 3. Detects duplicate header names and missing required columns.
 4. Alerts if unsupported legacy tabs are present.

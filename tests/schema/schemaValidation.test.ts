@@ -18,7 +18,8 @@ describe('Phase 3 — Data Schema and Spreadsheet Validation', () => {
     const result = SpreadsheetBootstrap.bootstrapSpreadsheet(spreadsheet, SheetRegistry, '2.0.0');
 
     expect(result.success).toBe(true);
-    expect(result.createdTabs.length).toBe(Object.keys(SheetRegistry.SHEET_NAMES).length);
+    expect(result.createdTabs.length).toBe(SheetRegistry.getCanonicalSheetNames().length);
+    expect(result.createdTabs.length).toBe(4);
 
     const validation = SchemaValidator.validateSpreadsheetSchema(spreadsheet, SheetRegistry);
     expect(validation.valid).toBe(true);

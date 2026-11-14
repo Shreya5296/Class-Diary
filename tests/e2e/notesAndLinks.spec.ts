@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginAsAdmin, navigateTo } from './helpers/authHelper';
 import { generateSyntheticTestId, generateSyntheticStudent } from './helpers/testNamespace';
 
-test.describe('E2E — Meeting Links and Student Notes Workflow', () => {
+test.describe('E2E — Primary Meeting Link and Student Management Workflow', () => {
   test.beforeEach(async ({ page }) => {
     const loggedIn = await loginAsAdmin(page);
     if (!loggedIn) {
@@ -10,7 +10,7 @@ test.describe('E2E — Meeting Links and Student Notes Workflow', () => {
     }
   });
 
-  test('creates meeting link and student note, verifying persistence across refresh', async ({ page }) => {
+  test('configures student primary meeting link, verifying persistence across refresh', async ({ page }) => {
     const testId = generateSyntheticTestId('NL');
     const student = generateSyntheticStudent(testId);
 
@@ -25,45 +25,24 @@ test.describe('E2E — Meeting Links and Student Notes Workflow', () => {
     await expect(page.locator('text=Loading students…')).toBeHidden({ timeout: 60000 });
     await expect(page.locator(`text=${student.full_name}`)).toBeVisible({ timeout: 45000 });
 
-    // 2. Open Student Profile -> Meeting Links tab
+    // 2. Open Student Details -> Edit Student
     await page.locator('table').locator(`text=${student.full_name}`).first().click();
-    await page.locator('button:has-text("View Full Profile")').click();
-    await page.locator('main button:has-text("Meeting Links")').click();
-    await expect(page.locator('button:has-text("+ Add Meeting Link")')).toBeVisible({ timeout: 15000 });
+    await page.locator('button:has-text("Edit Student")').click();
+    await expect(page.getByLabel('Primary Meeting Link')).toBeVisible({ timeout: 15000 });
 
-    // 3. Create Meeting Link
-    await page.locator('button:has-text("+ Add Meeting Link")').click();
+    // 3. Set Primary Meeting Link
     await page.getByLabel('Primary Meeting Link').fill('https://meet.google.com/test-room-123');
-    await page.locator('button:has-text("Save Meeting Link")').click();
-    await expect(page.locator('button:has-text("Save Meeting Link")')).toBeHidden({ timeout: 35000 });
+    await page.locator('button:has-text("Save Changes")').click();
+    await expect(page.locator('button:has-text("Save Changes")')).toBeHidden({ timeout: 35000 });
 
-    // Verify Meeting Link in list is rendered as styled button
-    await expect(page.locator('button:has-text("meet.google.com/test-room-123")').first()).toBeVisible({ timeout: 35000 });
+    // 4. Verify Meeting Link in expanded details is rendered
+    await page.locator('table').locator(`text=${student.full_name}`).first().click();
+    await expect(page.locator('text=meet.google.com/test-room-123').first()).toBeVisible({ timeout: 35000 });
 
-    // 4. Switch to Student Notes tab
-    await page.locator('main button:has-text("Student Notes")').click();
-    await expect(page.locator('button:has-text("+ Add Note")')).toBeVisible({ timeout: 15000 });
-
-    // 5. Create Student Note
-    await page.locator('button:has-text("+ Add Note")').click();
-    const noteText = `Progress log entry for ${testId}: Mastered quadratic equations today.`;
-    await page.locator('textarea').fill(noteText);
-    await page.locator('button:has-text("Save Note")').click();
-    await expect(page.locator('button:has-text("Save Note")')).toBeHidden({ timeout: 35000 });
-
-    // Verify note is displayed
-    await expect(page.locator(`p:has-text("${noteText}")`)).toBeVisible({ timeout: 35000 });
-
-    // 6. Refresh persistence check
+    // 5. Refresh persistence check
     await page.reload();
     await navigateTo(page, 'Students');
     await page.locator(`text=${student.full_name}`).first().click();
-    await page.locator('button:has-text("View Full Profile")').click();
-
-    await page.locator('main button:has-text("Student Notes")').click();
-    await expect(page.locator(`p:has-text("${noteText}")`)).toBeVisible({ timeout: 35000 });
-
-    await page.locator('main button:has-text("Meeting Links")').click();
     await expect(page.locator('text=meet.google.com/test-room-123').first()).toBeVisible({ timeout: 35000 });
   });
 });

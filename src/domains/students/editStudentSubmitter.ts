@@ -4,7 +4,6 @@ import { Package } from '../packages/packageTypes';
 import { ScheduleItem } from './registrationTypes';
 import { WeeklyScheduleEntry, saveSchedules } from '../classes/scheduleApi';
 import { updateStudent } from './studentApi';
-import { createMeetingLink } from '../meeting-links/meetingLinkApi';
 import { createPackage, updatePackage } from '../packages/packageApi';
 import { calculateEndTime } from '../classes/scheduleDurationCalculator';
 import { formatCanonicalScheduleString } from './scheduleFormatter';
@@ -13,7 +12,8 @@ import { startAsyncScheduling } from './asyncScheduleWorker';
 export interface SubmitEditStudentParams {
   student: Student;
   studentData: StudentInput;
-  meetingLinks: { link1: string; link2: string };
+  meetingLink?: string;
+  meetingLinks?: { link1: string; link2?: string };
   packageData: PackageFormData;
   existingPkg: Package | null;
   schedules: ScheduleItem[];
@@ -28,9 +28,13 @@ export async function submitEditStudent(params: SubmitEditStudentParams): Promis
   successMessage: string;
 }> {
   const {
-    student, studentData, meetingLinks, packageData, existingPkg,
+    student, studentData, packageData, existingPkg,
     schedules, firstClassDate, autoSchedule, dur, token,
   } = params;
+
+  const linkToSave = params.meetingLink !== undefined
+    ? params.meetingLink.trim()
+    : (params.meetingLinks?.link1 !== undefined ? params.meetingLinks.link1.trim() : studentData.primary_meeting_link);
 
   const preservedData = {
     ...studentData,
@@ -38,20 +42,10 @@ export async function submitEditStudent(params: SubmitEditStudentParams): Promis
     student_phone: studentData.student_phone !== undefined ? studentData.student_phone : (student.student_phone || ''),
     student_email: studentData.student_email !== undefined ? studentData.student_email : (student.student_email || ''),
     notes: studentData.notes !== undefined ? studentData.notes : (student.notes || ''),
+    primary_meeting_link: linkToSave !== undefined ? linkToSave : (student.primary_meeting_link || ''),
   };
 
   const updatedStu = await updateStudent(student.student_id, preservedData, token);
-
-  if (meetingLinks.link1.trim() || meetingLinks.link2.trim()) {
-    await createMeetingLink({
-      student_id: student.student_id,
-      student_name: updatedStu.student_name,
-      meeting_link_1: meetingLinks.link1.trim(),
-      meeting_link_2: meetingLinks.link2.trim(),
-      meeting_url: meetingLinks.link1.trim(),
-      provider: 'GOOGLE_MEET',
-    }, token);
-  }
 
   const hasPkg = packageData.package_price.trim() || packageData.classes_purchased.trim() || packageData.class_duration;
   const durNum = dur || undefined;

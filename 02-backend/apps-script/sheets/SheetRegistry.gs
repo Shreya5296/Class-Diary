@@ -1,27 +1,27 @@
 /**
  * Canonical Sheet Registry
  * Defines the canonical business and operational spreadsheet tabs and their exact column headers.
- * AppConfig, ImportBatches, and ImportRowResults are permanently retired from canonical schemas.
+ * Exactly FOUR canonical tables: Students (10 cols), Packages (12 cols), Payments (6 cols), ClassSessions (9 cols).
+ * MeetingLinks and StudentNotes are permanently removed.
  */
 
 var SHEET_NAMES = {
   STUDENTS: 'Students',
-  ENROLLMENTS: 'Enrollments',
   PACKAGES: 'Packages',
-  FEE_OBLIGATIONS: 'FeeObligations',
   PAYMENTS: 'Payments',
   CLASS_SESSIONS: 'ClassSessions',
-  CLASS_SCHEDULES: 'ClassSchedules',
-  MEETING_LINKS: 'MeetingLinks',
-  STUDENT_NOTES: 'StudentNotes'
+  // Preserved for legacy reference only
+  ENROLLMENTS: 'Enrollments',
+  FEE_OBLIGATIONS: 'FeeObligations',
+  CLASS_SCHEDULES: 'ClassSchedules'
 };
 
 var SHEET_SCHEMAS = {};
 
-// Table 1: Students (9 columns)
+// Table 1: Students (10 columns)
 SHEET_SCHEMAS[SHEET_NAMES.STUDENTS] = [
-  'student_id', 'student_name', 'parent_name', 'parent_phone', 'student_phone',
-  'parent_email', 'student_email', 'subject', 'status'
+  'student_id', 'student_name', 'parent_name', 'parent_phone', 'parent_email',
+  'student_phone', 'student_email', 'subject', 'status', 'primary_meeting_link'
 ];
 
 // Preserved for legacy transition fallback; superseded by Packages
@@ -51,30 +51,25 @@ SHEET_SCHEMAS[SHEET_NAMES.PAYMENTS] = [
   'student_id', 'student_name', 'payment_date', 'amount', 'currency', 'in_inr'
 ];
 
-// Table 4: Class Sessions (8 columns)
+// Table 4: Class Sessions (9 columns)
 SHEET_SCHEMAS[SHEET_NAMES.CLASS_SESSIONS] = [
   'student_id', 'student_name', 'schedule_date', 'schedule_time',
-  'attendance_status', 'session_status', 'cancellation_reason', 'deduct_class'
+  'attendance_status', 'session_status', 'deduct_class', 'cancellation_reason', 'session_notes'
 ];
 
-// Table 5: Class Schedules (8 columns)
+// Preserved for legacy transition fallback
 SHEET_SCHEMAS[SHEET_NAMES.CLASS_SCHEDULES] = [
   'schedule_id', 'student_id', 'day_of_week', 'start_time', 'end_time',
   'is_active', 'created_at', 'updated_at'
 ];
 
-// Table 5: Meeting Links (4 columns)
-SHEET_SCHEMAS[SHEET_NAMES.MEETING_LINKS] = [
-  'student_id', 'student_name', 'meeting_link_1', 'meeting_link_2'
-];
-
-// Table 6: Student Notes (5 columns)
-SHEET_SCHEMAS[SHEET_NAMES.STUDENT_NOTES] = [
-  'student_id', 'student_name', 'note_date', 'note_text', 'follow_up_date'
-];
-
 function getCanonicalSheetNames() {
-  return Object.values(SHEET_NAMES);
+  return [
+    SHEET_NAMES.STUDENTS,
+    SHEET_NAMES.PACKAGES,
+    SHEET_NAMES.PAYMENTS,
+    SHEET_NAMES.CLASS_SESSIONS
+  ];
 }
 
 function getExpectedHeaders(sheetName) {

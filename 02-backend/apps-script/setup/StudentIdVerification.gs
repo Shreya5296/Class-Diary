@@ -44,7 +44,7 @@ function verifyStudentIdReferentialIntegrity(spreadsheet) {
     }
   }
 
-  var dangling = {}, sheetsToCheck = ['Packages', 'Payments', 'ClassSessions', 'MeetingLinks', 'StudentNotes', 'ClassSchedules'];
+  var dangling = {}, sheetsToCheck = ['Packages', 'Payments', 'ClassSessions'];
   for (var s = 0; s < sheetsToCheck.length; s++) {
     var name = sheetsToCheck[s], sh = ss.getSheetByName(name);
     if (!sh || sh.getLastRow() <= 1) continue;
@@ -99,7 +99,7 @@ function rollbackStudentIdMigration(spreadsheet) {
     var getColIdx = _migHelper && _migHelper.findColIndex ? _migHelper.findColIndex : findColIndex;
     var updateCol = _migHelper && _migHelper.updateColumnWithMap ? _migHelper.updateColumnWithMap : updateColumnWithMap;
 
-    var stats = {}, sheets = ['Students', 'Packages', 'Payments', 'ClassSessions', 'MeetingLinks', 'StudentNotes', 'ClassSchedules'];
+    var stats = {}, sheets = ['Students', 'Packages', 'Payments', 'ClassSessions'];
     for (var s = 0; s < sheets.length; s++) {
       var sh = ss.getSheetByName(sheets[s]);
       if (sh) { var cIdx = getColIdx(sh, 'student_id'); if (cIdx > 0) stats[sheets[s]] = updateCol(sh, cIdx, reverseMap); }

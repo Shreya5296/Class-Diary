@@ -44,12 +44,6 @@ export const ROUTE_CONFIGS: Record<NavSection, RouteConfig> = {
     subtitle: 'Schedule upcoming classes, record attendance outcomes, and manage credit consumption.',
     requiresAdmin: true,
   },
-  'meeting-links': {
-    id: 'meeting-links',
-    title: 'Meeting Links',
-    subtitle: 'Maintain verified Google Meet and Zoom links for remote classes.',
-    requiresAdmin: true,
-  },
   reports: {
     id: 'reports',
     title: 'Earnings Overview',

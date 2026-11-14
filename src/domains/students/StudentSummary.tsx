@@ -4,6 +4,7 @@ import { formatStatusBadge } from '../../lib/textFormat';
 import { formatDate } from '../../lib/dateFormat';
 import { CurrencyCreditSummary } from '../fees/creditCalculator';
 import { AvailableCreditBadge } from '../fees/AvailableCreditBadge';
+import { MeetingLinkButton } from '../meeting-links/MeetingLinkButton';
 
 export interface StudentSummaryProps {
   student: Student;
@@ -108,6 +109,18 @@ export const StudentSummary: React.FC<StudentSummaryProps> = ({ student, credits
             Parent Email
           </span>
           <strong style={{ color: 'var(--color-text-main)' }}>{student.parent_email || '—'}</strong>
+        </div>
+        <div>
+          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-xs)', display: 'block', marginBottom: '2px' }}>
+            Primary Meeting Link
+          </span>
+          {student.primary_meeting_link ? (
+            <div style={{ marginTop: '2px' }}>
+              <MeetingLinkButton url={student.primary_meeting_link} />
+            </div>
+          ) : (
+            <span style={{ color: 'var(--color-text-subtle)', fontStyle: 'italic' }}>None</span>
+          )}
         </div>
       </div>
     </div>
