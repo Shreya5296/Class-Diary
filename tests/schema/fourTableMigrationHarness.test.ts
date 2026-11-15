@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MockSpreadsheet } from '../mocks/MockSpreadsheet';
 // @ts-expect-error Apps script commonjs export
-import { runFourTableCanonicalMigration, generatePreMigrationInventory, runFourTableMigrationPreflight } from '../../02-backend/apps-script/setup/FourTableMigration.gs';
+import { runFourTableCanonicalMigration, generatePreMigrationInventory, runFourTableMigrationPreflight, runFourTablePostMigrationVerification } from '../../02-backend/apps-script/setup/FourTableMigration.gs';
 
 describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', () => {
   let spreadsheet: MockSpreadsheet;
@@ -197,6 +197,91 @@ describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', ()
       const res = runFourTableCanonicalMigration(spreadsheet);
       expect(res.report.conflictingMeetingLinks.length).toBe(0);
       expect(res.report.migratedMeetingLinks).toBe(2);
+    });
+
+    it('11. Post-migration verification correctly validates canonical tabs and schema integrity', () => {
+      // Setup production-like spreadsheet
+      const prodSs = new MockSpreadsheet();
+      prodSs.getId = () => '1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8';
+      prodSs.getName = () => 'Personal Dashboard';
+
+      const stuRows = [
+        ['student_id', 'student_name', 'parent_name', 'parent_phone', 'parent_email', 'student_phone', 'student_email', 'subject', 'status']
+      ];
+      for (let i = 1; i <= 9; i++) {
+        const sid = `STU_00${i}`;
+        stuRows.push([sid, `Student ${i}`, 'Parent', '9876543210', 'parent@test.com', '9876543211', 'student@test.com', 'Math', 'ACTIVE']);
+      }
+      prodSs.insertSheet('Students').rows = stuRows;
+
+      const pkgRows = [
+        ['student_id', 'student_name', 'plan_type', 'currency', 'package_price', 'per_class', 'classes_purchased', 'start_date', 'end_date', 'next_due_date', 'class_duration', 'class_schedule']
+      ];
+      for (let i = 1; i <= 9; i++) {
+        pkgRows.push([`STU_00${i}`, `Student ${i}`, 'PACKAGE', 'INR', 5000, 1000, 5, '2026-03-01', '2026-04-01', '2026-04-01', 60, '']);
+      }
+      prodSs.insertSheet('Packages').rows = pkgRows;
+
+      const payRows = [
+        ['student_id', 'student_name', 'payment_date', 'amount', 'currency', 'in_inr']
+      ];
+      for (let i = 1; i <= 13; i++) {
+        const idx = (i % 9) + 1;
+        payRows.push([`STU_00${idx}`, `Student ${idx}`, '2026-03-01', 1000, 'INR', 1000]);
+      }
+      prodSs.insertSheet('Payments').rows = payRows;
+
+      const clsRows = [
+        ['student_id', 'student_name', 'schedule_date', 'schedule_time', 'attendance_status', 'session_status', 'deduct_class', 'cancellation_reason']
+      ];
+      for (let i = 1; i <= 164; i++) {
+        const idx = (i % 9) + 1;
+        const d = `2026-${String(Math.floor((i - 1) / 28) + 1).padStart(2, '0')}-${String(((i - 1) % 28) + 1).padStart(2, '0')}`;
+        clsRows.push([`STU_00${idx}`, `Student ${idx}`, d, '10:00', 'ATTENDED', 'COMPLETED', true, '']);
+      }
+      // Put specific dates for the 3 target notes
+      clsRows[1] = ['STU_004', 'Student 4', '2026-09-13', '10:00', 'ATTENDED', 'COMPLETED', true, ''];
+      clsRows[2] = ['STU_004', 'Student 4', '2026-10-04', '10:00', 'ATTENDED', 'COMPLETED', true, ''];
+      clsRows[3] = ['STU_005', 'Student 5', '2026-08-28', '10:00', 'ATTENDED', 'COMPLETED', true, ''];
+      prodSs.insertSheet('ClassSessions').rows = clsRows;
+
+      prodSs.insertSheet('MeetingLinks').rows = [
+        ['student_id', 'student_name', 'meeting_link_1', 'meeting_link_2'],
+        ['STU_001', 'Student 1', 'https://meet.google.com/link-1', ''],
+        ['STU_002', 'Student 2', 'https://meet.google.com/link-2', ''],
+        ['STU_003', 'Student 3', 'https://meet.google.com/link-3', ''],
+        ['STU_007', 'Student 7', 'https://meet.google.com/shared-room', ''],
+        ['STU_008', 'Student 8', 'https://meet.google.com/shared-room', ''],
+        ['STU_004', 'Student 4', '', ''],
+        ['STU_005', 'Student 5', '', ''],
+        ['STU_006', 'Student 6', '', '']
+      ];
+
+      prodSs.insertSheet('StudentNotes').rows = [
+        ['student_id', 'student_name', 'note_date', 'note_text', 'follow_up_date'],
+        ['STU_004', 'Student 4', '2026-09-13', 'Calculus review session', ''],
+        ['STU_004', 'Student 4', '2026-10-04', 'Exam prep session', ''],
+        ['STU_005', 'Student 5', '2026-08-28', 'Introductory lab notes', '']
+      ];
+
+      // Execute migration
+      const mig = runFourTableCanonicalMigration(prodSs);
+      expect(mig.success).toBe(true);
+
+      // Verify post-migration verification function reports VERIFIED_SUCCESSFUL
+      const verif = runFourTablePostMigrationVerification(prodSs);
+      expect(verif.conclusion).toBe('VERIFIED_SUCCESSFUL');
+      expect(verif.canonicalTabsStatus.canonicalFourPresent).toBe(true);
+      expect(verif.canonicalTabsStatus.meetingLinksDeleted).toBe(true);
+      expect(verif.canonicalTabsStatus.studentNotesDeleted).toBe(true);
+      expect(verif.meetingLinkVerification.withPrimaryLink).toBe(5);
+      expect(verif.meetingLinkVerification.sharedUrlIdentical).toBe(true);
+      expect(verif.sessionNotesVerification.sessionsWithNotes).toBe(3);
+      expect(verif.sessionNotesVerification.expectedNotesMatched.stu004_2026_09_13).toBe(true);
+      expect(verif.sessionNotesVerification.expectedNotesMatched.stu004_2026_10_04).toBe(true);
+      expect(verif.sessionNotesVerification.expectedNotesMatched.stu005_2026_08_28).toBe(true);
+      expect(verif.packagesAndPaymentsVerification.packagesMatchExpected).toBe(true);
+      expect(verif.packagesAndPaymentsVerification.paymentsMatchExpected).toBe(true);
     });
   });
 });

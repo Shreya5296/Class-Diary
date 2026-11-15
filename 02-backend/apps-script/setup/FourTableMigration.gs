@@ -839,6 +839,260 @@ function runFourTableMigrationPreflight(spreadsheet) {
   return preflight;
 }
 
+function runFourTablePostMigrationVerification(spreadsheet) {
+  var ss = spreadsheet;
+  if (!ss) {
+    if (typeof SpreadsheetApp !== 'undefined' && typeof SpreadsheetApp.openById === 'function') {
+      try {
+        ss = SpreadsheetApp.openById(CANONICAL_SPREADSHEET_ID);
+      } catch (e) {
+        return { success: false, code: 'OPEN_FAILED', message: e.message };
+      }
+    }
+  }
+  if (!ss) return { success: false, code: 'UNAVAILABLE', message: 'Spreadsheet unavailable' };
+
+  var result = {
+    spreadsheetId: ss.getId(),
+    spreadsheetName: typeof ss.getName === 'function' ? ss.getName() : 'Personal Dashboard',
+    actualTabs: [],
+    canonicalTabsStatus: {
+      canonicalFourPresent: true,
+      missingCanonicalTabs: [],
+      meetingLinksDeleted: false,
+      studentNotesDeleted: false
+    },
+    archiveTabs: [],
+    schemas: {},
+    rowCounts: {
+      headerInclusive: {},
+      dataRows: {}
+    },
+    meetingLinkVerification: {
+      totalStudents: 0,
+      withPrimaryLink: 0,
+      withoutPrimaryLink: 0,
+      sharedUrlStudents: [],
+      sharedUrlIdentical: false,
+      studentLinks: []
+    },
+    sessionNotesVerification: {
+      totalSessions: 0,
+      sessionsWithNotes: 0,
+      notesFound: [],
+      expectedNotesMatched: {
+        stu004_2026_09_13: false,
+        stu004_2026_10_04: false,
+        stu005_2026_08_28: false
+      },
+      duplicateNotesFound: false,
+      cancellationReasonIntact: false
+    },
+    packagesAndPaymentsVerification: {
+      packagesDataRows: 0,
+      paymentsDataRows: 0,
+      packagesMatchExpected: false,
+      paymentsMatchExpected: false
+    },
+    discrepancies: [],
+    conclusion: 'PENDING'
+  };
+
+  // 1. Tab inventory
+  var sheets = typeof ss.getSheets === 'function' ? ss.getSheets() : [];
+  var tabNameMap = {};
+  for (var i = 0; i < sheets.length; i++) {
+    var name = sheets[i].getName();
+    result.actualTabs.push(name);
+    tabNameMap[name] = true;
+    if (name.indexOf('_Archived_') === 0 || name.indexOf('_Backup_') === 0) {
+      result.archiveTabs.push(name);
+    }
+  }
+
+  var expectedCanonical = ['Students', 'Packages', 'Payments', 'ClassSessions'];
+  for (var c = 0; c < expectedCanonical.length; c++) {
+    if (!tabNameMap[expectedCanonical[c]]) {
+      result.canonicalTabsStatus.canonicalFourPresent = false;
+      result.canonicalTabsStatus.missingCanonicalTabs.push(expectedCanonical[c]);
+      result.discrepancies.push('Missing canonical tab: ' + expectedCanonical[c]);
+    }
+  }
+
+  result.canonicalTabsStatus.meetingLinksDeleted = !tabNameMap['MeetingLinks'];
+  result.canonicalTabsStatus.studentNotesDeleted = !tabNameMap['StudentNotes'];
+  if (tabNameMap['MeetingLinks']) {
+    result.discrepancies.push('MeetingLinks tab was NOT deleted');
+  }
+  if (tabNameMap['StudentNotes']) {
+    result.discrepancies.push('StudentNotes tab was NOT deleted');
+  }
+
+  // 2. Students verification
+  var stuSheet = ss.getSheetByName('Students');
+  var stuData = [];
+  if (stuSheet) {
+    var sLastRow = stuSheet.getLastRow();
+    result.rowCounts.headerInclusive['Students'] = sLastRow;
+    result.rowCounts.dataRows['Students'] = Math.max(0, sLastRow - 1);
+    if (sLastRow > 0) {
+      stuData = stuSheet.getDataRange().getValues();
+      var sHeaders = stuData[0] || [];
+      result.schemas['Students'] = sHeaders;
+      var sIdIdx = sHeaders.indexOf('student_id');
+      var sLinkIdx = sHeaders.indexOf('primary_meeting_link');
+
+      if (sLinkIdx === -1) {
+        result.discrepancies.push('Students tab missing primary_meeting_link column');
+      }
+
+      result.meetingLinkVerification.totalStudents = stuData.length - 1;
+      var stu7Link = '', stu8Link = '';
+
+      for (var sr = 1; sr < stuData.length; sr++) {
+        var sid = String(stuData[sr][sIdIdx] || '').trim();
+        var link = sLinkIdx !== -1 ? String(stuData[sr][sLinkIdx] || '').trim() : '';
+        result.meetingLinkVerification.studentLinks.push({ student_id: sid, primary_meeting_link: link });
+        if (link) {
+          result.meetingLinkVerification.withPrimaryLink++;
+        } else {
+          result.meetingLinkVerification.withoutPrimaryLink++;
+        }
+        if (sid === 'STU_007') stu7Link = link;
+        if (sid === 'STU_008') stu8Link = link;
+      }
+
+      if (stu7Link && stu8Link && stu7Link === stu8Link) {
+        result.meetingLinkVerification.sharedUrlIdentical = true;
+        result.meetingLinkVerification.sharedUrlStudents = ['STU_007', 'STU_008'];
+      } else if (stu7Link || stu8Link) {
+        result.discrepancies.push('STU_007 and STU_008 shared Google Meet URL mismatch: STU_007=' + stu7Link + ', STU_008=' + stu8Link);
+      }
+    }
+  }
+
+  // 3. ClassSessions verification
+  var clsSheet = ss.getSheetByName('ClassSessions');
+  if (clsSheet) {
+    var cLastRow = clsSheet.getLastRow();
+    result.rowCounts.headerInclusive['ClassSessions'] = cLastRow;
+    result.rowCounts.dataRows['ClassSessions'] = Math.max(0, cLastRow - 1);
+    result.sessionNotesVerification.totalSessions = Math.max(0, cLastRow - 1);
+
+    if (cLastRow > 0) {
+      var cData = clsSheet.getDataRange().getValues();
+      var cHeaders = cData[0] || [];
+      result.schemas['ClassSessions'] = cHeaders;
+
+      var cSidIdx = cHeaders.indexOf('student_id');
+      var cDateIdx = cHeaders.indexOf('schedule_date');
+      if (cDateIdx === -1) cDateIdx = cHeaders.indexOf('class_date');
+      var cNotesIdx = cHeaders.indexOf('session_notes');
+      var cCancelIdx = cHeaders.indexOf('cancellation_reason');
+
+      if (cNotesIdx === -1) {
+        result.discrepancies.push('ClassSessions tab missing session_notes column');
+      }
+      if (cCancelIdx === -1) {
+        result.discrepancies.push('ClassSessions tab missing cancellation_reason column');
+      } else {
+        result.sessionNotesVerification.cancellationReasonIntact = (cCancelIdx !== cNotesIdx);
+      }
+
+      var seenNotesInSession = {};
+      for (var cr = 1; cr < cData.length; cr++) {
+        var csid = String(cData[cr][cSidIdx] || '').trim();
+        var cdate = _normalizeNoteDate(cData[cr][cDateIdx]);
+        var cnotes = cNotesIdx !== -1 ? String(cData[cr][cNotesIdx] || '').trim() : '';
+        var ccancel = cCancelIdx !== -1 ? String(cData[cr][cCancelIdx] || '').trim() : '';
+
+        if (cnotes) {
+          result.sessionNotesVerification.sessionsWithNotes++;
+          var noteKey = csid + '||' + cdate;
+          if (seenNotesInSession[noteKey]) {
+            result.sessionNotesVerification.duplicateNotesFound = true;
+            result.discrepancies.push('Duplicate note in session: ' + noteKey);
+          }
+          seenNotesInSession[noteKey] = true;
+
+          result.sessionNotesVerification.notesFound.push({
+            student_id: csid,
+            schedule_date: cdate,
+            session_notes: cnotes,
+            cancellation_reason: ccancel
+          });
+
+          if (csid === 'STU_004' && cdate === '2026-09-13') {
+            result.sessionNotesVerification.expectedNotesMatched.stu004_2026_09_13 = true;
+          }
+          if (csid === 'STU_004' && cdate === '2026-10-04') {
+            result.sessionNotesVerification.expectedNotesMatched.stu004_2026_10_04 = true;
+          }
+          if (csid === 'STU_005' && cdate === '2026-08-28') {
+            result.sessionNotesVerification.expectedNotesMatched.stu005_2026_08_28 = true;
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Packages verification
+  var pkgSheet = ss.getSheetByName('Packages');
+  if (pkgSheet) {
+    var pLastRow = pkgSheet.getLastRow();
+    result.rowCounts.headerInclusive['Packages'] = pLastRow;
+    result.rowCounts.dataRows['Packages'] = Math.max(0, pLastRow - 1);
+    result.packagesAndPaymentsVerification.packagesDataRows = Math.max(0, pLastRow - 1);
+    result.packagesAndPaymentsVerification.packagesMatchExpected = (result.packagesAndPaymentsVerification.packagesDataRows === 9);
+    if (pLastRow > 0) {
+      result.schemas['Packages'] = (pkgSheet.getDataRange().getValues()[0] || []);
+    }
+  }
+
+  // 5. Payments verification
+  var paySheet = ss.getSheetByName('Payments');
+  if (paySheet) {
+    var pyLastRow = paySheet.getLastRow();
+    result.rowCounts.headerInclusive['Payments'] = pyLastRow;
+    result.rowCounts.dataRows['Payments'] = Math.max(0, pyLastRow - 1);
+    result.packagesAndPaymentsVerification.paymentsDataRows = Math.max(0, pyLastRow - 1);
+    result.packagesAndPaymentsVerification.paymentsMatchExpected = (result.packagesAndPaymentsVerification.paymentsDataRows === 13);
+    if (pyLastRow > 0) {
+      result.schemas['Payments'] = (paySheet.getDataRange().getValues()[0] || []);
+    }
+  }
+
+  // 6. Conclusion
+  var allExpectedMatched = (
+    result.sessionNotesVerification.expectedNotesMatched.stu004_2026_09_13 &&
+    result.sessionNotesVerification.expectedNotesMatched.stu004_2026_10_04 &&
+    result.sessionNotesVerification.expectedNotesMatched.stu005_2026_08_28
+  );
+
+  var passed = (
+    result.canonicalTabsStatus.canonicalFourPresent &&
+    result.canonicalTabsStatus.meetingLinksDeleted &&
+    result.canonicalTabsStatus.studentNotesDeleted &&
+    result.meetingLinkVerification.withPrimaryLink === 5 &&
+    result.sessionNotesVerification.sessionsWithNotes === 3 &&
+    allExpectedMatched &&
+    !result.sessionNotesVerification.duplicateNotesFound &&
+    result.sessionNotesVerification.cancellationReasonIntact &&
+    result.packagesAndPaymentsVerification.packagesMatchExpected &&
+    result.packagesAndPaymentsVerification.paymentsMatchExpected &&
+    result.discrepancies.length === 0
+  );
+
+  result.conclusion = passed ? 'VERIFIED_SUCCESSFUL' : 'VERIFICATION_DISCREPANCIES_DETECTED';
+
+  if (typeof Logger !== 'undefined' && typeof Logger.log === 'function') {
+    Logger.log('=== FOUR-TABLE POST-MIGRATION VERIFICATION REPORT ===');
+    Logger.log(JSON.stringify(result, null, 2));
+  }
+
+  return result;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CANONICAL_SPREADSHEET_ID: CANONICAL_SPREADSHEET_ID,
@@ -846,6 +1100,7 @@ if (typeof module !== 'undefined' && module.exports) {
     runFourTableMigrationWithoutBackups: runFourTableMigrationWithoutBackups,
     generatePreMigrationInventory: generatePreMigrationInventory,
     runFourTableMigrationPreflight: runFourTableMigrationPreflight,
+    runFourTablePostMigrationVerification: runFourTablePostMigrationVerification,
     createIndependentSpreadsheetSnapshot: createIndependentSpreadsheetSnapshot
   };
 }
