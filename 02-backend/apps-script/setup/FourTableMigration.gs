@@ -12,15 +12,40 @@
  * - Fully idempotent.
  */
 
+var CANONICAL_SPREADSHEET_ID = '1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8';
+
 function runFourTableCanonicalMigration(spreadsheet, options) {
   var opts = options || {};
+  var expectedId = opts.expectedSpreadsheetId || CANONICAL_SPREADSHEET_ID;
   var ss = spreadsheet;
+
   if (!ss) {
-    if (typeof SpreadsheetApp !== 'undefined' && SpreadsheetApp.getActiveSpreadsheet) {
-      ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (typeof SpreadsheetApp !== 'undefined' && typeof SpreadsheetApp.openById === 'function') {
+      try {
+        ss = SpreadsheetApp.openById(expectedId);
+      } catch (openErr) {
+        return {
+          success: false,
+          code: 'OPEN_FAILED',
+          message: 'Failed to open target spreadsheet (' + expectedId + '): ' + openErr.message
+        };
+      }
     }
   }
-  if (!ss) return { success: false, code: 'UNAVAILABLE', message: 'Spreadsheet unavailable' };
+
+  if (!ss) {
+    return { success: false, code: 'UNAVAILABLE', message: 'Spreadsheet unavailable' };
+  }
+
+  // Strict target ID verification before ANY spreadsheet mutation
+  var actualId = typeof ss.getId === 'function' ? ss.getId() : '';
+  if (actualId !== expectedId) {
+    return {
+      success: false,
+      code: 'INVALID_TARGET',
+      message: 'Target spreadsheet ID verification failed. Expected: ' + expectedId + ', got: ' + (actualId || 'unknown')
+    };
+  }
 
   var report = {
     originalRowCounts: {},
@@ -32,6 +57,7 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
     migratedNotes: 0,
     unmatchedNotes: [],
     ambiguousNotes: [],
+    matchedFollowUpNotes: [],
     backupsCreated: [],
     archivedTabs: [],
     errors: [],
@@ -246,11 +272,22 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
           // Already contains note (idempotent)
           report.migratedNotes++;
         }
+
+        // Preserve matched note with follow-up date in structured archive
+        if (nFollowUp) {
+          report.matchedFollowUpNotes.push({
+            student_id: nSid,
+            note_date: nDate,
+            note_text: nText,
+            follow_up_date: nFollowUp
+          });
+        }
       } else if (matchingSessions.length > 1) {
         report.ambiguousNotes.push({
           student_id: nSid,
           note_date: nDate,
           note_text: nText,
+          follow_up_date: nFollowUp,
           matchCount: matchingSessions.length
         });
       } else {
@@ -264,21 +301,53 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
     }
   }
 
-  // 6. ARCHIVE UNMATCHED NOTES SAFELY
-  if (report.unmatchedNotes.length > 0 || report.ambiguousNotes.length > 0) {
+  // 6. ARCHIVE UNMATCHED, AMBIGUOUS, AND FOLLOW-UP NOTES SAFELY & IDEMPOTENTLY
+  var hasArchiveItems = (report.unmatchedNotes.length > 0 ||
+                         report.ambiguousNotes.length > 0 ||
+                         report.matchedFollowUpNotes.length > 0);
+
+  if (hasArchiveItems) {
     var archSheet = ss.getSheetByName('_Archived_Historical_Notes');
     if (!archSheet) {
       archSheet = ss.insertSheet('_Archived_Historical_Notes');
       archSheet.appendRow(['student_id', 'note_date', 'note_text', 'follow_up_date', 'archived_reason']);
       report.archivedTabs.push('_Archived_Historical_Notes');
     }
+
+    // Build deduplication index from existing archive rows
+    var existingArchiveKeys = {};
+    if (archSheet.getLastRow() > 1) {
+      var archData = archSheet.getDataRange().getValues();
+      for (var ar = 1; ar < archData.length; ar++) {
+        var aSid = String(archData[ar][0] || '').trim();
+        var aDate = String(archData[ar][1] || '').trim();
+        var aText = String(archData[ar][2] || '').trim();
+        var aFollow = String(archData[ar][3] || '').trim();
+        var aReason = String(archData[ar][4] || '').trim();
+        var sig = aSid + '||' + aDate + '||' + aText + '||' + aFollow + '||' + aReason;
+        existingArchiveKeys[sig] = true;
+      }
+    }
+
+    function _appendArchiveRowIfNotExists(sid, dt, txt, follow, reason) {
+      var rowSig = sid + '||' + dt + '||' + txt + '||' + (follow || '') + '||' + reason;
+      if (!existingArchiveKeys[rowSig]) {
+        archSheet.appendRow([sid, dt, txt, follow || '', reason]);
+        existingArchiveKeys[rowSig] = true;
+      }
+    }
+
     for (var u = 0; u < report.unmatchedNotes.length; u++) {
       var un = report.unmatchedNotes[u];
-      archSheet.appendRow([un.student_id, un.note_date, un.note_text, un.follow_up_date || '', 'UNMATCHED_NO_SESSION_ON_DATE']);
+      _appendArchiveRowIfNotExists(un.student_id, un.note_date, un.note_text, un.follow_up_date, 'UNMATCHED_NO_SESSION_ON_DATE');
     }
     for (var a = 0; a < report.ambiguousNotes.length; a++) {
       var an = report.ambiguousNotes[a];
-      archSheet.appendRow([an.student_id, an.note_date, an.note_text, '', 'AMBIGUOUS_MULTIPLE_SESSIONS']);
+      _appendArchiveRowIfNotExists(an.student_id, an.note_date, an.note_text, an.follow_up_date, 'AMBIGUOUS_MULTIPLE_SESSIONS');
+    }
+    for (var m = 0; m < report.matchedFollowUpNotes.length; m++) {
+      var mf = report.matchedFollowUpNotes[m];
+      _appendArchiveRowIfNotExists(mf.student_id, mf.note_date, mf.note_text, mf.follow_up_date, 'MATCHED_WITH_FOLLOW_UP_DATE');
     }
   }
 
