@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MockSpreadsheet } from '../mocks/MockSpreadsheet';
 // @ts-expect-error Apps script commonjs export
-import { runFourTableCanonicalMigration, generatePreMigrationInventory } from '../../02-backend/apps-script/setup/FourTableMigration.gs';
+import { runFourTableCanonicalMigration, generatePreMigrationInventory, runFourTableMigrationPreflight } from '../../02-backend/apps-script/setup/FourTableMigration.gs';
 
 describe('FourTableMigration Hardened Targeting and Follow-up Archive Harness', () => {
   let spreadsheet: MockSpreadsheet;
@@ -159,6 +159,29 @@ describe('FourTableMigration Hardened Targeting and Follow-up Archive Harness', 
       expect(inv.rowCounts['StudentNotes']).toBe(5);
       expect(inv.headers['Students']).toContain('student_id');
       expect(inv.headers['ClassSessions']).toContain('schedule_date');
+    });
+
+    it('executes read-only preflight and reports record-level analysis accurately without modifying data', () => {
+      const pf = runFourTableMigrationPreflight(spreadsheet);
+      expect(pf.meetingLinksAnalysis.totalRecords).toBe(1);
+      expect(pf.meetingLinksAnalysis.withLink1).toBe(1);
+      expect(pf.meetingLinksAnalysis.withLink2).toBe(0);
+      expect(pf.meetingLinksAnalysis.orphanedStudentIds.length).toBe(0);
+
+      expect(pf.studentNotesAnalysis.totalNotes).toBe(4);
+      expect(pf.studentNotesAnalysis.matchedExactlyOne).toBe(2);
+      expect(pf.studentNotesAnalysis.matchedMultiple).toBe(1); // stu_02 on 2026-03-15
+      expect(pf.studentNotesAnalysis.matchedNone).toBe(1); // stu_01 on 2026-04-01
+      expect(pf.studentNotesAnalysis.withFollowUpDate).toBe(3);
+
+      expect(pf.classSessionsAnalysis.totalSessions).toBe(4);
+      expect(pf.classSessionsAnalysis.duplicateStudentDateSessions.length).toBe(1);
+
+      // Verify no changes were made to sheets
+      expect(spreadsheet.getSheetByName('Students')!.rows[0].includes('primary_meeting_link')).toBe(false);
+      expect(spreadsheet.getSheetByName('ClassSessions')!.rows[0].includes('session_notes')).toBe(false);
+      expect(spreadsheet.getSheetByName('MeetingLinks')).toBeDefined();
+      expect(spreadsheet.getSheetByName('StudentNotes')).toBeDefined();
     });
   });
 });

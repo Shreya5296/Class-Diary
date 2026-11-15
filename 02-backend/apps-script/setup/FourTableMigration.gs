@@ -14,6 +14,26 @@
 
 var CANONICAL_SPREADSHEET_ID = '1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8';
 
+function _normalizeNoteDate(dVal) {
+  if (!dVal) return '';
+  if (dVal instanceof Date) {
+    var y = dVal.getFullYear();
+    var m = dVal.getMonth() + 1;
+    var d = dVal.getDate();
+    return y + '-' + (m < 10 ? '0' + m : String(m)) + '-' + (d < 10 ? '0' + d : String(d));
+  }
+  var str = String(dVal).trim().replace(/^'/, '');
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
+    var parts = str.split('/');
+    var dy = parts[2];
+    var dm = parts[1].length < 2 ? '0' + parts[1] : parts[1];
+    var dd = parts[0].length < 2 ? '0' + parts[0] : parts[0];
+    return dy + '-' + dm + '-' + dd;
+  }
+  return str.slice(0, 10);
+}
+
 function runFourTableCanonicalMigration(spreadsheet, options) {
   var opts = options || {};
   var expectedId = opts.expectedSpreadsheetId || CANONICAL_SPREADSHEET_ID;
@@ -199,26 +219,6 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
   }
 
   // 5. MIGRATE STUDENT NOTES
-  function _normalizeNoteDate(dVal) {
-    if (!dVal) return '';
-    if (dVal instanceof Date) {
-      var y = dVal.getFullYear();
-      var m = dVal.getMonth() + 1;
-      var d = dVal.getDate();
-      return y + '-' + (m < 10 ? '0' + m : String(m)) + '-' + (d < 10 ? '0' + d : String(d));
-    }
-    var str = String(dVal).trim().replace(/^'/, '');
-    if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
-      var parts = str.split('/');
-      var dy = parts[2];
-      var dm = parts[1].length < 2 ? '0' + parts[1] : parts[1];
-      var dd = parts[0].length < 2 ? '0' + parts[0] : parts[0];
-      return dy + '-' + dm + '-' + dd;
-    }
-    return str.slice(0, 10);
-  }
-
   if (notesSheet && notesSheet.getLastRow() > 1) {
     var noteData = notesSheet.getDataRange().getValues();
     var noteHeaders = noteData[0] || [];
@@ -468,12 +468,246 @@ function createIndependentSpreadsheetSnapshot() {
   return result;
 }
 
+function runFourTableMigrationPreflight(spreadsheet) {
+  var ss = spreadsheet;
+  if (!ss) {
+    if (typeof SpreadsheetApp !== 'undefined' && typeof SpreadsheetApp.openById === 'function') {
+      try {
+        ss = SpreadsheetApp.openById(CANONICAL_SPREADSHEET_ID);
+      } catch (e) {
+        return { success: false, code: 'OPEN_FAILED', message: e.message };
+      }
+    }
+  }
+  if (!ss) return { success: false, code: 'UNAVAILABLE', message: 'Spreadsheet unavailable' };
+
+  var preflight = {
+    spreadsheetId: ss.getId(),
+    spreadsheetName: typeof ss.getName === 'function' ? ss.getName() : 'Personal Dashboard',
+    meetingLinksAnalysis: {
+      totalRecords: 0,
+      withLink1: 0,
+      withLink2: 0,
+      bothIdentical: 0,
+      bothDiffer: 0,
+      orphanedStudentIds: [],
+      cannotBeMappedSafely: [],
+      studentsAlreadyHavePrimaryLink: 0,
+      recordDetails: []
+    },
+    studentNotesAnalysis: {
+      totalNotes: 0,
+      matchedExactlyOne: 0,
+      matchedMultiple: 0,
+      matchedNone: 0,
+      withFollowUpDate: 0,
+      duplicates: [],
+      preservationConfirmed: true,
+      recordDetails: []
+    },
+    classSessionsAnalysis: {
+      totalSessions: 0,
+      targetColumnSessionNotesIndex: -1,
+      targetColumnAlreadyExists: false,
+      existingNonEmptySessionNotes: 0,
+      duplicateStudentDateSessions: []
+    },
+    safetyVerification: {
+      verifiedConditions: "report.verified requires: final Students row count equals original, final ClassSessions row count equals original, and errors array is empty (errors.length === 0)",
+      conflictsPreventDeletion: false,
+      orphansPreventDeletion: false,
+      ambiguousPreventDeletion: false,
+      duplicateNotesPreventedByIdempotencyKey: true
+    },
+    conclusion: 'PENDING'
+  };
+
+  // 1. Read Students
+  var stuSheet = ss.getSheetByName('Students');
+  var stuMap = {};
+  if (stuSheet && stuSheet.getLastRow() > 1) {
+    var sData = stuSheet.getDataRange().getValues();
+    var sHeaders = sData[0];
+    var sIdIdx = sHeaders.indexOf('student_id');
+    var sLinkIdx = sHeaders.indexOf('primary_meeting_link');
+    preflight.meetingLinksAnalysis.studentsAlreadyHavePrimaryLink = 0;
+    for (var r = 1; r < sData.length; r++) {
+      var sid = String(sData[r][sIdIdx] || '').trim();
+      if (sid) {
+        stuMap[sid] = true;
+        if (sLinkIdx !== -1 && String(sData[r][sLinkIdx] || '').trim()) {
+          preflight.meetingLinksAnalysis.studentsAlreadyHavePrimaryLink++;
+        }
+      }
+    }
+  }
+
+  // 2. Read MeetingLinks
+  var mlSheet = ss.getSheetByName('MeetingLinks');
+  if (mlSheet && mlSheet.getLastRow() > 1) {
+    var mlData = mlSheet.getDataRange().getValues();
+    var mlHeaders = mlData[0];
+    var mlSidIdx = mlHeaders.indexOf('student_id');
+    var mlL1Idx = mlHeaders.indexOf('meeting_link_1');
+    var mlL2Idx = mlHeaders.indexOf('meeting_link_2');
+
+    preflight.meetingLinksAnalysis.totalRecords = mlData.length - 1;
+    for (var m = 1; m < mlData.length; m++) {
+      var mRow = mlData[m];
+      var mSid = String(mRow[mlSidIdx] || '').trim();
+      var l1 = String(mRow[mlL1Idx] || '').trim();
+      var l2 = String(mRow[mlL2Idx] || '').trim();
+
+      if (l1) preflight.meetingLinksAnalysis.withLink1++;
+      if (l2) preflight.meetingLinksAnalysis.withLink2++;
+
+      var isIdentical = (l1 && l2 && l1 === l2);
+      var isDiffer = (l1 && l2 && l1 !== l2);
+      if (isIdentical) preflight.meetingLinksAnalysis.bothIdentical++;
+      if (isDiffer) preflight.meetingLinksAnalysis.bothDiffer++;
+
+      var isOrphan = !stuMap[mSid];
+      if (isOrphan) {
+        preflight.meetingLinksAnalysis.orphanedStudentIds.push(mSid);
+      }
+      if (isDiffer || isOrphan || (!l1 && !l2)) {
+        preflight.meetingLinksAnalysis.cannotBeMappedSafely.push({ student_id: mSid, reason: isOrphan ? 'ORPHAN_STUDENT_ID' : (isDiffer ? 'CONFLICTING_LINKS' : 'EMPTY_LINKS') });
+      }
+
+      preflight.meetingLinksAnalysis.recordDetails.push({
+        student_id: mSid,
+        hasLink1: !!l1,
+        hasLink2: !!l2,
+        isIdentical: isIdentical,
+        isConflict: isDiffer,
+        isOrphan: isOrphan,
+        chosenLink: l1 || l2 || ''
+      });
+    }
+  }
+
+  // 3. Read ClassSessions
+  var clsSheet = ss.getSheetByName('ClassSessions');
+  var sessionDateCountMap = {};
+  var clsData = [];
+  var clsDateIdx = -1;
+  var clsSidIdx = -1;
+  var clsNotesIdx = -1;
+
+  if (clsSheet && clsSheet.getLastRow() > 1) {
+    clsData = clsSheet.getDataRange().getValues();
+    var clsHeaders = clsData[0];
+    clsSidIdx = clsHeaders.indexOf('student_id');
+    clsDateIdx = clsHeaders.indexOf('schedule_date');
+    if (clsDateIdx === -1) clsDateIdx = clsHeaders.indexOf('class_date');
+    clsNotesIdx = clsHeaders.indexOf('session_notes');
+
+    preflight.classSessionsAnalysis.totalSessions = clsData.length - 1;
+    preflight.classSessionsAnalysis.targetColumnAlreadyExists = (clsNotesIdx !== -1);
+    preflight.classSessionsAnalysis.targetColumnSessionNotesIndex = (clsNotesIdx !== -1 ? clsNotesIdx + 1 : clsHeaders.length + 1);
+
+    for (var c = 1; c < clsData.length; c++) {
+      var cSid = String(clsData[c][clsSidIdx] || '').trim();
+      var cDate = _normalizeNoteDate(clsData[c][clsDateIdx]);
+      var cNotes = clsNotesIdx !== -1 ? String(clsData[c][clsNotesIdx] || '').trim() : '';
+      if (cNotes) {
+        preflight.classSessionsAnalysis.existingNonEmptySessionNotes++;
+      }
+      var key = cSid + '||' + cDate;
+      sessionDateCountMap[key] = (sessionDateCountMap[key] || 0) + 1;
+    }
+
+    for (var k in sessionDateCountMap) {
+      if (sessionDateCountMap[k] > 1) {
+        var parts = k.split('||');
+        preflight.classSessionsAnalysis.duplicateStudentDateSessions.push({
+          student_id: parts[0],
+          schedule_date: parts[1],
+          sessionCount: sessionDateCountMap[k]
+        });
+      }
+    }
+  }
+
+  // 4. Read StudentNotes
+  var notesSheet = ss.getSheetByName('StudentNotes');
+  var seenNoteSigs = {};
+  if (notesSheet && notesSheet.getLastRow() > 1) {
+    var nData = notesSheet.getDataRange().getValues();
+    var nHeaders = nData[0];
+    var nSidIdx = nHeaders.indexOf('student_id');
+    var nDateIdx = nHeaders.indexOf('note_date');
+    var nTextIdx = nHeaders.indexOf('note_text');
+    var nFollowIdx = nHeaders.indexOf('follow_up_date');
+
+    preflight.studentNotesAnalysis.totalNotes = nData.length - 1;
+
+    for (var n = 1; n < nData.length; n++) {
+      var nSid = String(nData[n][nSidIdx] || '').trim();
+      var nDate = _normalizeNoteDate(nData[n][nDateIdx]);
+      var nText = String(nData[n][nTextIdx] || '').trim();
+      var nFollow = _normalizeNoteDate(nData[n][nFollowIdx]);
+
+      if (nFollow) preflight.studentNotesAnalysis.withFollowUpDate++;
+
+      var sig = nSid + '||' + nDate + '||' + nText + '||' + nFollow;
+      if (seenNoteSigs[sig]) {
+        preflight.studentNotesAnalysis.duplicates.push({ student_id: nSid, note_date: nDate, row: n + 1 });
+      }
+      seenNoteSigs[sig] = true;
+
+      // Find matches in ClassSessions
+      var matchCount = 0;
+      for (var cr = 1; cr < clsData.length; cr++) {
+        var csid = String(clsData[cr][clsSidIdx] || '').trim();
+        var cdate = _normalizeNoteDate(clsData[cr][clsDateIdx]);
+        if (csid === nSid && cdate === nDate) {
+          matchCount++;
+        }
+      }
+
+      if (matchCount === 1) preflight.studentNotesAnalysis.matchedExactlyOne++;
+      else if (matchCount > 1) preflight.studentNotesAnalysis.matchedMultiple++;
+      else preflight.studentNotesAnalysis.matchedNone++;
+
+      var destination = matchCount === 1 
+        ? (nFollow ? 'ClassSessions.session_notes AND _Archived_Historical_Notes' : 'ClassSessions.session_notes')
+        : '_Archived_Historical_Notes';
+
+      preflight.studentNotesAnalysis.recordDetails.push({
+        student_id: nSid,
+        note_date: nDate,
+        hasFollowUp: !!nFollow,
+        follow_up_date: nFollow,
+        matchCount: matchCount,
+        destination: destination
+      });
+    }
+  }
+
+  var hasBlockers = (
+    preflight.meetingLinksAnalysis.cannotBeMappedSafely.length > 0 ||
+    preflight.studentNotesAnalysis.matchedMultiple > 0 ||
+    preflight.studentNotesAnalysis.duplicates.length > 0
+  );
+
+  preflight.conclusion = hasBlockers ? 'BLOCKED — DATA RECONCILIATION REQUIRED' : 'READY TO MIGRATE';
+
+  if (typeof Logger !== 'undefined' && typeof Logger.log === 'function') {
+    Logger.log('=== FOUR-TABLE MIGRATION READ-ONLY PREFLIGHT REPORT ===');
+    Logger.log(JSON.stringify(preflight, null, 2));
+  }
+
+  return preflight;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CANONICAL_SPREADSHEET_ID: CANONICAL_SPREADSHEET_ID,
     runFourTableCanonicalMigration: runFourTableCanonicalMigration,
     runFourTableMigrationWithoutBackups: runFourTableMigrationWithoutBackups,
     generatePreMigrationInventory: generatePreMigrationInventory,
+    runFourTableMigrationPreflight: runFourTableMigrationPreflight,
     createIndependentSpreadsheetSnapshot: createIndependentSpreadsheetSnapshot
   };
 }
