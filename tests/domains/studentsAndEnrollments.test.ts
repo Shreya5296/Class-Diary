@@ -85,7 +85,8 @@ describe('Phase 5 — Students and Enrollments Domain Services', () => {
       parent_phone: '9876543210',
       parent_email: 'parent@example.com',
       subject: 'Science',
-      notes: ''
+      notes: '',
+      primary_meeting_link: 'https://meet.google.com/test-link'
     };
 
     // 1. Frontend adapter maps to clean backend payload
@@ -96,6 +97,7 @@ describe('Phase 5 — Students and Enrollments Domain Services', () => {
     expect(adapted.parent_email).toBe('parent@example.com');
     expect(adapted.student_email).toBe('student@example.com');
     expect(adapted.subject).toBe('Science');
+    expect(adapted.primary_meeting_link).toBe('https://meet.google.com/test-link');
 
     // Obsolete fields must not be injected
     expect(adapted.first_name).toBeUndefined();
