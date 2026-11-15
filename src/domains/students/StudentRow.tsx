@@ -3,7 +3,7 @@ import { Student } from './studentTypes';
 import { WeeklyScheduleEntry } from '../classes/scheduleApi';
 import { Package } from '../packages/packageTypes';
 import { StudentFinancialInfo } from './useStudentAggregates';
-import { formatClassBalance } from './classBalanceFormatter';
+import { formatClassBalance, formatRemainingClasses } from './classBalanceFormatter';
 import { formatWeeklySchedule } from './scheduleFormatter';
 import { StudentCell } from './StudentCell';
 import { StudentExpandedDetails } from './StudentExpandedDetails';
@@ -40,6 +40,8 @@ export const StudentRow: React.FC<StudentRowProps> = ({
 }) => {
   const scheduleText = formatWeeklySchedule(schedule);
   const classBalanceText = formatClassBalance(balance.totalConsumed, balance.totalPurchased);
+  const remainingCount = Math.max(0, (balance.totalPurchased || 0) - (balance.totalConsumed || 0));
+  const remainingText = formatRemainingClasses(balance.totalConsumed, balance.totalPurchased);
   const effectiveActive = isActive !== undefined ? isActive : (student.status || '').trim().toUpperCase() === 'ACTIVE';
   const rowClass = `${rowStyles.row} ${isExpanded ? rowStyles.rowExpanded : ''}`.trim();
 
@@ -62,13 +64,9 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                 key={i}
                 title={subj.trim()}
                 style={{
-                  fontSize: 'var(--font-size-xs)',
-                  fontWeight: 500,
-                  padding: '2px 6px',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: 'var(--color-bg-subtle)',
-                  color: 'var(--color-text-muted)',
-                  border: '1px solid var(--color-border-subtle)',
+                  fontSize: 'var(--font-size-xs)', fontWeight: 500, padding: '2px 6px',
+                  borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-bg-subtle)',
+                  color: 'var(--color-text-muted)', border: '1px solid var(--color-border-subtle)',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -85,11 +83,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               fontSize: 'var(--font-size-xs)',
               color: schedule.length > 0 ? 'var(--color-text-main)' : 'var(--color-text-subtle)',
               fontStyle: schedule.length > 0 ? 'normal' : 'italic',
-              width: '100%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              display: 'block',
+              width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
             }}
           >
             {scheduleText}
@@ -97,21 +91,32 @@ export const StudentRow: React.FC<StudentRowProps> = ({
         </td>
 
         <td style={{ width: STUDENT_TABLE_COLUMNS.classes }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-main)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-            {classBalanceText}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span
+              style={{
+                fontFamily: 'monospace', fontSize: 'var(--font-size-xs)', fontWeight: 600,
+                color: 'var(--color-text-main)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
+              }}
+              title={`${balance.totalConsumed} of ${balance.totalPurchased} classes consumed (${remainingCount} remaining)`}
+            >
+              {classBalanceText}
+            </span>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 500,
+                color: remainingCount > 0 ? 'var(--color-success-text)' : 'var(--color-text-muted)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {remainingText}
+            </span>
+          </div>
         </td>
 
         <td style={{ width: STUDENT_TABLE_COLUMNS.actions, textAlign: 'right' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', minWidth: '48px' }}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditStudent(student);
-              }}
-            >
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEditStudent(student); }}>
               Edit
             </Button>
           </div>

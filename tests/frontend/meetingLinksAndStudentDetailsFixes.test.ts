@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatClassBalance } from '../../src/domains/students/classBalanceFormatter';
+import { formatClassBalance, formatRemainingClasses } from '../../src/domains/students/classBalanceFormatter';
 import { formatWeeklySchedule } from '../../src/domains/students/scheduleFormatter';
 import { detectMeetingPlatform } from '../../src/domains/meeting-links/platformDetector';
 
@@ -78,6 +78,20 @@ describe('Meeting Links and Student Details UI Fixes', () => {
       expect(formatClassBalance(-5, 20)).toBe('00/20');
       expect(formatClassBalance(NaN, 20)).toBe('00/20');
       expect(formatClassBalance(5, NaN)).toBe('05/00');
+    });
+
+    it('formats remaining classes subtitle matching business rules', () => {
+      // 9 consumed / 24 purchased displays 09/24 and 15 left
+      expect(formatClassBalance(9, 24)).toBe('09/24');
+      expect(formatRemainingClasses(9, 24)).toBe('15 left');
+
+      // Zero remaining displays 00 left
+      expect(formatRemainingClasses(24, 24)).toBe('00 left');
+      expect(formatRemainingClasses(12, 12)).toBe('00 left');
+      expect(formatRemainingClasses(0, 0)).toBe('00 left');
+
+      // Partial remaining displays with leading zero
+      expect(formatRemainingClasses(9, 12)).toBe('03 left');
     });
   });
 

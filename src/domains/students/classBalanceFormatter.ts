@@ -15,3 +15,11 @@ export function formatClassBalance(consumed: number, total: number): string {
 
   return `${formattedConsumed}/${formattedTotal}`;
 }
+
+export function formatRemainingClasses(consumed: number, total: number): string {
+  const safeConsumed = Math.max(0, Math.round(consumed || 0));
+  const safeTotal = Math.max(0, Math.round(total || 0));
+  const remaining = Math.max(0, safeTotal - safeConsumed);
+  const digits = Math.max(2, String(safeTotal).length);
+  return `${String(remaining).padStart(digits, '0')} left`;
+}
