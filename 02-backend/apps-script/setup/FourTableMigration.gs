@@ -71,6 +71,7 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
     originalRowCounts: {},
     targetRowCounts: {},
     migratedMeetingLinks: 0,
+    skippedEmptyMeetingLinks: 0,
     conflictingMeetingLinks: [],
     duplicateMeetingLinks: [],
     missingStudentMeetingLinks: [],
@@ -81,6 +82,10 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
     backupsCreated: [],
     archivedTabs: [],
     errors: [],
+    meetingLinksDeletionEligible: false,
+    meetingLinksBlockedReasons: [],
+    studentNotesDeletionEligible: false,
+    studentNotesBlockedReasons: [],
     verified: false,
     success: false
   };
@@ -182,6 +187,12 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
       var link2 = String(row[mlColMap['meeting_link_2']] || '').trim();
 
       if (!mSid) continue;
+
+      // Empty meeting link records contain no data to migrate: skip safely
+      if (!link1 && !link2) {
+        report.skippedEmptyMeetingLinks++;
+        continue;
+      }
 
       if (seenMlStudents[mSid]) {
         report.duplicateMeetingLinks.push({ student_id: mSid, row: mr + 1 });
@@ -351,7 +362,7 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
     }
   }
 
-  // 7. VERIFICATION
+  // 7. INDEPENDENT VERIFICATION & SEPARATE DELETION GATES
   var finalStuCount = stuSheet.getLastRow();
   var finalClsCount = clsSheet.getLastRow();
   report.targetRowCounts['Students'] = finalStuCount;
@@ -362,15 +373,104 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
   report.targetRowCounts['Packages'] = pkgSheet ? pkgSheet.getLastRow() : 0;
   report.targetRowCounts['Payments'] = paySheet ? paySheet.getLastRow() : 0;
 
-  report.verified = (
+  var baseRowCountsPreserved = (
     finalStuCount === report.originalRowCounts['Students'] &&
     finalClsCount === report.originalRowCounts['ClassSessions'] &&
-    report.errors.length === 0
+    report.targetRowCounts['Packages'] === report.originalRowCounts['Packages'] &&
+    report.targetRowCounts['Payments'] === report.originalRowCounts['Payments']
   );
 
-  // 8. REMOVE REDUNDANT TABS ONLY IF VERIFIED AND NOT EXPLICITLY PRESERVED
-  if (report.verified && opts.removeOldTabs !== false) {
-    if (mlSheet) {
+  // 7.1 Independent Deletion Gate: MeetingLinks
+  var mlBlockedReasons = [];
+  if (report.conflictingMeetingLinks.length > 0) {
+    mlBlockedReasons.push('Conflicting meeting links detected: ' + report.conflictingMeetingLinks.length);
+  }
+  if (report.missingStudentMeetingLinks.length > 0) {
+    mlBlockedReasons.push('Orphaned non-empty meeting links detected: ' + report.missingStudentMeetingLinks.length);
+  }
+  if (report.duplicateMeetingLinks.length > 0) {
+    mlBlockedReasons.push('Duplicate student meeting link rows detected: ' + report.duplicateMeetingLinks.length);
+  }
+  if (!baseRowCountsPreserved) {
+    mlBlockedReasons.push('Base row counts not preserved');
+  }
+
+  report.meetingLinksDeletionEligible = (mlBlockedReasons.length === 0 && report.errors.length === 0);
+  report.meetingLinksBlockedReasons = mlBlockedReasons;
+
+  // 7.2 Independent Deletion Gate: StudentNotes
+  var notesBlockedReasons = [];
+  var totalNotesToAccount = (notesSheet && notesSheet.getLastRow() > 1) ? notesSheet.getLastRow() - 1 : 0;
+  var notesAccounted = report.migratedNotes + report.unmatchedNotes.length + report.ambiguousNotes.length;
+
+  if (notesAccounted < totalNotesToAccount) {
+    notesBlockedReasons.push('Unaccounted notes detected: ' + notesAccounted + ' accounted of ' + totalNotesToAccount);
+  }
+
+  var notesRequiringArchive = report.unmatchedNotes.length + report.ambiguousNotes.length + report.matchedFollowUpNotes.length;
+  if (notesRequiringArchive > 0) {
+    var checkArchSheet = ss.getSheetByName('_Archived_Historical_Notes');
+    if (!checkArchSheet || checkArchSheet.getLastRow() <= 1) {
+      notesBlockedReasons.push('Archive verification failed: _Archived_Historical_Notes sheet missing or empty');
+    } else {
+      var archValues = checkArchSheet.getDataRange().getValues();
+      var archSigSet = {};
+      for (var av = 1; av < archValues.length; av++) {
+        var aRow = archValues[av];
+        var asid = String(aRow[0] || '').trim();
+        var adt = String(aRow[1] || '').trim();
+        var atxt = String(aRow[2] || '').trim();
+        var afollow = String(aRow[3] || '').trim();
+        var areason = String(aRow[4] || '').trim();
+        archSigSet[asid + '||' + adt + '||' + atxt + '||' + afollow + '||' + areason] = true;
+      }
+
+      for (var uIdx = 0; uIdx < report.unmatchedNotes.length; uIdx++) {
+        var uItem = report.unmatchedNotes[uIdx];
+        var uSig = uItem.student_id + '||' + uItem.note_date + '||' + uItem.note_text + '||' + (uItem.follow_up_date || '') + '||UNMATCHED_NO_SESSION_ON_DATE';
+        if (!archSigSet[uSig]) {
+          notesBlockedReasons.push('Archive verification missing record for unmatched note: ' + uSig);
+          break;
+        }
+      }
+
+      for (var aIdx = 0; aIdx < report.ambiguousNotes.length; aIdx++) {
+        var aItem = report.ambiguousNotes[aIdx];
+        var aSig = aItem.student_id + '||' + aItem.note_date + '||' + aItem.note_text + '||' + (aItem.follow_up_date || '') + '||AMBIGUOUS_MULTIPLE_SESSIONS';
+        if (!archSigSet[aSig]) {
+          notesBlockedReasons.push('Archive verification missing record for ambiguous note: ' + aSig);
+          break;
+        }
+      }
+
+      for (var fIdx = 0; fIdx < report.matchedFollowUpNotes.length; fIdx++) {
+        var fItem = report.matchedFollowUpNotes[fIdx];
+        var fSig = fItem.student_id + '||' + fItem.note_date + '||' + fItem.note_text + '||' + (fItem.follow_up_date || '') + '||MATCHED_WITH_FOLLOW_UP_DATE';
+        if (!archSigSet[fSig]) {
+          notesBlockedReasons.push('Archive verification missing record for follow-up note: ' + fSig);
+          break;
+        }
+      }
+    }
+  }
+
+  if (!baseRowCountsPreserved) {
+    notesBlockedReasons.push('Base row counts not preserved');
+  }
+
+  report.studentNotesDeletionEligible = (notesBlockedReasons.length === 0 && report.errors.length === 0);
+  report.studentNotesBlockedReasons = notesBlockedReasons;
+
+  report.verified = (
+    baseRowCountsPreserved &&
+    report.errors.length === 0 &&
+    report.meetingLinksDeletionEligible &&
+    report.studentNotesDeletionEligible
+  );
+
+  // 8. REMOVE REDUNDANT TABS WITH INDEPENDENT GATES
+  if (opts.removeOldTabs !== false) {
+    if (mlSheet && report.meetingLinksDeletionEligible) {
       try {
         ss.deleteSheet(mlSheet);
         report.archivedTabs.push('MeetingLinks (deleted)');
@@ -378,7 +478,7 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
         report.errors.push('Could not delete MeetingLinks: ' + e.message);
       }
     }
-    if (notesSheet) {
+    if (notesSheet && report.studentNotesDeletionEligible) {
       try {
         ss.deleteSheet(notesSheet);
         report.archivedTabs.push('StudentNotes (deleted)');
@@ -488,10 +588,12 @@ function runFourTableMigrationPreflight(spreadsheet) {
       totalRecords: 0,
       withLink1: 0,
       withLink2: 0,
+      skippedEmptyLinks: 0,
       bothIdentical: 0,
       bothDiffer: 0,
       orphanedStudentIds: [],
       cannotBeMappedSafely: [],
+      sharedUrlsObservation: [],
       studentsAlreadyHavePrimaryLink: 0,
       recordDetails: []
     },
@@ -513,10 +615,11 @@ function runFourTableMigrationPreflight(spreadsheet) {
       duplicateStudentDateSessions: []
     },
     safetyVerification: {
-      verifiedConditions: "report.verified requires: final Students row count equals original, final ClassSessions row count equals original, and errors array is empty (errors.length === 0)",
-      conflictsPreventDeletion: false,
-      orphansPreventDeletion: false,
-      ambiguousPreventDeletion: false,
+      verifiedConditions: "report.verified requires: base row counts preserved, zero unhandled errors, meetingLinksDeletionEligible === true, and studentNotesDeletionEligible === true",
+      conflictsPreventDeletion: true,
+      orphansPreventDeletion: true,
+      ambiguousPreventDeletion: true,
+      archiveVerificationRequired: true,
       duplicateNotesPreventedByIdempotencyKey: true
     },
     conclusion: 'PENDING'
@@ -552,6 +655,8 @@ function runFourTableMigrationPreflight(spreadsheet) {
     var mlL2Idx = mlHeaders.indexOf('meeting_link_2');
 
     preflight.meetingLinksAnalysis.totalRecords = mlData.length - 1;
+    var urlStudentMap = {};
+
     for (var m = 1; m < mlData.length; m++) {
       var mRow = mlData[m];
       var mSid = String(mRow[mlSidIdx] || '').trim();
@@ -561,6 +666,22 @@ function runFourTableMigrationPreflight(spreadsheet) {
       if (l1) preflight.meetingLinksAnalysis.withLink1++;
       if (l2) preflight.meetingLinksAnalysis.withLink2++;
 
+      // Empty meeting link records contains no data to migrate: skip safely
+      if (!l1 && !l2) {
+        preflight.meetingLinksAnalysis.skippedEmptyLinks++;
+        preflight.meetingLinksAnalysis.recordDetails.push({
+          student_id: mSid,
+          hasLink1: false,
+          hasLink2: false,
+          isIdentical: false,
+          isConflict: false,
+          isOrphan: !stuMap[mSid],
+          isEmpty: true,
+          chosenLink: ''
+        });
+        continue;
+      }
+
       var isIdentical = (l1 && l2 && l1 === l2);
       var isDiffer = (l1 && l2 && l1 !== l2);
       if (isIdentical) preflight.meetingLinksAnalysis.bothIdentical++;
@@ -569,9 +690,15 @@ function runFourTableMigrationPreflight(spreadsheet) {
       var isOrphan = !stuMap[mSid];
       if (isOrphan) {
         preflight.meetingLinksAnalysis.orphanedStudentIds.push(mSid);
+        preflight.meetingLinksAnalysis.cannotBeMappedSafely.push({ student_id: mSid, reason: 'ORPHAN_NON_EMPTY_LINK' });
+      } else if (isDiffer) {
+        preflight.meetingLinksAnalysis.cannotBeMappedSafely.push({ student_id: mSid, reason: 'CONFLICTING_LINKS' });
       }
-      if (isDiffer || isOrphan || (!l1 && !l2)) {
-        preflight.meetingLinksAnalysis.cannotBeMappedSafely.push({ student_id: mSid, reason: isOrphan ? 'ORPHAN_STUDENT_ID' : (isDiffer ? 'CONFLICTING_LINKS' : 'EMPTY_LINKS') });
+
+      var chosen = l1 || l2;
+      if (chosen) {
+        if (!urlStudentMap[chosen]) urlStudentMap[chosen] = [];
+        urlStudentMap[chosen].push(mSid);
       }
 
       preflight.meetingLinksAnalysis.recordDetails.push({
@@ -581,8 +708,19 @@ function runFourTableMigrationPreflight(spreadsheet) {
         isIdentical: isIdentical,
         isConflict: isDiffer,
         isOrphan: isOrphan,
-        chosenLink: l1 || l2 || ''
+        isEmpty: false,
+        chosenLink: chosen
       });
+    }
+
+    // Identify shared URLs across distinct students (observation only, not a conflict)
+    for (var uKey in urlStudentMap) {
+      if (urlStudentMap[uKey].length > 1) {
+        preflight.meetingLinksAnalysis.sharedUrlsObservation.push({
+          url: uKey,
+          studentIds: urlStudentMap[uKey]
+        });
+      }
     }
   }
 
