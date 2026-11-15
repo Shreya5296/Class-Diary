@@ -392,8 +392,51 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
   return { success: report.success, report: report };
 }
 
+function generatePreMigrationInventory() {
+  var ss = SpreadsheetApp.openById(CANONICAL_SPREADSHEET_ID);
+  var sheets = ss.getSheets();
+  var inventory = {
+    spreadsheetId: ss.getId(),
+    spreadsheetName: ss.getName(),
+    tabs: [],
+    rowCounts: {},
+    headers: {}
+  };
+  for (var i = 0; i < sheets.length; i++) {
+    var sh = sheets[i];
+    var name = sh.getName();
+    inventory.tabs.push(name);
+    inventory.rowCounts[name] = sh.getLastRow();
+    if (sh.getLastRow() > 0) {
+      inventory.headers[name] = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    }
+  }
+  Logger.log('=== PRE-MIGRATION INVENTORY ===');
+  Logger.log(JSON.stringify(inventory, null, 2));
+  return inventory;
+}
+
+function createIndependentSpreadsheetSnapshot() {
+  var file = DriveApp.getFileById(CANONICAL_SPREADSHEET_ID);
+  var ts = new Date().toISOString().replace(/[:.]/g, '-');
+  var copyName = 'Private Class Dashboard — Pre-4Table Independent Snapshot (' + ts + ')';
+  var copy = file.makeCopy(copyName);
+  var result = {
+    originalId: CANONICAL_SPREADSHEET_ID,
+    snapshotId: copy.getId(),
+    snapshotName: copy.getName(),
+    snapshotUrl: copy.getUrl()
+  };
+  Logger.log('=== INDEPENDENT SNAPSHOT CREATED ===');
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    runFourTableCanonicalMigration: runFourTableCanonicalMigration
+    CANONICAL_SPREADSHEET_ID: CANONICAL_SPREADSHEET_ID,
+    runFourTableCanonicalMigration: runFourTableCanonicalMigration,
+    generatePreMigrationInventory: generatePreMigrationInventory,
+    createIndependentSpreadsheetSnapshot: createIndependentSpreadsheetSnapshot
   };
 }
