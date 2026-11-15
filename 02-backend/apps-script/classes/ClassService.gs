@@ -4,7 +4,7 @@
 
 var _clsIdGen = typeof generateClassSessionId === 'function' ? { generateClassSessionId: generateClassSessionId } : (typeof require !== 'undefined' ? require('../shared/IdGenerator.gs') : null);
 var _clsVal = typeof validateClassScheduleInput === 'function' ? { validateClassScheduleInput: validateClassScheduleInput, validateClassCompleteInput: validateClassCompleteInput } : (typeof require !== 'undefined' ? require('./ClassValidation.gs') : null);
-var _clsRepo = typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_getById: Classes_getById, Classes_findByRestorationId: Classes_findByRestorationId, Classes_insert: Classes_insert, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null);
+var _clsRepo = typeof Classes_repoUpdate === 'function' ? { Classes_getAll: Classes_getAll, Classes_getById: Classes_getById, Classes_findByRestorationId: Classes_findByRestorationId, Classes_insert: Classes_insert, Classes_update: Classes_repoUpdate } : (typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_getById: Classes_getById, Classes_findByRestorationId: Classes_findByRestorationId, Classes_insert: Classes_insert, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null));
 var _clsStuRepo = typeof Students_getById === 'function' ? { Students_getById: Students_getById } : (typeof require !== 'undefined' ? require('../students/StudentRepository.gs') : null);
 var _clsPkgRepo = typeof Packages_getById === 'function' ? { Packages_getById: Packages_getById, Packages_getByStudentId: Packages_getByStudentId } : (typeof require !== 'undefined' ? require('../packages/PackageRepository.gs') : null);
 var _clsLock = typeof withLock === 'function' ? { withLock: withLock } : (typeof require !== 'undefined' ? require('../sheets/LockManager.gs') : null);
@@ -503,7 +503,10 @@ function Classes_restoreCredit(spreadsheet, data, actor) {
 }
 
 function Classes_update(spreadsheet, data, actor) {
-  var sid = data.class_session_id || data.session_id;
+  if (typeof data === 'string' || typeof data === 'number') {
+    return _clsRepo.Classes_update(spreadsheet, data, actor);
+  }
+  var sid = (data && (data.class_session_id || data.session_id)) || '';
   if (!sid) return { success: false, code: 'VALIDATION_ERROR', message: 'Session ID is required' };
   var existing = _clsRepo.Classes_getById(spreadsheet, sid);
   if (!existing) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Session not found' };
