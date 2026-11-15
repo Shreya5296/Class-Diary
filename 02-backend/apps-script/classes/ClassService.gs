@@ -508,6 +508,8 @@ function Classes_update(spreadsheet, data, actor) {
   var existing = _clsRepo.Classes_getById(spreadsheet, sid);
   if (!existing) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Session not found' };
   var updates = {};
+  if (existing && existing._rowIndex) updates._rowIndex = existing._rowIndex;
+  if (existing && existing.student_id) updates.student_id = existing.student_id;
   if (data.session_notes !== undefined) updates.session_notes = data.session_notes;
   if (data.attendance_status !== undefined) updates.attendance_status = data.attendance_status;
   if (data.session_status !== undefined) updates.session_status = data.session_status;
