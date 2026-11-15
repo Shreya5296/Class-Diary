@@ -55,6 +55,7 @@ export function generateAttentionAlerts(params: AttentionAlertParams): Attention
     // 1. Missing Meeting Link (only for active students)
     const link = meetingLinks.find((l) => l.student_id === sid);
     const hasValidLink = Boolean(
+      (stu.primary_meeting_link && stu.primary_meeting_link.trim()) ||
       (link?.meeting_link_1 && link.meeting_link_1.trim()) ||
       (link?.meeting_link_2 && link.meeting_link_2.trim()) ||
       (link?.meeting_url && link.meeting_url.trim())
@@ -68,7 +69,7 @@ export function generateAttentionAlerts(params: AttentionAlertParams): Attention
         reason: 'Meeting link not configured',
         severity: 'warning',
         actionLabel: 'Configure Link',
-        targetSection: 'meeting-links',
+        targetSection: 'students',
         student: stu,
       });
     }

@@ -147,7 +147,7 @@ function Classes_insert(spreadsheet, record) {
   return _clsRowWriter.appendRecord(sheet, _clsMapper, headers, record);
 }
 
-function Classes_update(spreadsheet, id, updates) {
+function Classes_repoUpdate(spreadsheet, id, updates) {
   var sheet = spreadsheet.getSheetByName(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
   if (!sheet) return null;
   var headers = _clsRegistry.getExpectedHeaders(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
@@ -242,10 +242,14 @@ function Classes_update(spreadsheet, id, updates) {
   var foundRec = Classes_getById(spreadsheet, id);
   if (foundRec && foundRec._rowIndex) {
     var merged = Object.assign({}, updates, { _rowIndex: foundRec._rowIndex });
-    return Classes_update(spreadsheet, id, merged);
+    return Classes_repoUpdate(spreadsheet, id, merged);
   }
 
   return _clsRowWriter.updateRecordById(sheet, _clsMapper, headers, 'student_id', id, updates);
+}
+
+function Classes_update(spreadsheet, id, updates) {
+  return Classes_repoUpdate(spreadsheet, id, updates);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -254,6 +258,7 @@ if (typeof module !== 'undefined' && module.exports) {
     Classes_getById: Classes_getById,
     Classes_findByRestorationId: Classes_findByRestorationId,
     Classes_insert: Classes_insert,
-    Classes_update: Classes_update
+    Classes_update: Classes_repoUpdate,
+    Classes_repoUpdate: Classes_repoUpdate
   };
 }

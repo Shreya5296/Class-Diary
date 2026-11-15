@@ -3,34 +3,29 @@ import { ClassSession } from './classTypes';
 import { fetchClasses } from './classApi';
 import { fetchSchedules, WeeklyScheduleEntry } from './scheduleApi';
 import { fetchPackages } from '../packages/packageApi';
-import { fetchMeetingLinks } from '../meeting-links/meetingLinkApi';
 import { fetchStudents } from '../students/studentApi';
 import { Student } from '../students/studentTypes';
 import { Package } from '../packages/packageTypes';
-import { MeetingLink } from '../meeting-links/meetingLinkTypes';
 
 export function useClassScheduleData(studentId?: string, token?: string | null) {
   const [sessions, setSessions] = useState<ClassSession[]>([]);
   const [schedules, setSchedules] = useState<WeeklyScheduleEntry[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
-  const [meetingLinks, setMeetingLinks] = useState<MeetingLink[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cls, scheds, pkgs, links, stuList] = await Promise.all([
+      const [cls, scheds, pkgs, stuList] = await Promise.all([
         fetchClasses(studentId, token).catch(() => []),
         fetchSchedules(undefined, token).catch(() => []),
         fetchPackages(undefined, token).catch(() => []),
-        fetchMeetingLinks(undefined, token).catch(() => []),
         fetchStudents({}, token).catch(() => []),
       ]);
       setSessions(cls);
       setSchedules(scheds);
       setPackages(pkgs);
-      setMeetingLinks(links);
       setStudents(stuList);
     } finally {
       setLoading(false);
@@ -56,8 +51,16 @@ export function useClassScheduleData(studentId?: string, token?: string | null) 
     return schedules.filter((s) => s.student_id === sid && s.is_active !== false);
   };
 
-  const getStudentMeetingLink = (sid: string): MeetingLink | undefined => {
-    return meetingLinks.find((l) => l.student_id === sid);
+  const getStudentMeetingLink = (sid: string): any => {
+    const s = students.find((st) => st.student_id === sid);
+    if (!s) return undefined;
+    return {
+      student_id: s.student_id,
+      student_name: s.student_name,
+      primary_meeting_link: s.primary_meeting_link || '',
+      meeting_link_1: s.primary_meeting_link || '',
+      meeting_url: s.primary_meeting_link || '',
+    };
   };
 
   return {

@@ -38,7 +38,6 @@ export const StudentList: React.FC<StudentListProps> = ({
     getStudentBalance,
     getStudentLastCompletedDate,
     getStudentSchedule,
-    getStudentMeetingLink,
     getStudentFinancials,
   } = useStudentAggregates(studentIds, token);
 
@@ -122,7 +121,7 @@ export const StudentList: React.FC<StudentListProps> = ({
                     schedule={getStudentSchedule(student.student_id)}
                     balance={bal}
                     financials={getStudentFinancials(student.student_id)}
-                    meetingLink={getStudentMeetingLink(student.student_id)}
+                    meetingLink={{ meeting_link_1: student.primary_meeting_link }}
                   />
                 );
               })}

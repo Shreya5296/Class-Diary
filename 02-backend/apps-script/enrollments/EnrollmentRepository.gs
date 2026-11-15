@@ -24,11 +24,13 @@ var _enrMapper = typeof createHeaderMap === 'function' ? { createHeaderMap: crea
 
 function Enrollments_getAll(spreadsheet) {
   var sheet = spreadsheet.getSheetByName(_enrRegistry.SHEET_NAMES.ENROLLMENTS);
+  if (!sheet) return [];
   return _enrRowReader.readAllRecords(sheet, _enrMapper);
 }
 
 function Enrollments_getById(spreadsheet, enrollmentId) {
   var sheet = spreadsheet.getSheetByName(_enrRegistry.SHEET_NAMES.ENROLLMENTS);
+  if (!sheet) return null;
   return _enrRowReader.findRecordById(sheet, _enrMapper, 'enrollment_id', enrollmentId);
 }
 
@@ -39,6 +41,11 @@ function Enrollments_getByStudentId(spreadsheet, studentId) {
 
 function Enrollments_insert(spreadsheet, record) {
   var sheet = spreadsheet.getSheetByName(_enrRegistry.SHEET_NAMES.ENROLLMENTS);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(_enrRegistry.SHEET_NAMES.ENROLLMENTS);
+    var initHeaders = _enrRegistry.getExpectedHeaders(_enrRegistry.SHEET_NAMES.ENROLLMENTS);
+    if (initHeaders && initHeaders.length > 0) sheet.appendRow(initHeaders);
+  }
   var headers = _enrRegistry.getExpectedHeaders(_enrRegistry.SHEET_NAMES.ENROLLMENTS);
   return _enrRowWriter.appendRecord(sheet, _enrMapper, headers, record);
 }

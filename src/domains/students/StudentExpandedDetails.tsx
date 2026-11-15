@@ -26,8 +26,7 @@ export interface StudentExpandedDetailsProps {
 export const StudentExpandedDetails: React.FC<StudentExpandedDetailsProps> = ({
   student, meetingLink, balance, financials, schedule = [], onEditStudent, onSelectStudent, onRenewStudent,
 }) => {
-  const primaryUrl = meetingLink?.meeting_link_1 || meetingLink?.meeting_url || '';
-  const secondaryUrl = meetingLink?.meeting_link_2 || '';
+  const primaryUrl = student.primary_meeting_link || meetingLink?.meeting_link_1 || meetingLink?.meeting_url || '';
   const remaining = Math.max(0, balance.totalPurchased - balance.totalConsumed);
   const primaryPkg = balance.packages[0];
   const out = formatOutstandingBalance(financials.outstanding, financials.currency);
@@ -89,15 +88,10 @@ export const StudentExpandedDetails: React.FC<StudentExpandedDetailsProps> = ({
         </div>
 
         <div className={styles.section}>
-          <div className={styles.heading}>Meeting Links</div>
+          <div className={styles.heading}>Primary Meeting Link</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <div>
-              <span style={{ color: 'var(--color-text-subtle)', marginRight: '6px', fontSize: '11px' }}>Primary:</span>
               {primaryUrl ? <MeetingLinkButton url={primaryUrl} /> : <span style={{ color: 'var(--color-text-subtle)', fontStyle: 'italic' }}>No link configured</span>}
-            </div>
-            <div>
-              <span style={{ color: 'var(--color-text-subtle)', marginRight: '6px', fontSize: '11px' }}>Secondary:</span>
-              {secondaryUrl ? <MeetingLinkButton url={secondaryUrl} /> : <span style={{ color: 'var(--color-text-subtle)', fontStyle: 'italic' }}>No link configured</span>}
             </div>
           </div>
         </div>

@@ -293,61 +293,67 @@ describe('Backend Operation Adapters and Compatibility', () => {
     expect(fin.data.totalReceived).toBeDefined();
   });
 
-  it('adapts notes and meeting links operations correctly', () => {
-    // 1. Create a student first
+  it('adapts primary meeting link on student and session notes on classes under 4-table canonical architecture', () => {
+    // 1. Create a student with primary_meeting_link
     const stuRes = registry['students.create']({
       spreadsheet,
-      payload: { full_name: 'Note Student', phone: '9876543210', parent_name: 'Note Parent' },
+      payload: { full_name: 'Note Student', phone: '9876543210', parent_name: 'Note Parent', primary_meeting_link: 'https://meet.google.com/test-link' },
       actorId: 'usr_test',
       verifiedEmail: 'ashreya0502@gmail.com',
       requestId: 'req_stu_note',
     });
     const studentId = stuRes.data.student_id;
+    expect(stuRes.data.primary_meeting_link).toBe('https://meet.google.com/test-link');
 
-    // 2. Create note
-    const noteRes = registry['notes.create']({
-      spreadsheet,
-      payload: { student_id: studentId, note_type: 'GENERAL', content: 'Progress note' },
-      actorId: 'usr_test',
-      verifiedEmail: 'ashreya0502@gmail.com',
-      requestId: 'req_note_create',
-    });
-    expect(noteRes.success).toBe(true);
-    expect(noteRes.data.note_id).toBeDefined();
-
-    // 3. List notes
-    const noteList = registry['notes.list']({
-      spreadsheet,
-      payload: { student_id: studentId },
-    });
-    expect(noteList.success).toBe(true);
-    expect(noteList.data).toHaveLength(1);
-    expect(noteList.data[0].content).toBe('Progress note');
-
-    // 4. Create meeting link
-    const linkRes = registry['meetingLinks.create']({
+    // 2. Schedule class session with session_notes
+    const sessionRes = registry['classes.schedule']({
       spreadsheet,
       payload: {
         student_id: studentId,
-        provider: 'GOOGLE_MEET',
-        link_label: 'Weekly Class',
-        meeting_url: 'https://meet.google.com/test-link',
+        schedule_date: '2026-11-20',
+        schedule_time: '17:00',
+        duration_minutes: 60,
+        session_notes: 'Initial progress note and lesson coverage.'
       },
       actorId: 'usr_test',
       verifiedEmail: 'ashreya0502@gmail.com',
-      requestId: 'req_ml_create',
+      requestId: 'req_cls_note',
     });
-    expect(linkRes.success).toBe(true);
-    expect(linkRes.data.meeting_link_id).toBeDefined();
+    expect(sessionRes.success).toBe(true);
 
-    // 5. List meeting links
-    const linkList = registry['meetingLinks.list']({
+    // 3. List classes and verify session_notes
+    const classList = registry['classes.list']({
       spreadsheet,
       payload: { student_id: studentId },
     });
-    expect(linkList.success).toBe(true);
-    expect(linkList.data).toHaveLength(1);
-    expect(linkList.data[0].meeting_url).toBe('https://meet.google.com/test-link');
+    expect(classList.success).toBe(true);
+    expect(classList.data).toHaveLength(1);
+    expect(classList.data[0].session_notes).toBe('Initial progress note and lesson coverage.');
+
+    // 4. Update session notes via classes.update
+    const updateRes = registry['classes.update']({
+      spreadsheet,
+      payload: {
+        session_id: classList.data[0].session_id,
+        session_notes: 'Updated lesson coverage: trigonometry completed.'
+      },
+    });
+    expect(updateRes.success).toBe(true);
+    expect(updateRes.data.session_notes).toBe('Updated lesson coverage: trigonometry completed.');
+
+    // 5. Update student meeting link
+    const updateStuRes = registry['students.update']({
+      spreadsheet,
+      payload: {
+        student_id: studentId,
+        primary_meeting_link: 'https://meet.google.com/updated-room'
+      },
+      actorId: 'usr_test',
+      verifiedEmail: 'ashreya0502@gmail.com',
+      requestId: 'req_stu_upd_link',
+    });
+    expect(updateStuRes.success).toBe(true);
+    expect(updateStuRes.data.primary_meeting_link).toBe('https://meet.google.com/updated-room');
 
     // 6. Save recurring weekly class schedules
     const saveSchedRes = registry['schedules.save']({

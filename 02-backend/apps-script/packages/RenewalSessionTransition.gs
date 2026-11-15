@@ -3,7 +3,7 @@
  * Canonical schema: student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, cancellation_reason, deduct_class
  */
 
-var _rstClsRepo = typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_insert: Classes_insert, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('../classes/ClassRepository.gs') : null);
+var _rstClsRepo = typeof Classes_repoUpdate === 'function' ? { Classes_getAll: Classes_getAll, Classes_insert: Classes_insert, Classes_update: Classes_repoUpdate } : (typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_insert: Classes_insert, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('../classes/ClassRepository.gs') : null));
 
 function _countConsumedCredits(sessions, studentId) {
   var count = 0;

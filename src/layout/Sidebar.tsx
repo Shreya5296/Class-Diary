@@ -9,7 +9,6 @@ import {
   StudentsIcon,
   FeesIcon,
   ClassesIcon,
-  MeetingLinksIcon,
   SettingsIcon,
 } from '../components/icons/NavIcons';
 import { CloseIcon, LogOutIcon } from '../components/icons/ActionIcons';
@@ -20,7 +19,6 @@ export type NavSection =
   | 'students'
   | 'finances'
   | 'classes'
-  | 'meeting-links'
   | 'settings'
   | 'fees'
   | 'reports';
@@ -38,7 +36,6 @@ const navItems = [
   { id: 'students' as NavSection, label: 'Students', Icon: StudentsIcon },
   { id: 'classes' as NavSection, label: 'Class Schedule', Icon: ClassesIcon },
   { id: 'finances' as NavSection, label: 'Finances', Icon: FeesIcon },
-  { id: 'meeting-links' as NavSection, label: 'Meeting Links', Icon: MeetingLinksIcon },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({

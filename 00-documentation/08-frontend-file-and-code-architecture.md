@@ -92,10 +92,9 @@ src/
     ├── students/               # StudentsPage, StudentList, AddStudentModal, EditStudentModal, registration, status
     ├── classes/                # ClassesPage, ClassSchedule, AttendanceControl, AutoScheduleModal, session calculations
     ├── finances/               # FinancesPage, FinanceSummaryCards, StudentBalanceTable, FinancialHistoryTable, AddPayment
-    ├── meeting-links/          # MeetingLinksPage, MeetingLinkTable, MeetingLinkModal, platform detector
+    ├── meeting-links/          # MeetingLinkButton, platform detector, meetingLinkTypes (styled link component)
     ├── packages/               # PackageList, PackageForm, PackageBalance, yearly calculations
     ├── payments/               # PaymentList, PaymentForm, paymentApi
-    ├── notes/                  # StudentNotes, StudentNoteForm, noteApi
     ├── fees/                   # Legacy domain routes cleanly redirecting to Finances
     ├── enrollments/            # Legacy enrollment types
     ├── reports/                # Report API client (financialSummary)

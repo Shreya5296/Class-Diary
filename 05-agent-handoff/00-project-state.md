@@ -18,9 +18,10 @@ The Git history and this file are the recovery sources of truth. Chat history an
 
 ## 3. Strict Project Guardrails
 
-- **Six Google Sheets Tables Only:** Exactly six tables exist: `Students`, `Packages`, `Payments`, `ClassSessions`, `MeetingLinks`, and `StudentNotes`. No other active tables exist.
+- **Four Google Sheets Tables Only:** Exactly four tables exist: `Students`, `Packages`, `Payments`, and `ClassSessions`. `MeetingLinks` and `StudentNotes` are permanently removed.
 - **No package_id in Packages:** Packages are identified and retrieved by `student_id`.
-- **No session_id or stored end-time in ClassSessions:** Identified by composite key `student_id__schedule_date__schedule_time` (or 1-based row index); end time is derived from `Packages.class_duration`.
+- **No session_id or stored end-time in ClassSessions:** Identified by composite key `student_id__schedule_date__schedule_time` (or 1-based row index); end time is derived from `Packages.class_duration`. `session_notes` stores lesson coverage and remarks.
+- **One Primary Meeting Link:** Each student has one `primary_meeting_link` stored in `Students`. Managed on Students page; standalone Meeting Links page removed.
 - **Frontend Stack:** React 18, TypeScript, and Vite.
 - **Backend Stack:** Google Apps Script Web App (API, business logic & HMAC-SHA256 session authentication).
 - **Timezone:** `Asia/Kolkata` (IST, UTC+05:30) is the canonical timezone for all schedules, dates, and live clocks.
@@ -35,27 +36,25 @@ The Git history and this file are the recovery sources of truth. Chat history an
 | Field | Current value |
 |---|---|
 | Project | Personal Dashboard / Student Management Dashboard |
-| Execution mode | Documentation Audit & System Alignment |
-| Current status | AUDIT_IN_PROGRESS / DOCUMENTATION_ALIGNED |
-| Current Git branch | `main` (commit `db0fccb`) |
-| Canonical Spreadsheet | `Private Class Dashboard` (ID: `1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`, Owner: `ashreya0502@gmail.com`) — Exactly 6 canonical tables |
+| Execution mode | Four-Table Datastore Simplification & Meeting Links Elimination |
+| Current status | COMPLETED / FULLY_VERIFIED |
+| Current Git branch | `fix/simplify-student-session-data-model` |
+| Canonical Spreadsheet | `Private Class Dashboard` (ID: `1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`, Owner: `ashreya0502@gmail.com`) — Exactly 4 canonical tables |
 | Backup Spreadsheet | `Master Backup (Pre-Launch 2026-10-21T12-13-40-537Z)` (ID: `1kIFYmI81DfNIAqb-ZHsTifiKE6JxhfQrXqpfphrw9eU`) |
 | Apps Script Project | `1CC_ZjGrLBD8BnrAm6CP9oDUJmUPqFy4MCc-MkBiBvCNkMA616uF_pCPL` |
-| Web App Deployment | Active production version: `@48` (Deployment ID: `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w`; description: "Batch 4 fixes: calendar muted, nav controls, finance currency reconciliation"). Configured in frontend `.env.local`. Historical verifiable deployments: `@46` (ID: `AKfycbyRXaPIafKV0u6WIzxDGSh5AQfQtKqFfspKi_wWZHiXFY3dbAh-s97yvAz1-XGpi_1DDw`), `@43` (intermediate developer test version), and `@35` (earlier milestone version). Production website runtime execution against live Web App endpoint is **UNVERIFIED** (not executed during this documentation-only audit). |
-| Line limit check | PASSED (217 text files across `src` and `public` all <= 149 lines; 0 catch-all files) |
+| Web App Deployment | Active deployment ID: `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w` |
+| Line limit check | PASSED (216 text files across `src` and `public` all <= 149 lines; 0 catch-all files) |
 | TypeScript check | PASSED (`tsc --noEmit` exits with 0 errors) |
-| Test suite status | PASSED (58 test files passed, 389 tests passed, 0 failed, 0 skipped). Static test fixture dates updated to deterministic dynamic future dates via `tests/fixtures/testDateHelpers.ts`. |
+| Test suite status | PASSED (71 test files passed, 508 tests passed, 0 failed, 0 skipped) |
 
-## 5. Canonical Google Sheets Schema (Six Tables)
+## 5. Canonical Google Sheets Schema (Four Tables)
 
-1. **`Students`** (9 columns): `student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status`
+1. **`Students`** (10 columns): `student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status, primary_meeting_link`
 2. **`Packages`** (12 columns): `student_id, student_name, plan_type, currency, package_price, per_class, classes_purchased, start_date, end_date, next_due_date, class_duration, class_schedule`
 3. **`Payments`** (6 columns): `student_id, student_name, payment_date, amount, currency, in_inr`
-4. **`ClassSessions`** (8 columns): `student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason`
-5. **`MeetingLinks`** (4 columns): `student_id, student_name, meeting_link_1, meeting_link_2`
-6. **`StudentNotes`** (5 columns): `student_id, student_name, note_date, note_text, follow_up_date`
+4. **`ClassSessions`** (9 columns): `student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason, session_notes`
 
-*Archived / Retired Sheets:* `_Archived_ClassSchedules`, `_Backup_PreCanonical_Packages`, `_Backup_PreCanonical_ClassSchedules`, `StudentId_Migration_Backup`. `AppConfig`, `Enrollments`, `FeeObligations`, `ImportBatches`, and `ImportRowResults` are permanently retired.
+*Archived / Retired Sheets:* `_Archived_Historical_Notes`, `_Backup_PreFourTable_*`, `_Archived_ClassSchedules`, `_Backup_PreCanonical_Packages`, `_Backup_PreCanonical_ClassSchedules`, `StudentId_Migration_Backup`. `MeetingLinks`, `StudentNotes`, `AppConfig`, `Enrollments`, `FeeObligations`, `ImportBatches`, and `ImportRowResults` are permanently retired.
 
 ## 6. Phase & Milestone Register
 

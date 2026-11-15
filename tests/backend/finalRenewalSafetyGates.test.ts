@@ -42,10 +42,10 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
   });
 
   // Issue 1: Canonical ClassSessions Schema
-  it('Issue 1: Verifies and enforces the agreed canonical ClassSessions 8-column schema', () => {
+  it('Issue 1: Verifies and enforces the agreed canonical ClassSessions 9-column schema', () => {
     const expectedHeaders = [
       'student_id', 'student_name', 'schedule_date', 'schedule_time',
-      'attendance_status', 'session_status', 'cancellation_reason', 'deduct_class'
+      'attendance_status', 'session_status', 'deduct_class', 'cancellation_reason', 'session_notes'
     ];
     const registered = SheetRegistry.SHEET_SCHEMAS[SheetRegistry.SHEET_NAMES.CLASS_SESSIONS];
     expect(registered).toEqual(expectedHeaders);
@@ -60,18 +60,20 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
       attendance_status: 'NOT_MARKED',
       session_status: 'SCHEDULED',
       cancellation_reason: '',
-      deduct_class: false
+      deduct_class: false,
+      session_notes: 'Initial test note'
     });
     expect(inserted).toBeDefined();
 
     const rows = sheet.getDataRange().getValues();
     const lastRow = rows[rows.length - 1];
-    expect(lastRow.length).toBe(8);
+    expect(lastRow.length).toBe(9);
     expect(lastRow[0]).toBe('STU_SCHEMA_TEST');
     expect(lastRow[1]).toBe('Schema Student');
     expect(lastRow[2]).toBe('2026-11-20');
     expect(lastRow[3]).toBe('16:00');
-    expect(lastRow[7]).toBe(false);
+    expect(lastRow[6]).toBe(false);
+    expect(lastRow[8]).toBe('Initial test note');
   });
 
   // Issue 2: Durable store persistence and cold-recovery without AuditLog

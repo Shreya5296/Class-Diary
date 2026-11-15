@@ -39,7 +39,7 @@ export const EditStudentForm: React.FC<EditStudentFormProps> = ({ student, onSuc
   });
 
   const {
-    loadingInitial, meetingLinks, setMeetingLinks,
+    loadingInitial, meetingLink, setMeetingLink,
     existingPkg, packageData, setPackageData, schedules, setSchedules
   } = useEditStudentInitialData(student, token);
 
@@ -95,7 +95,7 @@ export const EditStudentForm: React.FC<EditStudentFormProps> = ({ student, onSuc
     setIsSubmitting(true);
     try {
       const { updatedStudent, successMessage } = await submitEditStudent({
-        student, studentData, meetingLinks, packageData, existingPkg,
+        student, studentData, meetingLink, packageData, existingPkg,
         schedules, firstClassDate, autoSchedule, dur, token,
       });
       await onSuccess(updatedStudent, successMessage);
@@ -112,7 +112,7 @@ export const EditStudentForm: React.FC<EditStudentFormProps> = ({ student, onSuc
     <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       {serverError && <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--color-danger-bg)', border: '1px solid var(--color-danger-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-danger-text)', fontSize: 'var(--font-size-sm)' }}>⚠️ {serverError}</div>}
       <EditStudentPersonalSection values={studentData} errors={errors} onChange={(f, v) => setStudentData((p) => ({ ...p, [f]: v }))} disabled={isSubmitting} />
-      <EditStudentLinksSection meetingLink1={meetingLinks.link1} meetingLink2={meetingLinks.link2} errors={errors} onChange={(f, v) => setMeetingLinks((p) => ({ ...p, [f === 'meeting_link_1' ? 'link1' : 'link2']: v }))} disabled={isSubmitting} />
+      <EditStudentLinksSection meetingLink={meetingLink} errors={errors} onChange={setMeetingLink} disabled={isSubmitting} />
       <EditStudentPackageSection
         existingPackage={existingPkg}
         values={packageData}

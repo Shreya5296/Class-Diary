@@ -62,10 +62,8 @@ test.describe('Frontend UI/UX Redesign — Screen & Viewport Coverage', () => {
     await expect(page.locator('h1:has-text("Class Schedule & Attendance")')).toBeVisible();
     await expect(page.locator('button:has-text("+ Schedule Class")')).toBeVisible();
 
-    // 5. Meeting Links
-    await navigate(page, 'Meeting Links');
-    await expect(page.locator('h1:has-text("Meeting Links Directory")')).toBeVisible();
-    await expect(page.locator('button:has-text("+ Add Meeting Link")')).toBeVisible();
+    // Verify Meeting Links is absent from the sidebar
+    await expect(page.locator('aside button:has-text("Meeting Links")')).toHaveCount(0);
 
     // 7. Profile & Preferences (via Account dropdown)
     await page.locator('button[aria-label="Account menu"]').click();

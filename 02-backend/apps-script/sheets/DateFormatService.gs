@@ -7,7 +7,6 @@ var DATE_COLUMNS_CONFIG = {
   'Packages': ['start_date', 'end_date', 'next_due_date'],
   'Payments': ['payment_date'],
   'ClassSessions': ['schedule_date'],
-  'StudentNotes': ['note_date', 'follow_up_date'],
   'Enrollments': ['start_date', 'end_date'],
   'FeeObligations': ['issue_date', 'due_date']
 };

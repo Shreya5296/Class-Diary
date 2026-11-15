@@ -116,3 +116,23 @@ export function handleMockClassRestoreCredit(payload: Record<string, unknown>) {
   }
   return { session_id: sid, deduct_class: false };
 }
+
+export function handleMockClassUpdate(payload: Record<string, unknown>) {
+  const sid = String(payload.session_id || payload.class_session_id || '');
+  const classesList = MOCK_CLASSES as unknown as Record<string, unknown>[];
+  const session = classesList.find((c) => c.session_id === sid || c.class_session_id === sid);
+  if (session) {
+    if (payload.session_notes !== undefined) {
+      session.session_notes = payload.session_notes;
+      session.notes = payload.session_notes;
+    }
+    if (payload.cancellation_reason !== undefined) {
+      session.cancellation_reason = payload.cancellation_reason;
+    }
+    if (payload.attendance_status !== undefined) {
+      session.attendance_status = payload.attendance_status;
+    }
+    return session;
+  }
+  return { session_id: sid, ...payload };
+}

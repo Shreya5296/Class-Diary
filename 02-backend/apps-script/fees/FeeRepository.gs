@@ -40,6 +40,10 @@ function FeeObligations_getByStudentId(spreadsheet, studentId) {
 function FeeObligations_insert(spreadsheet, record) {
   var sheet = spreadsheet.getSheetByName(_feeRegistry.SHEET_NAMES.FEE_OBLIGATIONS);
   var headers = _feeRegistry.getExpectedHeaders(_feeRegistry.SHEET_NAMES.FEE_OBLIGATIONS);
+  if (!sheet && typeof spreadsheet.insertSheet === 'function') {
+    sheet = spreadsheet.insertSheet(_feeRegistry.SHEET_NAMES.FEE_OBLIGATIONS);
+    if (headers && headers.length > 0) sheet.appendRow(headers);
+  }
   return _feeRowWriter.appendRecord(sheet, _feeMapper, headers, record);
 }
 

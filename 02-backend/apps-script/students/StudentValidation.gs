@@ -44,6 +44,14 @@ function validateStudentInput(data, isUpdate) {
     }
   }
 
+  var rawMeetingLink = data.primary_meeting_link;
+  if (rawMeetingLink !== undefined && rawMeetingLink !== null && String(rawMeetingLink).trim() !== '') {
+    var linkStr = String(rawMeetingLink).trim();
+    if (!/^https?:\/\/[^\s]+$/i.test(linkStr)) {
+      errors.primary_meeting_link = 'Invalid meeting link URL format';
+    }
+  }
+
   return {
     valid: Object.keys(errors).length === 0,
     errors: errors

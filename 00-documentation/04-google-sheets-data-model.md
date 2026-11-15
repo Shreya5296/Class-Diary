@@ -5,7 +5,7 @@
 - **Product:** Personal Dashboard (Student Management Dashboard)
 - **Document ID:** 04
 - **Status:** Authoritative Datastore Specification
-- **Version:** 4.0.0 (Strict Six-Table Canonical Architecture)
+- **Version:** 5.0.0 (Strict Four-Table Canonical Architecture)
 - **Canonical Spreadsheet:** `Private Class Dashboard` (`1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`)
 - **Spreadsheet Owner:** `ashreya0502@gmail.com`
 
@@ -13,10 +13,12 @@
 
 ## 2. Canonical Data Architecture Principles
 
-1. **Strictly Six Tables Only:**
-   The entire application datastore consists of **exactly six Google Sheets tables**. No other active data tables exist.
+1. **Strictly Four Tables Only:**
+   The entire application datastore consists of **exactly four Google Sheets tables**: `Students`, `Packages`, `Payments`, and `ClassSessions`. `MeetingLinks` and `StudentNotes` are permanently removed.
 2. **Schema Restrictions (Non-Negotiable):**
    Documentation and code must never invent, reference, or create any of the following as active Google Sheets tables:
+   - `MeetingLinks` (Permanently removed; replaced by `Students.primary_meeting_link`)
+   - `StudentNotes` (Permanently removed; replaced by `ClassSessions.session_notes`)
    - `ClassSchedules` (Archived as `_Archived_ClassSchedules`)
    - `PackageHistory`
    - `StudentPayments`
@@ -37,7 +39,7 @@
 
 ## 3. Authoritative Google Sheets Tables & Column Specifications
 
-### 3.1 Table 1: `Students` (Exactly 9 columns)
+### 3.1 Table 1: `Students` (Exactly 10 columns)
 
 | # | Column Name | Type | Required | Description |
 |---:|---|---|---|---|
@@ -50,9 +52,10 @@
 | 7 | `student_email` | Text | No | Direct student email for calendar invites (optional). |
 | 8 | `subject` | Text | No | Enrolled subject or subjects (e.g. `Physics`, `AP Calculus BC`). |
 | 9 | `status` | Enum | Yes | Student status: `ACTIVE`, `INACTIVE`, or `ARCHIVED`. Default `ACTIVE`. |
+| 10 | `primary_meeting_link` | Text/URL | No | Single primary virtual meeting room URL (Google Meet, Zoom, etc.). |
 
 **Canonical Column Order:**
-`student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status`
+`student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status, primary_meeting_link`
 
 ---
 
@@ -102,7 +105,7 @@
 
 ---
 
-### 3.4 Table 4: `ClassSessions` (Exactly 8 columns)
+### 3.4 Table 4: `ClassSessions` (Exactly 9 columns)
 
 | # | Column Name | Type | Required | Description |
 |---:|---|---|---|---|
@@ -113,45 +116,18 @@
 | 5 | `attendance_status` | Enum | Yes | `NOT_MARKED`, `PRESENT`, `ATTENDED`, `ABSENT`, `CANCELLED`, `CANCELLED_LATE`. |
 | 6 | `session_status` | Enum | Yes | `SCHEDULED`, `COMPLETED`, `CANCELLED`. |
 | 7 | `deduct_class` | Boolean | Yes | `TRUE` if class consumes package balance; `FALSE` otherwise. |
-| 8 | `cancellation_reason` | Text | No | Reason for cancellation or rescheduling note. |
+| 8 | `cancellation_reason` | Text | No | Reason for cancellation or structured cancellation note. |
+| 9 | `session_notes` | Text | No | Lesson coverage, stories/topics taught, concepts discussed, remarks. |
 
 **Canonical Column Order:**
-`student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason`
+`student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason, session_notes`
 
 *Important Implementation Notes:*
 - There is **no session ID column** and **no stored end-time column** in Google Sheets.
 - **Session Identity:** Sessions are identified in memory and during API operations by composite key: `student_id__schedule_date__schedule_time` (e.g. `STU_001__2026-01-19__18:00`) or by 1-based `_rowIndex`.
 - **Derived End Time:** End time is computed on the fly as `schedule_time + class_duration` (using `Packages.class_duration` for that student, defaulting to 60 minutes).
 - **Consumed Balance Derivation:** The application counts sessions for that student where `deduct_class === true` (or `'TRUE'`). Remaining balance is `classes_purchased - consumed_classes`.
-
----
-
-### 3.5 Table 5: `MeetingLinks` (Exactly 4 columns)
-
-| # | Column Name | Type | Required | Description |
-|---:|---|---|---|---|
-| 1 | `student_id` | String ID | Yes | Foreign key to `Students.student_id`. Primary key (1 row per student). |
-| 2 | `student_name` | Text | Yes | Student name snapshot. |
-| 3 | `meeting_link_1` | Text/URL | Yes | Primary virtual meeting room URL (e.g. Google Meet). |
-| 4 | `meeting_link_2` | Text/URL | No | Secondary or backup virtual meeting room URL (e.g. Zoom). |
-
-**Canonical Column Order:**
-`student_id, student_name, meeting_link_1, meeting_link_2`
-
----
-
-### 3.6 Table 6: `StudentNotes` (Exactly 5 columns)
-
-| # | Column Name | Type | Required | Description |
-|---:|---|---|---|---|
-| 1 | `student_id` | String ID | Yes | Foreign key to `Students.student_id`. |
-| 2 | `student_name` | Text | Yes | Student name snapshot. |
-| 3 | `note_date` | Date/Text | Yes | Date note was recorded (`YYYY-MM-DD` / `dd/mm/yyyy`). |
-| 4 | `note_text` | Text | Yes | Pedagogical remarks, progress notes, or follow-up content. |
-| 5 | `follow_up_date` | Date/Text | No | Optional follow-up target date (`YYYY-MM-DD` / `dd/mm/yyyy`). |
-
-**Canonical Column Order:**
-`student_id, student_name, note_date, note_text, follow_up_date`
+- **Session Notes Responsibility:** `session_notes` is the per-session log for coverage and remarks. `cancellation_reason` remains the structured reason when a session is cancelled.
 
 ---
 

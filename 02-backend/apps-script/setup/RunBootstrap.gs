@@ -51,7 +51,7 @@ function runBootstrap() {
 
   Logger.log('Bootstrap result: ' + JSON.stringify(result));
   Logger.log('Created tabs: ' + JSON.stringify(result.createdTabs));
-  Logger.log('Expected 6 tabs: Students, Packages, Payments, ClassSessions, MeetingLinks, StudentNotes');
+  Logger.log('Expected 4 tabs: Students, Packages, Payments, ClassSessions');
 
   // Verify tab count
   var allSheets = spreadsheet.getSheets();

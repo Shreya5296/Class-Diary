@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Package } from '../packages/packageTypes';
 import { fetchPackages } from '../packages/packageApi';
-import { MeetingLink } from '../meeting-links/meetingLinkTypes';
-import { fetchMeetingLinks } from '../meeting-links/meetingLinkApi';
 import { Payment } from '../payments/paymentTypes';
 import { fetchPayments } from '../payments/paymentApi';
 import { fetchClasses } from '../classes/classApi';
@@ -21,7 +19,6 @@ export interface StudentFinancialInfo {
 
 export function useStudentAggregates(studentIds: string[], token?: string | null) {
   const [packages, setPackages] = useState<Package[]>([]);
-  const [meetingLinks, setMeetingLinks] = useState<MeetingLink[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [schedulesMap, setSchedulesMap] = useState<Record<string, WeeklyScheduleEntry[]>>({});
@@ -31,15 +28,13 @@ export function useStudentAggregates(studentIds: string[], token?: string | null
     if (!studentIds || studentIds.length === 0) return;
     setLoading(true);
     try {
-      const [pkgs, links, pays, cls] = await Promise.all([
+      const [pkgs, pays, cls] = await Promise.all([
         fetchPackages(undefined, token).catch(() => []),
-        fetchMeetingLinks(undefined, token).catch(() => []),
         fetchPayments(undefined, undefined, token).catch(() => []),
         fetchClasses(undefined, token).catch(() => []),
       ]);
 
       setPackages(pkgs);
-      setMeetingLinks(links);
       setPayments(pays);
       setClasses(cls);
 
@@ -89,7 +84,7 @@ export function useStudentAggregates(studentIds: string[], token?: string | null
   };
 
   const getStudentSchedule = (sid: string): WeeklyScheduleEntry[] => schedulesMap[sid] || [];
-  const getStudentMeetingLink = (sid: string): MeetingLink | undefined => meetingLinks.find((l) => l.student_id === sid);
+  const getStudentMeetingLink = (_sid: string): any => undefined;
 
   const getStudentFinancials = (sid: string): StudentFinancialInfo => {
     const studentPkgs = packages.filter((p) => p.student_id === sid && p.status !== 'CANCELLED' && p.status !== 'VOID');
@@ -103,25 +98,32 @@ export function useStudentAggregates(studentIds: string[], token?: string | null
     }
 
     let totalPaid = 0;
-    let inInr = 0;
+    let totalInInr = 0;
     for (const pay of studentPays) {
       totalPaid += Number(pay.amount || 0);
-      if (pay.in_inr !== undefined && pay.in_inr !== null) {
-        inInr += Number(pay.in_inr || 0);
-      }
+      if (pay.in_inr) totalInInr += Number(pay.in_inr);
     }
 
     const outstanding = Math.max(0, totalInvoiced - totalPaid);
-    return { totalInvoiced, totalPaid, outstanding, currency, inInr };
+    return {
+      totalInvoiced,
+      totalPaid,
+      outstanding,
+      currency,
+      inInr: totalInInr > 0 ? totalInInr : undefined,
+    };
   };
 
   return {
+    packages,
+    payments,
+    classes,
     loading,
+    refetch: loadAggregates,
     getStudentBalance,
     getStudentLastCompletedDate,
     getStudentSchedule,
     getStudentMeetingLink,
     getStudentFinancials,
-    refetchAggregates: loadAggregates,
   };
 }

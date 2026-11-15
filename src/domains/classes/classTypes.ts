@@ -26,6 +26,7 @@ export interface ClassSession {
   cancellation_reason?: string;
   meeting_url?: string;
   notes?: string;
+  session_notes?: string;
   created_at?: string;
   updated_at?: string;
   completed_at?: string;
@@ -48,4 +49,5 @@ export interface ClassSessionInput {
   duration_minutes: number;
   deduct_class?: boolean;
   notes?: string;
+  session_notes?: string;
 }

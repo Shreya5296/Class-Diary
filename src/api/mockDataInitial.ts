@@ -1,8 +1,8 @@
 export const MOCK_STUDENTS = [
-  { student_id: 'STU_001', student_name: 'Aarav Sharma', parent_name: 'Priya Sharma', parent_phone: '+91 98765 43210', student_phone: '+91 98765 43211', parent_email: 'priya@example.com', student_email: 'aarav@example.com', subject: 'AP Calculus BC', status: 'ACTIVE', created_at: '2026-01-15T09:00:00Z' },
-  { student_id: 'STU_002', student_name: 'Diya Patel', parent_name: 'Rajesh Patel', parent_phone: '+91 98234 56789', student_phone: '+91 98234 56780', parent_email: 'rajesh@example.com', student_email: 'diya@example.com', subject: 'IB Physics HL', status: 'ACTIVE', created_at: '2026-02-01T10:30:00Z' },
-  { student_id: 'STU_003', student_name: 'Rohan Verma', parent_name: 'Sunita Verma', parent_phone: '+91 97123 45678', student_phone: '', parent_email: 'sunita@example.com', student_email: 'rohan@example.com', subject: 'Grade 10 Mathematics', status: 'ACTIVE', created_at: '2026-02-20T14:00:00Z' },
-  { student_id: 'STU_004', student_name: 'Ananya Roy', parent_name: 'Debashis Roy', parent_phone: '+91 99012 34567', student_phone: '+91 99012 34568', parent_email: 'debashis@example.com', student_email: 'ananya@example.com', subject: 'SAT Math Preparation', status: 'INACTIVE', created_at: '2025-11-10T11:00:00Z' }
+  { student_id: 'STU_001', student_name: 'Aarav Sharma', parent_name: 'Priya Sharma', parent_phone: '+91 98765 43210', student_phone: '+91 98765 43211', parent_email: 'priya@example.com', student_email: 'aarav@example.com', subject: 'AP Calculus BC', status: 'ACTIVE', primary_meeting_link: 'https://meet.google.com/abc-xyz-pqr', created_at: '2026-01-15T09:00:00Z' },
+  { student_id: 'STU_002', student_name: 'Diya Patel', parent_name: 'Rajesh Patel', parent_phone: '+91 98234 56789', student_phone: '+91 98234 56780', parent_email: 'rajesh@example.com', student_email: 'diya@example.com', subject: 'IB Physics HL', status: 'ACTIVE', primary_meeting_link: 'https://zoom.us/j/987654321', created_at: '2026-02-01T10:30:00Z' },
+  { student_id: 'STU_003', student_name: 'Rohan Verma', parent_name: 'Sunita Verma', parent_phone: '+91 97123 45678', student_phone: '', parent_email: 'sunita@example.com', student_email: 'rohan@example.com', subject: 'Grade 10 Mathematics', status: 'ACTIVE', primary_meeting_link: 'https://meet.google.com/def-uvw-rst', created_at: '2026-02-20T14:00:00Z' },
+  { student_id: 'STU_004', student_name: 'Ananya Roy', parent_name: 'Debashis Roy', parent_phone: '+91 99012 34567', student_phone: '+91 99012 34568', parent_email: 'debashis@example.com', student_email: 'ananya@example.com', subject: 'SAT Math Preparation', status: 'INACTIVE', primary_meeting_link: '', created_at: '2025-11-10T11:00:00Z' }
 ];
 
 export const MOCK_FEES = [
@@ -17,9 +17,9 @@ export const MOCK_PAYMENTS: Array<Record<string, unknown>> = [
 ];
 
 export const MOCK_CLASSES = [
-  { session_id: 'cls_401', student_id: 'STU_001', topic: 'AP Calculus: Multivariable Integration', start_time: new Date(Date.now() + 86400000).toISOString(), duration_minutes: 60, status: 'SCHEDULED', meeting_url: 'https://meet.google.com/abc-xyz-pqr', class_credit_effect: 'NONE' },
-  { session_id: 'cls_402', student_id: 'STU_002', topic: 'IB Physics: Electromagnetic Induction', start_time: new Date(Date.now() + 172800000).toISOString(), duration_minutes: 90, status: 'SCHEDULED', meeting_url: 'https://zoom.us/j/987654321', class_credit_effect: 'NONE' },
-  { session_id: 'cls_403', student_id: 'STU_001', topic: 'AP Calculus: Differential Equations Review', start_time: new Date(Date.now() - 172800000).toISOString(), duration_minutes: 60, status: 'ATTENDED', meeting_url: 'https://meet.google.com/abc-xyz-pqr', class_credit_effect: 'CONSUME' }
+  { session_id: 'cls_401', student_id: 'STU_001', topic: 'AP Calculus: Multivariable Integration', start_time: new Date(Date.now() + 86400000).toISOString(), duration_minutes: 60, status: 'SCHEDULED', meeting_url: 'https://meet.google.com/abc-xyz-pqr', session_notes: 'Multivariable Integration prep', class_credit_effect: 'NONE' },
+  { session_id: 'cls_402', student_id: 'STU_002', topic: 'IB Physics: Electromagnetic Induction', start_time: new Date(Date.now() + 172800000).toISOString(), duration_minutes: 90, status: 'SCHEDULED', meeting_url: 'https://zoom.us/j/987654321', session_notes: '', class_credit_effect: 'NONE' },
+  { session_id: 'cls_403', student_id: 'STU_001', topic: 'AP Calculus: Differential Equations Review', start_time: new Date(Date.now() - 172800000).toISOString(), duration_minutes: 60, status: 'ATTENDED', meeting_url: 'https://meet.google.com/abc-xyz-pqr', session_notes: 'Covered differential equations and slope fields.', class_credit_effect: 'CONSUME' }
 ];
 
 export const MOCK_LINKS = [
@@ -58,6 +58,7 @@ export function createMockStudent(payload: Record<string, unknown>) {
     student_email: String(payload.student_email || ''),
     subject: Array.isArray(payload.subjects) ? payload.subjects.join(', ') : (Array.isArray(payload.subject) ? (payload.subject as string[]).join(', ') : String(payload.subject || '')),
     status: String(payload.status || 'ACTIVE'),
+    primary_meeting_link: String(payload.primary_meeting_link || '').trim(),
     created_at: new Date().toISOString()
   };
   MOCK_STUDENTS.unshift(newStu);
@@ -118,6 +119,7 @@ export function scheduleMockClass(payload: Record<string, unknown>) {
     session_status: 'SCHEDULED',
     attendance_status: 'NOT_MARKED',
     meeting_url: String(payload.meeting_url || ''),
+    session_notes: String(payload.session_notes || ''),
     class_credit_effect: 'PENDING',
     deduct_class: false,
   };

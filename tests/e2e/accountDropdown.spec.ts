@@ -105,19 +105,10 @@ test.describe('E2E — Account Dropdown, Branding, Preferences & Calendar', () =
     await expect(page.locator('#currencySelect')).toHaveValue('USD');
   });
 
-  test('displays meeting links with primary and secondary links cleanly labeled', async ({ page }) => {
-    await page.locator('aside button:has-text("Meeting Links")').click();
-    await expect(page.locator('h1:has-text("Meeting Links Directory")')).toBeVisible();
-
-    // Primary meeting link column is present
-    await expect(page.locator('th:has-text("Primary Meeting Link")').first()).toBeVisible();
-
-    // Secondary meeting link is displayed
-    await expect(page.locator('th:has-text("Secondary Meeting Link")').first()).toBeVisible();
-
-    // Copy action available, Open ↗ removed per requirement 3.2
-    await expect(page.locator('button:has-text("Copy")').first()).toBeVisible();
-    await expect(page.locator('a:has-text("Open ↗")')).toHaveCount(0);
+  test('confirms Meeting Links is removed from sidebar and primary meeting link is managed in Students', async ({ page }) => {
+    await expect(page.locator('aside button:has-text("Meeting Links")')).toHaveCount(0);
+    await page.locator('aside button:has-text("Students")').click();
+    await expect(page.locator('h1:has-text("Students Directory")')).toBeVisible();
   });
 
   test('displays weekly class schedule calendar on Dashboard starting on Monday', async ({ page }) => {

@@ -10,6 +10,7 @@ export interface Student {
   subjects?: string[];
   status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED' | string;
   notes?: string;
+  primary_meeting_link?: string;
   created_at?: string;
   updated_at?: string;
   archived_at?: string;
@@ -30,6 +31,7 @@ export interface StudentInput {
   subjects?: string[];
   status?: string;
   notes?: string;
+  primary_meeting_link?: string;
   // Convenience aliases for UI components
   full_name?: string;
   email?: string;

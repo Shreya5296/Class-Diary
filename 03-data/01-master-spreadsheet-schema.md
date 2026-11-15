@@ -12,32 +12,32 @@
 
 ---
 
-## 2. Canonical Tab Inventory (Six Tables Only)
+## 2. Canonical Tab Inventory (Four Tables Only)
 
-The master spreadsheet consists of **strictly six canonical data tables**. No other active data tables exist.
+The master spreadsheet consists of **strictly four canonical data tables**. `MeetingLinks` and `StudentNotes` are permanently eliminated.
 
 ```text
-The Six Canonical Tables:
-├── 1. Students          (9 columns: student directory, parent contacts, subject, status)
+The Four Canonical Tables:
+├── 1. Students          (10 columns: student directory, parent contacts, subject, status, primary_meeting_link)
 ├── 2. Packages          (12 columns: package pricing, class count, duration, recurring schedule)
 ├── 3. Payments          (6 columns: payment date, original amount, currency, manual in_inr)
-├── 4. ClassSessions     (8 columns: schedule date & time, attendance status, deduct_class, cancellation)
-├── 5. MeetingLinks      (4 columns: flat student meeting link 1 and meeting link 2)
-└── 6. StudentNotes      (5 columns: pedagogical notes, note date, text, follow-up date)
+└── 4. ClassSessions     (9 columns: schedule date & time, attendance status, deduct_class, cancellation, session_notes)
 
 Archived & Retired Sheets:
+├── _Archived_Historical_Notes (Archived unmapped historical notes)
+├── _Backup_PreFourTable_* (Archived backups prior to 4-table simplification)
 ├── _Archived_ClassSchedules (Archived during canonical schema migration)
 ├── _Backup_PreCanonical_Packages (Archived backup)
 ├── _Backup_PreCanonical_ClassSchedules (Archived backup)
 ├── StudentId_Migration_Backup (Archived backup from STU_001 migration)
-└── Permanently Retired: Enrollments, FeeObligations, AppConfig, ImportBatches, ImportRowResults
+└── Permanently Retired: MeetingLinks, StudentNotes, Enrollments, FeeObligations, AppConfig, ImportBatches, ImportRowResults
 ```
 
 ---
 
 ## 3. Detailed Physical Column Order & Field Specifications
 
-### 3.1 Tab 1: `Students` (9 Columns)
+### 3.1 Tab 1: `Students` (10 Columns)
 | # | Column Name | Type | Key | Description |
 |---:|---|---|---|---|
 | 1 | `student_id` | String ID | PK | Immutable unique student identifier (`STU_001` format). |
@@ -49,9 +49,10 @@ Archived & Retired Sheets:
 | 7 | `student_email` | Text | — | Direct student email for calendar invites (optional). |
 | 8 | `subject` | Text | — | Enrolled subject or subjects (e.g. `AP Calculus BC`). |
 | 9 | `status` | Enum | — | Student status: `ACTIVE`, `INACTIVE`, `ARCHIVED`. Default `ACTIVE`. |
+| 10 | `primary_meeting_link` | Text/URL | — | Single primary virtual meeting room URL (Google Meet, Zoom, etc.). |
 
 **Canonical Column Order:**
-`student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status`
+`student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status, primary_meeting_link`
 
 ---
 
@@ -99,7 +100,7 @@ Archived & Retired Sheets:
 
 ---
 
-### 3.4 Tab 4: `ClassSessions` (8 Columns)
+### 3.4 Tab 4: `ClassSessions` (9 Columns)
 | # | Column Name | Type | Key | Description |
 |---:|---|---|---|---|
 | 1 | `student_id` | String ID | FK | Links to `Students.student_id`. |
@@ -110,39 +111,14 @@ Archived & Retired Sheets:
 | 6 | `session_status` | Enum | — | `SCHEDULED`, `COMPLETED`, `CANCELLED`. |
 | 7 | `deduct_class` | Boolean | — | `TRUE` if class consumes package balance; `FALSE` otherwise. |
 | 8 | `cancellation_reason` | Text | — | Reason for cancellation or rescheduling note. |
+| 9 | `session_notes` | Text | — | Lesson coverage, stories/topics taught, concepts discussed, remarks. |
 
 **Canonical Column Order:**
-`student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason`
+`student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason, session_notes`
 
 *Important Schema Rules:*
 - **There is no session ID column and no stored end-time column** in Google Sheets.
 - **Session Identity:** Sessions are identified by composite key `student_id__schedule_date__schedule_time` (or 1-based row index).
 - **Derived End Time:** End time is dynamically derived as `schedule_time + Packages.class_duration`.
 - **Consumed Balance Derivation:** The application counts sessions for that student where `deduct_class === true`. Remaining balance is `classes_purchased - consumed_classes`.
-
----
-
-### 3.5 Tab 5: `MeetingLinks` (4 Columns)
-| # | Column Name | Type | Key | Description |
-|---:|---|---|---|---|
-| 1 | `student_id` | String ID | FK | Links to `Students.student_id`. Primary key (1 row per student). |
-| 2 | `student_name` | Text | — | Student name snapshot. |
-| 3 | `meeting_link_1` | Text/URL | — | Primary virtual meeting room URL (Google Meet). |
-| 4 | `meeting_link_2` | Text/URL | — | Secondary or backup virtual meeting room URL (Zoom). |
-
-**Canonical Column Order:**
-`student_id, student_name, meeting_link_1, meeting_link_2`
-
----
-
-### 3.6 Tab 6: `StudentNotes` (5 Columns)
-| # | Column Name | Type | Key | Description |
-|---:|---|---|---|---|
-| 1 | `student_id` | String ID | FK | Links to `Students.student_id`. |
-| 2 | `student_name` | Text | — | Student name snapshot. |
-| 3 | `note_date` | Date/Text | — | Date note was recorded (`YYYY-MM-DD` / `dd/mm/yyyy`). |
-| 4 | `note_text` | Text | — | Pedagogical remarks, progress notes, or follow-up content. |
-| 5 | `follow_up_date` | Date/Text | — | Optional follow-up target date (`YYYY-MM-DD` / `dd/mm/yyyy`). |
-
-**Canonical Column Order:**
-`student_id, student_name, note_date, note_text, follow_up_date`
+- **Lesson Notes Integration:** `session_notes` stores pedagogical notes and lesson coverage directly against the scheduled class session.

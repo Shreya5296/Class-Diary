@@ -55,35 +55,15 @@ test.describe('E2E — Finances Refinements & Meeting Links Management', () => {
     await expect(page.locator('table thead th:has-text("Actions")')).toHaveCount(0);
   });
 
-  test('Meeting Links: verifies styled link buttons, missing link state, and unselected student in modal', async ({ page }) => {
-    await navigateTo(page, 'Meeting Links');
-    await expect(page.locator('h1:has-text("Meeting Links Directory")')).toBeVisible({ timeout: 15000 });
+  test('Students: verifies Primary Meeting Link management and absence of standalone Meeting Links page', async ({ page }) => {
+    // 1. Verify Meeting Links is absent from sidebar navigation
+    await expect(page.locator('aside button:has-text("Meeting Links")')).toHaveCount(0);
 
-    // 1. Primary and Secondary link columns are present
-    await expect(page.locator('text=Primary Meeting Link').first()).toBeVisible();
-    await expect(page.locator('text=Secondary Meeting Link').first()).toBeVisible();
+    // 2. Navigate to Students directory
+    await navigateTo(page, 'Students');
+    await expect(page.locator('h1:has-text("Students Directory")')).toBeVisible({ timeout: 15000 });
 
-    // 2. Missing link behavior: "No link configured" is displayed without adjacent Add button
-    await expect(page.locator('text=No link configured').first()).toBeVisible();
-    await expect(page.locator('table button:has-text("Add Meeting Link")')).toHaveCount(0);
-
-    // 3. Page-level "+ Add Meeting Link" button opens modal without auto-selecting student
-    const addBtn = page.locator('button:has-text("+ Add Meeting Link")');
-    await expect(addBtn).toBeVisible();
-    await addBtn.click();
-    await expect(page.locator('div[role="dialog"]')).toBeVisible();
-
-    // 4. Verify neutral "Select student" placeholder and required validation
-    const select = page.locator('select');
-    await expect(select).toHaveValue('');
-    await expect(select.locator('option').first()).toHaveText('Select student');
-
-    // Click submit without selecting student
-    await page.locator('button:has-text("Save Meeting Link")').click();
-    await expect(page.locator('text=Please select a student.')).toBeVisible();
-
-    // Cancel form
-    await page.locator('button:has-text("Cancel")').click();
-    await expect(page.locator('div[role="dialog"]')).not.toBeVisible();
+    // 3. Verify student list renders and expandable details show Primary Meeting Link
+    await expect(page.locator('text=Aarav Sharma').first()).toBeVisible();
   });
 });

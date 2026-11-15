@@ -52,24 +52,18 @@
 ├── classes/                    # Class Sessions domain
 │   ├── ClassHandlers.gs        # classes.list, schedule, batchSchedule, complete, cancel, restoreCredit
 │   ├── ClassService.gs         # Session scheduling, conflict detection, attendance deduction, auto-replacement
-│   ├── ClassRepository.gs      # Persistence for ClassSessions (8 cols, composite key matching)
+│   ├── ClassRepository.gs      # Persistence for ClassSessions (9 cols, composite key matching, session_notes)
 │   ├── ClassValidation.gs      # Session time & date validation
 │   ├── ClassScheduleHandlers.gs# schedules.list, save
 │   └── ClassScheduleService.gs # Recurring schedule string parser & persistence
-├── meeting-links/              # Meeting Links domain
-│   ├── MeetingLinkHandlers.gs  # meetingLinks.list, create, update, deactivate, cleanupInactive
-│   ├── MeetingLinkService.gs   # Platform detection, slot update logic
-│   ├── MeetingLinkRepository.gs# Persistence for MeetingLinks sheet (4 cols)
-│   └── MeetingLinkValidation.gs# URL scheme validation (https only)
-├── notes/                      # Student Notes domain
-│   ├── NoteHandlers.gs         # notes.list, create
-│   ├── NoteService.gs          # Note creation & follow-up logging
-│   ├── NoteRepository.gs       # Persistence for StudentNotes sheet (5 cols)
-│   └── NoteValidation.gs       # Note text validation
+├── students/                   # Students domain (10 cols, includes primary_meeting_link)
 ├── reports/                    # Reports domain
 │   ├── ReportHandlers.gs       # dashboard.overview, reports.financialSummary
 │   └── ReportService.gs        # Multi-currency financial aggregations & debtor insulation
-├── sheets/                     # Core Google Sheets data access layer
+├── setup/                      # Setup & migration engines
+│   ├── FourTableMigration.gs   # Four-table datastore migration, backup & verification engine
+│   └── ...
+├── sheets/                     # Core Google Sheets data access layer (Strictly 4 canonical tables)
 │   ├── SheetRegistry.gs        # Canonical sheet names and expected headers
 │   ├── HeaderMapper.gs         # Dynamic header name to index mapping, + escape, date conversion
 │   ├── RowReader.gs            # Generic sheet record reading

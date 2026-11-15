@@ -151,12 +151,6 @@ describe('Student ID Migration Execution & Recovery Engine', () => {
       ClassSessions: createMockSheet('ClassSessions', ['session_id', 'student_id'], [
         ['cls_1', 'stu_legacy_1'],
       ]),
-      MeetingLinks: createMockSheet('MeetingLinks', ['meeting_link_id', 'student_id'], [
-        ['ml_1', 'stu_legacy_1'],
-      ]),
-      StudentNotes: createMockSheet('StudentNotes', ['note_id', 'student_id'], [
-        ['note_1', 'stu_legacy_1'],
-      ]),
       ClassSchedules: createMockSheet('ClassSchedules', ['schedule_id', 'student_id'], [
         ['csch_1', 'stu_legacy_1'],
       ]),
@@ -172,8 +166,6 @@ describe('Student ID Migration Execution & Recovery Engine', () => {
     expect(sheets.Packages._getRawData()[1][1]).toBe('STU_002');
     expect(sheets.Payments._getRawData()[1][1]).toBe('STU_002');
     expect(sheets.ClassSessions._getRawData()[1][1]).toBe('STU_002');
-    expect(sheets.MeetingLinks._getRawData()[1][1]).toBe('STU_002');
-    expect(sheets.StudentNotes._getRawData()[1][1]).toBe('STU_002');
     expect(sheets.ClassSchedules._getRawData()[1][1]).toBe('STU_002');
   });
 
@@ -186,11 +178,8 @@ describe('Student ID Migration Execution & Recovery Engine', () => {
       Packages: createMockSheet('Packages', ['package_id', 'student_id'], [
         ['pkg_1', 'STU_002'],
       ]),
-      MeetingLinks: createMockSheet('MeetingLinks', ['meeting_link_id', 'student_id'], [
-        ['ml_1', 'stu_legacy_1'], // Interrupted before this was updated!
-      ]),
-      StudentNotes: createMockSheet('StudentNotes', ['note_id', 'student_id'], [
-        ['note_1', 'stu_legacy_1'],
+      ClassSessions: createMockSheet('ClassSessions', ['session_id', 'student_id'], [
+        ['cls_1', 'stu_legacy_1'], // Interrupted before this was updated!
       ]),
       StudentId_Migration_Backup: createMockSheet('StudentId_Migration_Backup', ['original_id', 'migrated_id', 'status'], [
         ['stu_legacy_1', 'STU_002', 'MAPPED'],
@@ -203,8 +192,7 @@ describe('Student ID Migration Execution & Recovery Engine', () => {
     expect(retryRes.resumed).toBe(true);
     expect(retryRes.mapping['stu_legacy_1']).toBe('STU_002');
 
-    expect(sheets.MeetingLinks._getRawData()[1][1]).toBe('STU_002');
-    expect(sheets.StudentNotes._getRawData()[1][1]).toBe('STU_002');
+    expect(sheets.ClassSessions._getRawData()[1][1]).toBe('STU_002');
     expect(sheets.Students._getRawData()[2][0]).toBe('STU_002');
   });
 

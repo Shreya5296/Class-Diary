@@ -8,11 +8,11 @@ import SpreadsheetBootstrap from '../../02-backend/apps-script/sheets/Spreadshee
 
 // Load backend modules via CommonJS
 // @ts-ignore
-const { MeetingLinks_deleteSlot, MeetingLinks_deactivate } = require('../../02-backend/apps-script/meeting-links/MeetingLinkService.gs');
+const { Students_update, Students_getById, Students_create } = require('../../02-backend/apps-script/students/StudentService.gs');
 // @ts-ignore
-const { registerMeetingLinkOperations } = require('../../02-backend/apps-script/meeting-links/MeetingLinkHandlers.gs');
+const { registerStudentOperations } = require('../../02-backend/apps-script/students/StudentHandlers.gs');
 
-describe('Backend Meeting Link Delete Operations', () => {
+describe('Backend Meeting Link Operations on Canonical Students Table', () => {
   let spreadsheet: MockSpreadsheet;
   const registry: Record<string, Function> = {};
   const mockRouter = {
@@ -20,120 +20,103 @@ describe('Backend Meeting Link Delete Operations', () => {
       registry[name] = fn;
     },
   };
+  const adminActor = { actorId: 'usr_admin', email: 'admin@example.com', isAdmin: true };
 
   beforeEach(() => {
     spreadsheet = new MockSpreadsheet();
     SpreadsheetBootstrap.bootstrapSpreadsheet(spreadsheet, SheetRegistry, '1.0.0');
-    registerMeetingLinkOperations(mockRouter);
+    registerStudentOperations(mockRouter);
 
-    const sheet = spreadsheet.getSheetByName('MeetingLinks');
-    // Pre-populate with two student records
-    sheet!.appendRow(['STU_001', 'Aarav Patel', 'https://meet.google.com/link1', 'https://zoom.us/j/link2']);
-    sheet!.appendRow(['STU_002', 'Diya Sharma', 'https://meet.google.com/only_link', '']);
+    // Pre-populate with two student records with primary_meeting_link
+    Students_create(spreadsheet, {
+      student_id: 'STU_001',
+      student_name: 'Aarav Patel',
+      parent_name: 'Vikram Patel',
+      parent_phone: '+91 98765 43210',
+      parent_email: 'vikram@example.com',
+      student_phone: '',
+      student_email: '',
+      subject: 'Coding',
+      status: 'ACTIVE',
+      primary_meeting_link: 'https://meet.google.com/link1',
+    }, adminActor);
+
+    Students_create(spreadsheet, {
+      student_id: 'STU_002',
+      student_name: 'Diya Sharma',
+      parent_name: 'Anita Sharma',
+      parent_phone: '+91 98765 43211',
+      parent_email: 'anita@example.com',
+      student_phone: '',
+      student_email: '',
+      subject: 'Math',
+      status: 'ACTIVE',
+      primary_meeting_link: 'https://meet.google.com/only_link',
+    }, adminActor);
   });
 
-  it('deletes only meeting_link_1 for a student, preserving meeting_link_2 and identity', () => {
-    const res = MeetingLinks_deleteSlot(spreadsheet, {
-      student_id: 'STU_001',
-      field: 'meeting_link_1',
-    });
+  it('clears primary_meeting_link for a student while preserving student identity and other fields', () => {
+    const res = Students_update(spreadsheet, 'STU_001', {
+      primary_meeting_link: '',
+    }, adminActor);
 
     expect(res.success).toBe(true);
-    expect(res.data.meeting_link_1).toBe('');
-    expect(res.data.meeting_link_2).toBe('https://zoom.us/j/link2');
+    expect(res.data.primary_meeting_link).toBe('');
     expect(res.data.student_id).toBe('STU_001');
     expect(res.data.student_name).toBe('Aarav Patel');
+    expect(res.data.parent_email).toBe('vikram@example.com');
 
-    const sheet = spreadsheet.getSheetByName('MeetingLinks');
-    expect(sheet!.rows[1]).toEqual(['STU_001', 'Aarav Patel', '', 'https://zoom.us/j/link2']);
+    // Fetch directly from DB
+    const student = Students_getById(spreadsheet, 'STU_001');
+    expect(student.primary_meeting_link).toBe('');
+    expect(student.student_name).toBe('Aarav Patel');
+
     // Other student untouched
-    expect(sheet!.rows[2]).toEqual(['STU_002', 'Diya Sharma', 'https://meet.google.com/only_link', '']);
+    const stu2 = Students_getById(spreadsheet, 'STU_002');
+    expect(stu2.primary_meeting_link).toBe('https://meet.google.com/only_link');
   });
 
-  it('deletes only meeting_link_2 for a student, preserving meeting_link_1', () => {
-    const res = MeetingLinks_deleteSlot(spreadsheet, {
-      student_id: 'STU_001',
-      field: 'meeting_link_2',
-    });
+  it('updates primary_meeting_link to a new URL safely', () => {
+    const res = Students_update(spreadsheet, 'STU_001', {
+      primary_meeting_link: 'https://zoom.us/j/999999999',
+    }, adminActor);
 
     expect(res.success).toBe(true);
-    expect(res.data.meeting_link_1).toBe('https://meet.google.com/link1');
-    expect(res.data.meeting_link_2).toBe('');
+    expect(res.data.primary_meeting_link).toBe('https://zoom.us/j/999999999');
 
-    const sheet = spreadsheet.getSheetByName('MeetingLinks');
-    expect(sheet!.rows[1]).toEqual(['STU_001', 'Aarav Patel', 'https://meet.google.com/link1', '']);
+    const student = Students_getById(spreadsheet, 'STU_001');
+    expect(student.primary_meeting_link).toBe('https://zoom.us/j/999999999');
   });
 
-  it('deletes the only existing meeting link (meeting_link_1 for STU_002) without deleting the student record', () => {
-    const res = MeetingLinks_deleteSlot(spreadsheet, {
-      student_id: 'STU_002',
-      field: 'meeting_link_1',
-    });
-
-    expect(res.success).toBe(true);
-    expect(res.data.meeting_link_1).toBe('');
-    expect(res.data.meeting_link_2).toBe('');
-
-    const sheet = spreadsheet.getSheetByName('MeetingLinks');
-    expect(sheet!.rows).toHaveLength(3); // header + 2 student rows remain
-    expect(sheet!.rows[2]).toEqual(['STU_002', 'Diya Sharma', '', '']);
-  });
-
-  it('handles slot-based aliases: slot 1 and slot 2 (or primary / secondary)', () => {
-    const resSlot1 = MeetingLinks_deleteSlot(spreadsheet, { student_id: 'STU_001', slot: 'primary' });
-    expect(resSlot1.success).toBe(true);
-    expect(resSlot1.data.meeting_link_1).toBe('');
-
-    const resSlot2 = MeetingLinks_deleteSlot(spreadsheet, { student_id: 'STU_001', slot: 2 });
-    expect(resSlot2.success).toBe(true);
-    expect(resSlot2.data.meeting_link_2).toBe('');
-  });
-
-  it('rejects invalid field names with INVALID_FIELD', () => {
-    const res = MeetingLinks_deleteSlot(spreadsheet, {
-      student_id: 'STU_001',
-      field: 'meeting_link_3', // forbidden
-    });
-
-    expect(res.success).toBe(false);
-    expect(res.code).toBe('INVALID_FIELD');
-  });
-
-  it('rejects missing or empty student ID with VALIDATION_ERROR', () => {
-    const res = MeetingLinks_deleteSlot(spreadsheet, {
-      student_id: '',
-      field: 'meeting_link_1',
-    });
+  it('rejects invalid meeting link format with VALIDATION_ERROR', () => {
+    const res = Students_update(spreadsheet, 'STU_001', {
+      primary_meeting_link: 'invalid-url-string',
+    }, adminActor);
 
     expect(res.success).toBe(false);
     expect(res.code).toBe('VALIDATION_ERROR');
   });
 
-  it('handles nonexistent student safely without crashing or corrupting data', () => {
-    const res = MeetingLinks_deleteSlot(spreadsheet, {
-      student_id: 'STU_NONEXISTENT',
-      field: 'meeting_link_1',
+  it('rejects update for nonexistent student safely', () => {
+    const res = Students_update(spreadsheet, 'STU_NONEXISTENT', {
+      primary_meeting_link: 'https://meet.google.com/test',
+    }, adminActor);
+
+    expect(res.success).toBe(false);
+    expect(res.code).toBe('RECORD_NOT_FOUND');
+  });
+
+  it('executes through registered router operation students.update', () => {
+    const res = registry['students.update']({
+      spreadsheet,
+      payload: { student_id: 'STU_001', primary_meeting_link: '' },
+      actorId: 'usr_admin',
     });
 
     expect(res.success).toBe(true);
-    expect(res.data.student_id).toBe('STU_NONEXISTENT');
-  });
+    expect(res.data.primary_meeting_link).toBe('');
 
-  it('executes through registered router operations meetingLinks.delete and meetingLinks.deactivate', () => {
-    const delRes = registry['meetingLinks.delete']({
-      spreadsheet,
-      payload: { student_id: 'STU_001', field: 'meeting_link_1' },
-      actorId: 'usr_admin',
-    });
-    expect(delRes.success).toBe(true);
-    expect(delRes.data.meeting_link_1).toBe('');
-
-    const deactRes = registry['meetingLinks.deactivate']({
-      spreadsheet,
-      payload: { student_id: 'STU_001', slot: 2 },
-      actorId: 'usr_admin',
-    });
-    expect(deactRes.success).toBe(true);
-    expect(deactRes.data.meeting_link_2).toBe('');
+    const student = Students_getById(spreadsheet, 'STU_001');
+    expect(student.primary_meeting_link).toBe('');
   });
 });

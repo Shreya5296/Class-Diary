@@ -44,7 +44,7 @@ export function adaptStudentInput(input: Partial<StudentInput>): Record<string, 
   const status = input.status ? String(input.status).trim().toUpperCase() : 'ACTIVE';
   const subjectsArr = subjectStr ? subjectStr.split(',').map((s) => s.trim()).filter(Boolean) : [];
 
-  return {
+  const result: Record<string, unknown> = {
     student_name: name,
     parent_name: parentName,
     parent_phone: parentPhone,
@@ -60,6 +60,10 @@ export function adaptStudentInput(input: Partial<StudentInput>): Record<string, 
     email: parentEmail,
     internal_summary: formatSubjectAndNotes(subjectStr, notes),
   };
+  if (input.primary_meeting_link !== undefined) {
+    result.primary_meeting_link = String(input.primary_meeting_link || '').trim();
+  }
+  return result;
 }
 
 export function enrichStudentData(student: Student): Student {

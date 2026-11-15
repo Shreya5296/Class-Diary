@@ -25,14 +25,14 @@ The dashboard consolidates all daily tutoring operations into one unified, respo
 
 - **Frontend:** React 18, TypeScript, Vite. Hosted on Vercel as a single-page application (SPA).
 - **Backend:** Google Apps Script Web App. Provides authenticated REST-like POST operations, runs domain validation and business rules, and manages Google Sheets persistence.
-- **Canonical Datastore:** One private Google Spreadsheet containing **strictly six tables**: `Students`, `Packages`, `Payments`, `ClassSessions`, `MeetingLinks`, and `StudentNotes`.
+- **Canonical Datastore:** One private Google Spreadsheet containing **strictly four tables**: `Students`, `Packages`, `Payments`, and `ClassSessions`.
 - **Primary Timezone:** `Asia/Kolkata` (IST, UTC+05:30) for all dates, times, schedules, and live clocks.
 - **Base Currency:** `INR`. Multi-currency transactions retain original currency with manual `in_inr` conversion.
 - **User Model:** One authorized administrator (`ashreya0502@gmail.com`). No student or parent accounts.
 
 ## 4. Current Implemented Application Scope
 
-The application consists of seven distinct functional areas:
+The application consists of five primary functional navigation areas plus user preferences:
 
 ### 4.1 Dashboard (`/dashboard`)
 - **Operational Summary Cards:** Active student count, upcoming classes in the next 7 days, total outstanding balance in INR.
@@ -62,7 +62,8 @@ The application consists of seven distinct functional areas:
 
 ### 4.4 Class Schedule & Attendance (`/classes`)
 - **Sessions Ledger:** Chronological table of dated class sessions filterable by student.
-- **Columns:** Date (`dd/mm/yyyy`), Time (12-hour AM/PM), Student, Subject, Attendance Status, Session Status, Class Deduction flag.
+- **Columns:** Student, Weekday & Date (`dd/mm/yyyy`), Class Time (12-hour AM/PM), Consumed / Purchased classes, Join Class, Session Notes, Attendance Status.
+- **Session Notes:** Review and edit lesson notes, topics covered, and session remarks via the dedicated notes modal.
 - **Attendance Actions:**
   - **Present / Attended:** Marks `session_status = COMPLETED`, `attendance_status = PRESENT`, and `deduct_class = true`.
   - **Absent / No-Show:** Prompts owner whether to deduct class credit.
@@ -77,13 +78,7 @@ The application consists of seven distinct functional areas:
 - **Payment History Tab:** Ascending chronological list of all payments received, with student search, date range filtering, and CSV export.
 - **Multi-Currency Protection:** Foreign payments retain original currency (USD, GBP, EUR) and record manual `in_inr`. Foreign payments without manual INR conversion do not mix into INR totals.
 
-### 4.6 Meeting Links (`/meeting-links`)
-- **Student Meeting Links Table:** Compact view of all configured meeting links.
-- **Platform Detection:** Automatically detects and displays badges for Google Meet, Zoom, or Custom URLs.
-- **Direct Actions:** One-click clickable button to open room in new tab, and one-click copy button with visual feedback.
-- **Add / Edit Modal:** Manage primary (`meeting_link_1`) and backup (`meeting_link_2`) links per student.
-
-### 4.7 Settings & Global Shell (`/settings` & Layout)
+### 4.6 Settings & Global Shell (`/settings` & Layout)
 - **Top Bar:** Brand identity, Welcome Back header, live updating date and 12-hour clock in `Asia/Kolkata`.
 - **Account Dropdown:** User avatar, name, email, link to Regional Preferences, and session Sign Out.
 - **Regional Preferences:** Displays system defaults (`Asia/Kolkata` time zone, `INR` base currency, 60-min default duration).
@@ -98,5 +93,6 @@ The following are strictly out of scope:
 - Automated email or WhatsApp marketing campaigns.
 - Native mobile applications (iOS/Android).
 - Separate external SQL or NoSQL database servers.
-- Additional Google Sheets tables beyond the six canonical tables.
+- Additional Google Sheets tables beyond the four canonical tables.
+- Standalone Meeting Links or Student Notes tables or pages (meeting links are stored directly in `Students.primary_meeting_link` and notes in `ClassSessions.session_notes`).
 - Legacy bulk import / reconcile features (permanently retired in Phase 15).

@@ -164,7 +164,7 @@ describe('Fix Batch 2 Comprehensive Verification', () => {
       expect(DATE_COLUMNS_CONFIG['Packages']).toEqual(['start_date', 'end_date', 'next_due_date']);
       expect(DATE_COLUMNS_CONFIG['Payments']).toEqual(['payment_date']);
       expect(DATE_COLUMNS_CONFIG['ClassSessions']).toEqual(['schedule_date']);
-      expect(DATE_COLUMNS_CONFIG['StudentNotes']).toEqual(['note_date', 'follow_up_date']);
+      expect(DATE_COLUMNS_CONFIG['StudentNotes']).toBeUndefined();
     });
 
     it('parses ISO date string to spreadsheet Date object at noon', () => {

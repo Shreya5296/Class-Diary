@@ -51,12 +51,10 @@ flowchart TD
     end
 
     subgraph Datastore["Canonical Google Spreadsheet (Private)"]
-        T1["Students (9 cols)"]
+        T1["Students (10 cols)"]
         T2["Packages (12 cols)"]
         T3["Payments (6 cols)"]
-        T4["ClassSessions (8 cols)"]
-        T5["MeetingLinks (4 cols)"]
-        T6["StudentNotes (5 cols)"]
+        T4["ClassSessions (9 cols)"]
     end
 
     UI --> State
@@ -65,6 +63,7 @@ flowchart TD
     DoPost --> AuthGuards
     AuthGuards --> Router
     Router --> Services
+    Router --> LockMgr
     Services --> LockMgr
     Services --> Repositories
     Repositories --> SheetsAccess
@@ -72,8 +71,6 @@ flowchart TD
     SheetsAccess --> T2
     SheetsAccess --> T3
     SheetsAccess --> T4
-    SheetsAccess --> T5
-    SheetsAccess --> T6
 ```
 
 ## 4. Request & Response Lifecycle Flow
@@ -105,15 +102,13 @@ sequenceDiagram
 
 ## 5. Domain Relationship Diagram
 
-The canonical datastore contains **strictly six tables** with all secondary records linking directly to `Students.student_id`.
+The canonical datastore contains **strictly four tables** with all secondary records linking directly to `Students.student_id`.
 
 ```mermaid
 erDiagram
     Students ||--o{ Packages : "has (linked by student_id)"
     Students ||--o{ Payments : "pays (linked by student_id)"
     Students ||--o{ ClassSessions : "attends (linked by student_id)"
-    Students ||--o| MeetingLinks : "uses (linked by student_id)"
-    Students ||--o{ StudentNotes : "records (linked by student_id)"
 
     Students {
         string student_id PK "Unique identifier (STU_001)"
@@ -125,6 +120,7 @@ erDiagram
         string student_email "Student email"
         string subject "Enrolled subject(s)"
         string status "ACTIVE | INACTIVE"
+        string primary_meeting_link "One primary meeting link"
     }
 
     Packages {
@@ -160,21 +156,7 @@ erDiagram
         string session_status "SCHEDULED | COMPLETED | CANCELLED"
         boolean deduct_class "True consumes package balance"
         string cancellation_reason "Reason if cancelled"
-    }
-
-    MeetingLinks {
-        string student_id FK "References Students.student_id"
-        string student_name "Student name snapshot"
-        string meeting_link_1 "Primary room URL (Google Meet)"
-        string meeting_link_2 "Backup room URL (Zoom)"
-    }
-
-    StudentNotes {
-        string student_id FK "References Students.student_id"
-        string student_name "Student name snapshot"
-        string note_date "Date note created"
-        string note_text "Note content"
-        string follow_up_date "Optional follow-up date"
+        string session_notes "Lesson coverage, remarks, contextual notes"
     }
 ```
 

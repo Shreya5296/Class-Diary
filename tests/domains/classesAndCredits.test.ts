@@ -37,24 +37,16 @@ describe('Phase 5 — Classes, Credits, Meeting Links, and Notes', () => {
     studentId = s.data.student_id;
   });
 
-  it('manages flat meeting links (primary meeting_link_1 and secondary meeting_link_2)', () => {
-    const l1 = MeetingLinkService.MeetingLinks_create(spreadsheet, {
-      student_id: studentId,
-      meeting_link_1: 'https://zoom.us/j/111',
+  it('manages primary meeting link directly on student record', () => {
+    const l1 = StudentService.Students_update(spreadsheet, studentId, {
+      primary_meeting_link: 'https://zoom.us/j/111',
     }, actor);
     expect(l1.success).toBe(true);
-    expect(l1.data.meeting_link_1).toBe('https://zoom.us/j/111');
+    expect(l1.data.primary_meeting_link).toBe('https://zoom.us/j/111');
 
-    const l2 = MeetingLinkService.MeetingLinks_create(spreadsheet, {
-      student_id: studentId,
-      meeting_link_2: 'https://meet.google.com/abc',
-    }, actor);
-    expect(l2.success).toBe(true);
-
-    const row = MeetingLinkRepository.MeetingLinks_getByStudentId(spreadsheet, studentId);
-    expect(row).toBeDefined();
-    expect(row.meeting_link_1).toBe('https://zoom.us/j/111');
-    expect(row.meeting_link_2).toBe('https://meet.google.com/abc');
+    const student = StudentService.Students_getById(spreadsheet, studentId);
+    expect(student).toBeDefined();
+    expect(student.primary_meeting_link).toBe('https://zoom.us/j/111');
   });
 
   it('manages class consumption, no-shows, and credit restoration safeguards', () => {
@@ -200,12 +192,15 @@ describe('Phase 5 — Classes, Credits, Meeting Links, and Notes', () => {
     expect(bal.remaining_classes).toBe(8); // Preserved!
   });
 
-  it('records student notes and provides dashboard overview metrics', () => {
-    const note = NoteService.Notes_create(spreadsheet, {
-      student_id: studentId, note_type: 'FOLLOW_UP', note_text: 'Check homework completion',
-      follow_up_date: '2026-03-10'
+  it('records session notes on class sessions and provides dashboard overview metrics', () => {
+    const cls = ClassService.Classes_schedule(spreadsheet, {
+      student_id: studentId,
+      scheduled_start: '2026-03-10T10:00:00.000Z',
+      scheduled_end: '2026-03-10T11:00:00.000Z',
+      session_notes: 'Check homework completion'
     }, actor);
-    expect(note.success).toBe(true);
+    expect(cls.success).toBe(true);
+    expect(cls.data.session_notes).toBe('Check homework completion');
 
     const overview = ReportService.Reports_getDashboardOverview(spreadsheet);
     expect(overview.success).toBe(true);

@@ -4,7 +4,7 @@
 
 var _clsIdGen = typeof generateClassSessionId === 'function' ? { generateClassSessionId: generateClassSessionId } : (typeof require !== 'undefined' ? require('../shared/IdGenerator.gs') : null);
 var _clsVal = typeof validateClassScheduleInput === 'function' ? { validateClassScheduleInput: validateClassScheduleInput, validateClassCompleteInput: validateClassCompleteInput } : (typeof require !== 'undefined' ? require('./ClassValidation.gs') : null);
-var _clsRepo = typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_getById: Classes_getById, Classes_findByRestorationId: Classes_findByRestorationId, Classes_insert: Classes_insert, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null);
+var _clsRepo = typeof Classes_repoUpdate === 'function' ? { Classes_getAll: Classes_getAll, Classes_getById: Classes_getById, Classes_findByRestorationId: Classes_findByRestorationId, Classes_insert: Classes_insert, Classes_update: Classes_repoUpdate } : (typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_getById: Classes_getById, Classes_findByRestorationId: Classes_findByRestorationId, Classes_insert: Classes_insert, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null));
 var _clsStuRepo = typeof Students_getById === 'function' ? { Students_getById: Students_getById } : (typeof require !== 'undefined' ? require('../students/StudentRepository.gs') : null);
 var _clsPkgRepo = typeof Packages_getById === 'function' ? { Packages_getById: Packages_getById, Packages_getByStudentId: Packages_getByStudentId } : (typeof require !== 'undefined' ? require('../packages/PackageRepository.gs') : null);
 var _clsLock = typeof withLock === 'function' ? { withLock: withLock } : (typeof require !== 'undefined' ? require('../sheets/LockManager.gs') : null);
@@ -23,7 +23,10 @@ var _sessionMetaMap = (typeof globalThis !== 'undefined' && globalThis.__session
   : ((typeof globalThis !== 'undefined') ? (globalThis.__sessionMetaMap = {}) : {});
 
 function Classes_schedule(spreadsheet, data, actor) {
-  var start = data.scheduled_start || data.start_time;
+  var dateStr = data.schedule_date || data.class_date || '';
+  var timeStr = data.schedule_time || data.start_time || '10:00';
+  if (timeStr && timeStr.length === 5) timeStr += ':00';
+  var start = data.scheduled_start || (dateStr ? (dateStr + 'T' + timeStr + '.000Z') : data.start_time);
   var end = data.scheduled_end;
   if (!end && start) {
     try {
@@ -63,8 +66,9 @@ function Classes_schedule(spreadsheet, data, actor) {
     scheduled_end: endIso,
     attendance_status: 'NOT_MARKED',
     session_status: 'SCHEDULED',
+    deduct_class: false,
     cancellation_reason: '',
-    deduct_class: false
+    session_notes: normalized.session_notes !== undefined ? String(normalized.session_notes).trim() : (normalized.notes !== undefined ? String(normalized.notes).trim() : '')
   };
 
   var lockFn = _clsLock && _clsLock.withLock ? _clsLock.withLock : function(t, fn) { return { success: true, result: fn() }; };
@@ -267,14 +271,19 @@ function Classes_complete(spreadsheet, data, actor) {
 
   var effect = deduct ? 'CONSUME' : 'NO_CONSUME';
 
-  var updated = _clsRepo.Classes_update(spreadsheet, sid, {
+  var updatePayload = {
     _rowIndex: session._rowIndex,
     rowIndex: session._rowIndex,
     student_id: session.student_id,
     session_status: 'COMPLETED',
     attendance_status: att,
     deduct_class: deduct
-  });
+  };
+  if (data.session_notes !== undefined) {
+    updatePayload.session_notes = String(data.session_notes).trim();
+  }
+
+  var updated = _clsRepo.Classes_update(spreadsheet, sid, updatePayload);
 
   var returnData = Object.assign({}, updated, {
     session_status: 'COMPLETED',
@@ -317,7 +326,7 @@ function Classes_cancel(spreadsheet, data, actor) {
   );
   var attStatus = isLate ? 'CANCELLED_LATE' : 'CANCELLED';
 
-  var updated = _clsRepo.Classes_update(spreadsheet, sid, {
+  var cancelUpdatePayload = {
     _rowIndex: session._rowIndex,
     rowIndex: session._rowIndex,
     student_id: session.student_id,
@@ -325,7 +334,12 @@ function Classes_cancel(spreadsheet, data, actor) {
     attendance_status: attStatus,
     cancellation_reason: reason,
     deduct_class: deduct
-  });
+  };
+  if (data.session_notes !== undefined) {
+    cancelUpdatePayload.session_notes = String(data.session_notes).trim();
+  }
+
+  var updated = _clsRepo.Classes_update(spreadsheet, sid, cancelUpdatePayload);
 
   // Non-deductible cancellation logic:
   // If deduct === false, student credit entitlement is preserved.
@@ -488,12 +502,33 @@ function Classes_restoreCredit(spreadsheet, data, actor) {
   };
 }
 
+function Classes_update(spreadsheet, data, actor) {
+  if (typeof data === 'string' || typeof data === 'number') {
+    return _clsRepo.Classes_update(spreadsheet, data, actor);
+  }
+  var sid = (data && (data.class_session_id || data.session_id)) || '';
+  if (!sid) return { success: false, code: 'VALIDATION_ERROR', message: 'Session ID is required' };
+  var existing = _clsRepo.Classes_getById(spreadsheet, sid);
+  if (!existing) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Session not found' };
+  var updates = {};
+  if (existing && existing._rowIndex) updates._rowIndex = existing._rowIndex;
+  if (existing && existing.student_id) updates.student_id = existing.student_id;
+  if (data.session_notes !== undefined) updates.session_notes = data.session_notes;
+  if (data.attendance_status !== undefined) updates.attendance_status = data.attendance_status;
+  if (data.session_status !== undefined) updates.session_status = data.session_status;
+  if (data.deduct_class !== undefined) updates.deduct_class = data.deduct_class;
+  if (data.cancellation_reason !== undefined) updates.cancellation_reason = data.cancellation_reason;
+  var updated = _clsRepo.Classes_update(spreadsheet, sid, updates);
+  return { success: true, data: updated };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     Classes_schedule: Classes_schedule,
     Classes_batchSchedule: Classes_batchSchedule,
     Classes_complete: Classes_complete,
     Classes_cancel: Classes_cancel,
-    Classes_restoreCredit: Classes_restoreCredit
+    Classes_restoreCredit: Classes_restoreCredit,
+    Classes_update: Classes_update
   };
 }

@@ -97,7 +97,7 @@ describe('Next Implementation Batch — UX, Scheduling & Calendar', () => {
       expect(linkAlert?.reason).toBe('Meeting link not configured');
       expect(linkAlert?.actionLabel).toBe('Configure Link');
       expect(linkAlert?.studentId).toBe('STU_001');
-      expect(linkAlert?.targetSection).toBe('meeting-links');
+      expect(linkAlert?.targetSection).toBe('students');
     });
 
     it('flags active student with no class schedule configured', () => {

@@ -3,7 +3,7 @@
  */
 
 var _clsSvcH = typeof Classes_schedule === 'function' ? { Classes_schedule: Classes_schedule, Classes_batchSchedule: Classes_batchSchedule, Classes_complete: Classes_complete, Classes_cancel: Classes_cancel, Classes_restoreCredit: Classes_restoreCredit } : (typeof require !== 'undefined' ? require('./ClassService.gs') : null);
-var _clsRepoH = typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null);
+var _clsRepoH = typeof Classes_repoUpdate === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_repoUpdate } : (typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null));
 
 function registerClassOperations(router) {
   var reg = router && router.registerOperation ? router.registerOperation : (typeof registerOperation === 'function' ? registerOperation : null);
@@ -24,6 +24,7 @@ function registerClassOperations(router) {
       copy.start_time = c.schedule_time || c.start_time;
       copy.status = c.session_status || 'SCHEDULED';
       copy.duration_minutes = Number(c.duration_minutes) || 60;
+      copy.session_notes = c.session_notes || '';
       return copy;
     });
 

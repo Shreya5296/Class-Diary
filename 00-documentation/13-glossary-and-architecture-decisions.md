@@ -13,7 +13,7 @@
 ## 2. Terminology & Business Glossary
 
 - **Active Student:** A student whose status is not `INACTIVE` or `ARCHIVED`, who has remaining package balance ($> 0$), and whose last completed class occurred $< 1$ calendar month ago (or who has 0 completed classes).
-- **Canonical Datastore:** The single private Google Spreadsheet containing strictly six active tables (`Students`, `Packages`, `Payments`, `ClassSessions`, `MeetingLinks`, `StudentNotes`).
+- **Canonical Datastore:** The single private Google Spreadsheet containing strictly four active tables (`Students`, `Packages`, `Payments`, `ClassSessions`).
 - **Class Duration:** Duration of each individual class session in minutes (default `60`), stored in `Packages.class_duration`. Used to derive session end time.
 - **Class Schedule String:** Human-readable recurring weekly schedule string (e.g. `Mon - 6:00 PM, Wed - 6:00 PM, Sat - 10:00 AM`) stored directly inside `Packages.class_schedule`.
 - **Composite Session Key:** Synthetic in-memory identifier for class sessions formatted as `student_id__schedule_date__schedule_time` (e.g. `STU_001__2026-01-19__18:00`).
@@ -32,20 +32,20 @@
 
 ## 3. Architecture Decision Records (ADRs)
 
-### ADR-01: Six Canonical Google Sheets Tables Only
-- **Context:** Earlier prototypes experimented with up to 12 operational and intermediate tabs (`Enrollments`, `FeeObligations`, `ClassSchedules`, `AppConfig`, `ImportBatches`, `ImportRowResults`).
-- **Decision:** Consolidate the physical datastore into strictly six tables (`Students`, `Packages`, `Payments`, `ClassSessions`, `MeetingLinks`, `StudentNotes`). Retire all intermediate tables.
-- **Rationale:** A single tutor operations system does not need enterprise junction tables. Direct links to `student_id` simplify persistence and eliminate synchronization errors.
+### ADR-01: Four Canonical Google Sheets Tables Only
+- **Context:** Earlier versions maintained separate `MeetingLinks` and `StudentNotes` tables alongside `Students`, `Packages`, `Payments`, and `ClassSessions`.
+- **Decision:** Consolidate the physical datastore into strictly four tables: `Students` (10 cols), `Packages` (12 cols), `Payments` (6 cols), and `ClassSessions` (9 cols). Meeting links are embedded into `Students.primary_meeting_link` and notes into `ClassSessions.session_notes`. Standalone MeetingLinks and StudentNotes tables and frontend page are eliminated.
+- **Rationale:** Greatly reduces relational complexity, avoids fragmented updates across disparate sheets, and allows teachers to manage links directly from Students and lesson coverage directly on scheduled classes.
 
 ### ADR-02: Zero-GCP Server-Side HMAC-SHA256 Authentication
 - **Context:** Setting up Google Cloud Console OAuth consent screens and client credentials creates external operational dependencies.
 - **Decision:** Use server-side HMAC-SHA256 signed session tokens verified against an allowlist and `ADMIN_AUTH_KEY` stored in Apps Script `ScriptProperties`.
 - **Rationale:** Eliminates GCP dependencies, allows zero-configuration backend deployments, and securely restricts access to `ashreya0502@gmail.com`.
 
-### ADR-03: Composite Session Key for ClassSessions
+### ADR-03: Composite Session Key and Session Notes for ClassSessions
 - **Context:** The `ClassSessions` sheet contains no `session_id` column and no stored end-time column.
-- **Decision:** Identify sessions by composite key `student_id__schedule_date__schedule_time` or row index; derive end time dynamically from `Packages.class_duration`.
-- **Rationale:** Preserves the canonical 8-column spreadsheet layout while enabling robust single-session attendance updates.
+- **Decision:** Identify sessions by composite key `student_id__schedule_date__schedule_time` or row index; derive end time dynamically from `Packages.class_duration`; store lesson coverage and pedagogical remarks in `ClassSessions.session_notes`.
+- **Rationale:** Preserves the canonical 9-column spreadsheet layout while enabling robust single-session attendance and notes updates.
 
 ### ADR-04: Embedding Recurring Schedules into `Packages.class_schedule`
 - **Context:** Maintaining a separate `ClassSchedules` sheet caused synchronization drift during student updates.

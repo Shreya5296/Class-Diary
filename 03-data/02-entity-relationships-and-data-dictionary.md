@@ -18,12 +18,12 @@ All secondary entities link directly to `Students` using `student_id`. There are
                │   Students   │ (1)
                └──────┬───────┘
                       │
-     ┌────────────────┼────────────────┬────────────────┬────────────────┐
-     │ 1:N            │ 1:N            │ 1:N            │ 1:1            │ 1:N
-     ▼                ▼                ▼                ▼                ▼
-┌──────────┐    ┌──────────┐    ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ Packages │    │ Payments │    │ClassSessions │ │ MeetingLinks │ │ StudentNotes │
-└──────────┘    └──────────┘    └──────────────┘ └──────────────┘ └──────────────┘
+     ┌────────────────┼────────────────┐
+     │ 1:N            │ 1:N            │ 1:N
+     ▼                ▼                ▼
+┌──────────┐    ┌──────────┐    ┌──────────────┐
+│ Packages │    │ Payments │    │ClassSessions │
+└──────────┘    └──────────┘    └──────────────┘
 ```
 
 ---
@@ -46,14 +46,11 @@ All secondary entities link directly to `Students` using `student_id`. There are
   (e.g. `STU_001__2026-01-19__18:00`).
 - Updates match row by composite key or 1-based `_rowIndex`.
 - Derived End Time: `schedule_time + Packages.class_duration`.
+- Session Notes: Stored directly in `session_notes` (column 9).
 
-### 3.4 Meeting Links Identification (`MeetingLinks`)
-- Keyed directly by `student_id` (1 row per student).
-- Contains `meeting_link_1` (primary) and `meeting_link_2` (secondary/backup).
-
-### 3.5 Student Notes Identification (`StudentNotes`)
-- Keyed by `student_id`.
-- Contains `note_date`, `note_text`, and optional `follow_up_date`.
+### 3.4 Primary Meeting Link (`Students`)
+- Embedded directly in `Students.primary_meeting_link` (column 10).
+- Exactly one primary link per student. Stored and updated on the student record.
 
 ---
 
@@ -70,6 +67,7 @@ All secondary entities link directly to `Students` using `student_id`. There are
 | `Students` | `student_email` | String | G (7) | No | Direct student email for calendar invites. |
 | `Students` | `subject` | String | H (8) | No | Enrolled subject or subjects. |
 | `Students` | `status` | Enum | I (9) | Yes | `ACTIVE`, `INACTIVE`, `ARCHIVED`. |
+| `Students` | `primary_meeting_link` | String | J (10) | No | Single primary virtual room URL. |
 | `Packages` | `student_id` | String | A (1) | Yes | References `Students.student_id`. |
 | `Packages` | `student_name` | String | B (2) | Yes | Student name snapshot. |
 | `Packages` | `plan_type` | Enum | C (3) | Yes | `PACKAGE`, `MONTHLY`, `YEARLY`, `PER_CLASS`. |
@@ -96,12 +94,4 @@ All secondary entities link directly to `Students` using `student_id`. There are
 | `ClassSessions`| `session_status`| Enum | F (6) | Yes | `SCHEDULED`, `COMPLETED`, `CANCELLED`. |
 | `ClassSessions`| `deduct_class` | Boolean| G (7) | Yes | `TRUE` if class consumes balance. |
 | `ClassSessions`| `cancellation_reason`| String| H (8) | No | Cancellation or rescheduling note. |
-| `MeetingLinks` | `student_id` | String | A (1) | Yes | References `Students.student_id` (PK). |
-| `MeetingLinks` | `student_name` | String | B (2) | Yes | Student name snapshot. |
-| `MeetingLinks` | `meeting_link_1`| String | C (3) | Yes | Primary room URL (Google Meet). |
-| `MeetingLinks` | `meeting_link_2`| String | D (4) | No | Backup room URL (Zoom). |
-| `StudentNotes` | `student_id` | String | A (1) | Yes | References `Students.student_id`. |
-| `StudentNotes` | `student_name` | String | B (2) | Yes | Student name snapshot. |
-| `StudentNotes` | `note_date` | Date | C (3) | Yes | Date note created (`YYYY-MM-DD`). |
-| `StudentNotes` | `note_text` | String | D (4) | Yes | Pedagogical remarks / homework notes. |
-| `StudentNotes` | `follow_up_date`| Date | E (5) | No | Optional follow-up date. |
+| `ClassSessions`| `session_notes`| String | I (9) | No | Lesson coverage, topic taught, remarks. |
