@@ -200,7 +200,7 @@ describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', ()
     });
 
     it('11. Post-migration verification correctly validates canonical tabs and schema integrity', () => {
-      // Setup production-like spreadsheet
+      // Setup production-like spreadsheet matching exact inventory (8 data students, 8 pkgs, 12 payments, 164 sessions)
       const prodSs = new MockSpreadsheet();
       prodSs.getId = () => '1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8';
       prodSs.getName = () => 'Personal Dashboard';
@@ -208,7 +208,7 @@ describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', ()
       const stuRows = [
         ['student_id', 'student_name', 'parent_name', 'parent_phone', 'parent_email', 'student_phone', 'student_email', 'subject', 'status']
       ];
-      for (let i = 1; i <= 9; i++) {
+      for (let i = 1; i <= 8; i++) {
         const sid = `STU_00${i}`;
         stuRows.push([sid, `Student ${i}`, 'Parent', '9876543210', 'parent@test.com', '9876543211', 'student@test.com', 'Math', 'ACTIVE']);
       }
@@ -217,7 +217,7 @@ describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', ()
       const pkgRows = [
         ['student_id', 'student_name', 'plan_type', 'currency', 'package_price', 'per_class', 'classes_purchased', 'start_date', 'end_date', 'next_due_date', 'class_duration', 'class_schedule']
       ];
-      for (let i = 1; i <= 9; i++) {
+      for (let i = 1; i <= 8; i++) {
         pkgRows.push([`STU_00${i}`, `Student ${i}`, 'PACKAGE', 'INR', 5000, 1000, 5, '2026-03-01', '2026-04-01', '2026-04-01', 60, '']);
       }
       prodSs.insertSheet('Packages').rows = pkgRows;
@@ -225,8 +225,8 @@ describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', ()
       const payRows = [
         ['student_id', 'student_name', 'payment_date', 'amount', 'currency', 'in_inr']
       ];
-      for (let i = 1; i <= 13; i++) {
-        const idx = (i % 9) + 1;
+      for (let i = 1; i <= 12; i++) {
+        const idx = ((i - 1) % 8) + 1;
         payRows.push([`STU_00${idx}`, `Student ${idx}`, '2026-03-01', 1000, 'INR', 1000]);
       }
       prodSs.insertSheet('Payments').rows = payRows;
@@ -235,7 +235,7 @@ describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', ()
         ['student_id', 'student_name', 'schedule_date', 'schedule_time', 'attendance_status', 'session_status', 'deduct_class', 'cancellation_reason']
       ];
       for (let i = 1; i <= 164; i++) {
-        const idx = (i % 9) + 1;
+        const idx = ((i - 1) % 8) + 1;
         const d = `2026-${String(Math.floor((i - 1) / 28) + 1).padStart(2, '0')}-${String(((i - 1) % 28) + 1).padStart(2, '0')}`;
         clsRows.push([`STU_00${idx}`, `Student ${idx}`, d, '10:00', 'ATTENDED', 'COMPLETED', true, '']);
       }
@@ -271,6 +271,7 @@ describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', ()
       // Verify post-migration verification function reports VERIFIED_SUCCESSFUL
       const verif = runFourTablePostMigrationVerification(prodSs);
       expect(verif.conclusion).toBe('VERIFIED_SUCCESSFUL');
+      expect(verif.discrepancies).toEqual([]);
       expect(verif.canonicalTabsStatus.canonicalFourPresent).toBe(true);
       expect(verif.canonicalTabsStatus.meetingLinksDeleted).toBe(true);
       expect(verif.canonicalTabsStatus.studentNotesDeleted).toBe(true);
@@ -280,8 +281,40 @@ describe('FourTableMigration Hardened Targeting, Preflight & Deletion Gates', ()
       expect(verif.sessionNotesVerification.expectedNotesMatched.stu004_2026_09_13).toBe(true);
       expect(verif.sessionNotesVerification.expectedNotesMatched.stu004_2026_10_04).toBe(true);
       expect(verif.sessionNotesVerification.expectedNotesMatched.stu005_2026_08_28).toBe(true);
+      expect(verif.packagesAndPaymentsVerification.packagesDataRows).toBe(8);
+      expect(verif.packagesAndPaymentsVerification.packagesValidRecordsCount).toBe(8);
       expect(verif.packagesAndPaymentsVerification.packagesMatchExpected).toBe(true);
+      expect(verif.packagesAndPaymentsVerification.paymentsDataRows).toBe(12);
+      expect(verif.packagesAndPaymentsVerification.paymentsValidRecordsCount).toBe(12);
       expect(verif.packagesAndPaymentsVerification.paymentsMatchExpected).toBe(true);
+    });
+
+    it('12. Post-migration verification records specific discrepancies on corrupt records', () => {
+      const prodSs = new MockSpreadsheet();
+      prodSs.getId = () => '1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8';
+      prodSs.insertSheet('Students').rows = [
+        ['student_id', 'student_name', 'status', 'primary_meeting_link'],
+        ['STU_001', 'Student 1', 'ACTIVE', 'https://meet.google.com/link-1']
+      ];
+      prodSs.insertSheet('ClassSessions').rows = [
+        ['student_id', 'student_name', 'schedule_date', 'schedule_time', 'attendance_status', 'session_status', 'deduct_class', 'cancellation_reason', 'session_notes'],
+        ['STU_001', 'Student 1', '2026-03-01', '10:00', 'ATTENDED', 'COMPLETED', true, '', '']
+      ];
+      prodSs.insertSheet('Packages').rows = [
+        ['student_id', 'student_name', 'plan_type', 'currency', 'package_price', 'per_class', 'classes_purchased', 'start_date', 'end_date', 'next_due_date', 'class_duration', 'class_schedule'],
+        ['UNKNOWN_STU', 'Ghost', 'PACKAGE', 'INR', -500, 1000, 5, '2026-03-01', '2026-04-01', '2026-04-01', 60, '']
+      ];
+      prodSs.insertSheet('Payments').rows = [
+        ['student_id', 'student_name', 'payment_date', 'amount', 'currency', 'in_inr'],
+        ['UNKNOWN_STU', 'Ghost', '2026-03-01', -100, 'INR', -100]
+      ];
+
+      const verif = runFourTablePostMigrationVerification(prodSs);
+      expect(verif.conclusion).toBe('VERIFICATION_DISCREPANCIES_DETECTED');
+      expect(verif.discrepancies.length).toBeGreaterThan(0);
+      expect(verif.discrepancies.some((d: string) => d.includes('student_id not found in Students'))).toBe(true);
+      expect(verif.discrepancies.some((d: string) => d.includes('invalid package_price'))).toBe(true);
+      expect(verif.discrepancies.some((d: string) => d.includes('invalid amount'))).toBe(true);
     });
   });
 });

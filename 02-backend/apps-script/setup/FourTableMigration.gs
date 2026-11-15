@@ -948,10 +948,12 @@ function runFourTablePostMigrationVerification(spreadsheet) {
 
       result.meetingLinkVerification.totalStudents = stuData.length - 1;
       var stu7Link = '', stu8Link = '';
+      var validStudentIds = {};
 
       for (var sr = 1; sr < stuData.length; sr++) {
         var sid = String(stuData[sr][sIdIdx] || '').trim();
         var link = sLinkIdx !== -1 ? String(stuData[sr][sLinkIdx] || '').trim() : '';
+        if (sid) validStudentIds[sid] = true;
         result.meetingLinkVerification.studentLinks.push({ student_id: sid, primary_meeting_link: link });
         if (link) {
           result.meetingLinkVerification.withPrimaryLink++;
@@ -960,6 +962,10 @@ function runFourTablePostMigrationVerification(spreadsheet) {
         }
         if (sid === 'STU_007') stu7Link = link;
         if (sid === 'STU_008') stu8Link = link;
+      }
+
+      if (result.meetingLinkVerification.withPrimaryLink !== 5) {
+        result.discrepancies.push('Expected 5 students with primary_meeting_link, found ' + result.meetingLinkVerification.withPrimaryLink);
       }
 
       if (stu7Link && stu8Link && stu7Link === stu8Link) {
@@ -1033,6 +1039,19 @@ function runFourTablePostMigrationVerification(spreadsheet) {
           }
         }
       }
+
+      if (result.sessionNotesVerification.sessionsWithNotes !== 3) {
+        result.discrepancies.push('Expected 3 sessions with session_notes, found ' + result.sessionNotesVerification.sessionsWithNotes);
+      }
+      if (!result.sessionNotesVerification.expectedNotesMatched.stu004_2026_09_13) {
+        result.discrepancies.push('Missing historical note for STU_004 on 2026-09-13');
+      }
+      if (!result.sessionNotesVerification.expectedNotesMatched.stu004_2026_10_04) {
+        result.discrepancies.push('Missing historical note for STU_004 on 2026-10-04');
+      }
+      if (!result.sessionNotesVerification.expectedNotesMatched.stu005_2026_08_28) {
+        result.discrepancies.push('Missing historical note for STU_005 on 2026-08-28');
+      }
     }
   }
 
@@ -1041,12 +1060,79 @@ function runFourTablePostMigrationVerification(spreadsheet) {
   if (pkgSheet) {
     var pLastRow = pkgSheet.getLastRow();
     result.rowCounts.headerInclusive['Packages'] = pLastRow;
-    result.rowCounts.dataRows['Packages'] = Math.max(0, pLastRow - 1);
-    result.packagesAndPaymentsVerification.packagesDataRows = Math.max(0, pLastRow - 1);
-    result.packagesAndPaymentsVerification.packagesMatchExpected = (result.packagesAndPaymentsVerification.packagesDataRows === 9);
+    var pkgDataRows = Math.max(0, pLastRow - 1);
+    result.rowCounts.dataRows['Packages'] = pkgDataRows;
+    result.packagesAndPaymentsVerification.packagesDataRows = pkgDataRows;
+    result.packagesAndPaymentsVerification.expectedPackagesDataRows = 8;
+    result.packagesAndPaymentsVerification.expectedPackagesHeaderInclusive = 9;
+
     if (pLastRow > 0) {
-      result.schemas['Packages'] = (pkgSheet.getDataRange().getValues()[0] || []);
+      var pData = pkgSheet.getDataRange().getValues();
+      var pHeaders = pData[0] || [];
+      result.schemas['Packages'] = pHeaders;
+
+      var expectedPkgHeaders = [
+        'student_id', 'student_name', 'plan_type', 'currency', 'package_price',
+        'per_class', 'classes_purchased', 'start_date', 'end_date', 'next_due_date',
+        'class_duration', 'class_schedule'
+      ];
+      var pkgHeaderMismatch = false;
+      for (var phi = 0; phi < expectedPkgHeaders.length; phi++) {
+        if (pHeaders.indexOf(expectedPkgHeaders[phi]) === -1) {
+          pkgHeaderMismatch = true;
+          result.discrepancies.push('Packages sheet missing column: ' + expectedPkgHeaders[phi]);
+        }
+      }
+
+      var pSidIdx = pHeaders.indexOf('student_id');
+      var pPriceIdx = pHeaders.indexOf('package_price');
+      var pPurchasedIdx = pHeaders.indexOf('classes_purchased');
+      var validPkgRecords = 0;
+
+      for (var pr = 1; pr < pData.length; pr++) {
+        var pRow = pData[pr];
+        var psid = String(pRow[pSidIdx] || '').trim();
+        var pPrice = Number(pRow[pPriceIdx]);
+        var pPurchased = Number(pRow[pPurchasedIdx]);
+        var hasRowError = false;
+
+        if (!psid) {
+          result.discrepancies.push('Packages row ' + (pr + 1) + ' has empty student_id');
+          hasRowError = true;
+        } else if (validStudentIds && !validStudentIds[psid]) {
+          result.discrepancies.push('Packages row ' + (pr + 1) + ' student_id not found in Students: ' + psid);
+          hasRowError = true;
+        }
+        if (isNaN(pPrice) || pPrice < 0) {
+          result.discrepancies.push('Packages row ' + (pr + 1) + ' invalid package_price: ' + pRow[pPriceIdx]);
+          hasRowError = true;
+        }
+        if (isNaN(pPurchased) || pPurchased < 0) {
+          result.discrepancies.push('Packages row ' + (pr + 1) + ' invalid classes_purchased: ' + pRow[pPurchasedIdx]);
+          hasRowError = true;
+        }
+        if (!hasRowError) {
+          validPkgRecords++;
+        }
+      }
+
+      result.packagesAndPaymentsVerification.packagesValidRecordsCount = validPkgRecords;
+      result.packagesAndPaymentsVerification.packagesMatchExpected = (
+        pkgDataRows === 8 &&
+        validPkgRecords === 8 &&
+        !pkgHeaderMismatch
+      );
+
+      if (pkgDataRows !== 8) {
+        result.discrepancies.push('Packages row count mismatch: expected 8 data rows (9 header-inclusive), found ' + pkgDataRows);
+      }
+    } else {
+      result.packagesAndPaymentsVerification.packagesMatchExpected = false;
+      result.discrepancies.push('Packages sheet is empty');
     }
+  } else {
+    result.packagesAndPaymentsVerification.packagesMatchExpected = false;
+    result.discrepancies.push('Packages sheet missing');
   }
 
   // 5. Payments verification
@@ -1054,12 +1140,75 @@ function runFourTablePostMigrationVerification(spreadsheet) {
   if (paySheet) {
     var pyLastRow = paySheet.getLastRow();
     result.rowCounts.headerInclusive['Payments'] = pyLastRow;
-    result.rowCounts.dataRows['Payments'] = Math.max(0, pyLastRow - 1);
-    result.packagesAndPaymentsVerification.paymentsDataRows = Math.max(0, pyLastRow - 1);
-    result.packagesAndPaymentsVerification.paymentsMatchExpected = (result.packagesAndPaymentsVerification.paymentsDataRows === 13);
+    var payDataRows = Math.max(0, pyLastRow - 1);
+    result.rowCounts.dataRows['Payments'] = payDataRows;
+    result.packagesAndPaymentsVerification.paymentsDataRows = payDataRows;
+    result.packagesAndPaymentsVerification.expectedPaymentsDataRows = 12;
+    result.packagesAndPaymentsVerification.expectedPaymentsHeaderInclusive = 13;
+
     if (pyLastRow > 0) {
-      result.schemas['Payments'] = (paySheet.getDataRange().getValues()[0] || []);
+      var pyData = paySheet.getDataRange().getValues();
+      var pyHeaders = pyData[0] || [];
+      result.schemas['Payments'] = pyHeaders;
+
+      var expectedPayHeaders = ['student_id', 'student_name', 'payment_date', 'amount', 'currency', 'in_inr'];
+      var payHeaderMismatch = false;
+      for (var pyi = 0; pyi < expectedPayHeaders.length; pyi++) {
+        if (pyHeaders.indexOf(expectedPayHeaders[pyi]) === -1) {
+          payHeaderMismatch = true;
+          result.discrepancies.push('Payments sheet missing column: ' + expectedPayHeaders[pyi]);
+        }
+      }
+
+      var pySidIdx = pyHeaders.indexOf('student_id');
+      var pyAmtIdx = pyHeaders.indexOf('amount');
+      var pyDateIdx = pyHeaders.indexOf('payment_date');
+      var validPayRecords = 0;
+
+      for (var pyr = 1; pyr < pyData.length; pyr++) {
+        var pyRow = pyData[pyr];
+        var pysid = String(pyRow[pySidIdx] || '').trim();
+        var pyAmt = Number(pyRow[pyAmtIdx]);
+        var pyDate = String(pyRow[pyDateIdx] || '').trim();
+        var hasPayRowError = false;
+
+        if (!pysid) {
+          result.discrepancies.push('Payments row ' + (pyr + 1) + ' has empty student_id');
+          hasPayRowError = true;
+        } else if (validStudentIds && !validStudentIds[pysid]) {
+          result.discrepancies.push('Payments row ' + (pyr + 1) + ' student_id not found in Students: ' + pysid);
+          hasPayRowError = true;
+        }
+        if (isNaN(pyAmt) || pyAmt < 0) {
+          result.discrepancies.push('Payments row ' + (pyr + 1) + ' invalid amount: ' + pyRow[pyAmtIdx]);
+          hasPayRowError = true;
+        }
+        if (!pyDate) {
+          result.discrepancies.push('Payments row ' + (pyr + 1) + ' empty payment_date');
+          hasPayRowError = true;
+        }
+        if (!hasPayRowError) {
+          validPayRecords++;
+        }
+      }
+
+      result.packagesAndPaymentsVerification.paymentsValidRecordsCount = validPayRecords;
+      result.packagesAndPaymentsVerification.paymentsMatchExpected = (
+        payDataRows === 12 &&
+        validPayRecords === 12 &&
+        !payHeaderMismatch
+      );
+
+      if (payDataRows !== 12) {
+        result.discrepancies.push('Payments row count mismatch: expected 12 data rows (13 header-inclusive), found ' + payDataRows);
+      }
+    } else {
+      result.packagesAndPaymentsVerification.paymentsMatchExpected = false;
+      result.discrepancies.push('Payments sheet is empty');
     }
+  } else {
+    result.packagesAndPaymentsVerification.paymentsMatchExpected = false;
+    result.discrepancies.push('Payments sheet missing');
   }
 
   // 6. Conclusion
@@ -1083,7 +1232,7 @@ function runFourTablePostMigrationVerification(spreadsheet) {
     result.discrepancies.length === 0
   );
 
-  result.conclusion = passed ? 'VERIFIED_SUCCESSFUL' : 'VERIFICATION_DISCREPANCIES_DETECTED';
+  result.conclusion = (passed && result.discrepancies.length === 0) ? 'VERIFIED_SUCCESSFUL' : 'VERIFICATION_DISCREPANCIES_DETECTED';
 
   if (typeof Logger !== 'undefined' && typeof Logger.log === 'function') {
     Logger.log('=== FOUR-TABLE POST-MIGRATION VERIFICATION REPORT ===');
