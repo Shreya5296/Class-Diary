@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MockSpreadsheet } from '../mocks/MockSpreadsheet';
 // @ts-expect-error Apps script commonjs export
-import { runFourTableCanonicalMigration } from '../../02-backend/apps-script/setup/FourTableMigration.gs';
+import { runFourTableCanonicalMigration, generatePreMigrationInventory } from '../../02-backend/apps-script/setup/FourTableMigration.gs';
 
 describe('FourTableMigration Hardened Targeting and Follow-up Archive Harness', () => {
   let spreadsheet: MockSpreadsheet;
@@ -126,6 +126,39 @@ describe('FourTableMigration Hardened Targeting and Follow-up Archive Harness', 
 
       const sess2 = clsSheet.rows.find((r) => r[0] === 'stu_01' && r[2] === '2026-03-12');
       expect(sess2![8]).toBe('Algebra test prep (Follow-up: 2026-03-19)');
+    });
+
+    it('supports skipBackups option: executes full migration without creating backup tabs', () => {
+      const res = runFourTableCanonicalMigration(spreadsheet, { skipBackups: true });
+      expect(res.success).toBe(true);
+      expect(res.report.verified).toBe(true);
+      expect(res.report.backupsCreated.length).toBe(0);
+
+      // Verify no backup tabs were created
+      expect(spreadsheet.getSheetByName('_Backup_Pre4Table_Students')).toBeNull();
+      expect(spreadsheet.getSheetByName('_Backup_Pre4Table_ClassSessions')).toBeNull();
+      expect(spreadsheet.getSheetByName('_Backup_Pre4Table_MeetingLinks')).toBeNull();
+      expect(spreadsheet.getSheetByName('_Backup_Pre4Table_StudentNotes')).toBeNull();
+
+      // Verify canonical migration succeeded and old tabs were deleted
+      expect(spreadsheet.getSheetByName('Students')!.rows[0].includes('primary_meeting_link')).toBe(true);
+      expect(spreadsheet.getSheetByName('ClassSessions')!.rows[0].includes('session_notes')).toBe(true);
+      expect(spreadsheet.getSheetByName('MeetingLinks')).toBeNull();
+      expect(spreadsheet.getSheetByName('StudentNotes')).toBeNull();
+    });
+
+    it('generates pre-migration inventory accurately across all canonical tabs', () => {
+      const inv = generatePreMigrationInventory(spreadsheet);
+      expect(inv.schemaMatch).toBe(true);
+      expect(inv.missingExpectedTabs.length).toBe(0);
+      expect(inv.rowCounts['Students']).toBe(3);
+      expect(inv.rowCounts['Packages']).toBe(2);
+      expect(inv.rowCounts['Payments']).toBe(2);
+      expect(inv.rowCounts['ClassSessions']).toBe(5);
+      expect(inv.rowCounts['MeetingLinks']).toBe(2);
+      expect(inv.rowCounts['StudentNotes']).toBe(5);
+      expect(inv.headers['Students']).toContain('student_id');
+      expect(inv.headers['ClassSessions']).toContain('schedule_date');
     });
   });
 });

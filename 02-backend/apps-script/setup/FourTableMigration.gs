@@ -74,7 +74,7 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
       var rCount = sh.getLastRow();
       report.originalRowCounts[tabName] = rCount;
       var backupName = '_Backup_Pre4Table_' + tabName;
-      if (!ss.getSheetByName(backupName) && typeof sh.copyTo === 'function') {
+      if (!opts.skipBackups && !ss.getSheetByName(backupName) && typeof sh.copyTo === 'function') {
         try {
           var bSh = sh.copyTo(ss);
           bSh.setName(backupName);
@@ -392,28 +392,64 @@ function runFourTableCanonicalMigration(spreadsheet, options) {
   return { success: report.success, report: report };
 }
 
-function generatePreMigrationInventory() {
-  var ss = SpreadsheetApp.openById(CANONICAL_SPREADSHEET_ID);
+function generatePreMigrationInventory(spreadsheet) {
+  var ss = spreadsheet;
+  if (!ss) {
+    if (typeof SpreadsheetApp !== 'undefined' && typeof SpreadsheetApp.openById === 'function') {
+      try {
+        ss = SpreadsheetApp.openById(CANONICAL_SPREADSHEET_ID);
+      } catch (e) {
+        return { success: false, code: 'OPEN_FAILED', message: e.message };
+      }
+    }
+  }
+  if (!ss) return { success: false, code: 'UNAVAILABLE', message: 'Spreadsheet unavailable' };
+
   var sheets = ss.getSheets();
   var inventory = {
     spreadsheetId: ss.getId(),
-    spreadsheetName: ss.getName(),
+    spreadsheetName: typeof ss.getName === 'function' ? ss.getName() : 'Private Class Dashboard',
     tabs: [],
     rowCounts: {},
-    headers: {}
+    headers: {},
+    missingExpectedTabs: [],
+    schemaMatch: true
   };
+  var expectedCanonical = ['Students', 'Packages', 'Payments', 'ClassSessions', 'MeetingLinks', 'StudentNotes'];
   for (var i = 0; i < sheets.length; i++) {
     var sh = sheets[i];
     var name = sh.getName();
     inventory.tabs.push(name);
     inventory.rowCounts[name] = sh.getLastRow();
     if (sh.getLastRow() > 0) {
-      inventory.headers[name] = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+      var lastCol = typeof sh.getLastColumn === 'function' ? sh.getLastColumn() : (sh.rows && sh.rows[0] ? sh.rows[0].length : 0);
+      if (lastCol > 0 && typeof sh.getRange === 'function') {
+        inventory.headers[name] = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+      } else if (sh.rows && sh.rows[0]) {
+        inventory.headers[name] = sh.rows[0];
+      }
     }
   }
-  Logger.log('=== PRE-MIGRATION INVENTORY ===');
-  Logger.log(JSON.stringify(inventory, null, 2));
+  for (var e = 0; e < expectedCanonical.length; e++) {
+    if (inventory.tabs.indexOf(expectedCanonical[e]) === -1) {
+      inventory.missingExpectedTabs.push(expectedCanonical[e]);
+      inventory.schemaMatch = false;
+    }
+  }
+  if (typeof Logger !== 'undefined' && typeof Logger.log === 'function') {
+    Logger.log('=== PRE-MIGRATION INVENTORY ===');
+    Logger.log(JSON.stringify(inventory, null, 2));
+  }
   return inventory;
+}
+
+function runFourTableMigrationWithoutBackups() {
+  var res = runFourTableCanonicalMigration(null, { skipBackups: true });
+  if (typeof Logger !== 'undefined' && typeof Logger.log === 'function') {
+    Logger.log('=== FOUR-TABLE MIGRATION RESULT (NO BACKUPS) ===');
+    Logger.log(JSON.stringify(res, null, 2));
+  }
+  return res;
 }
 
 function createIndependentSpreadsheetSnapshot() {
@@ -436,6 +472,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CANONICAL_SPREADSHEET_ID: CANONICAL_SPREADSHEET_ID,
     runFourTableCanonicalMigration: runFourTableCanonicalMigration,
+    runFourTableMigrationWithoutBackups: runFourTableMigrationWithoutBackups,
     generatePreMigrationInventory: generatePreMigrationInventory,
     createIndependentSpreadsheetSnapshot: createIndependentSpreadsheetSnapshot
   };
