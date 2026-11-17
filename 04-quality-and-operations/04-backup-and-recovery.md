@@ -1,22 +1,28 @@
 # 04 — Backup and Recovery
 
-## 1. Purpose
+## 1. Document Control & Purpose
 
-Define a practical backup and recovery process for the Student Management Dashboard, whose canonical datastore is a private Google Spreadsheet and whose backend is a Google Apps Script Web App.
+- **Product:** Personal Dashboard (Student Management Dashboard)
+- **Document ID:** 04-04
+- **Status:** Authoritative Backup and Recovery Specification
+- **Version:** 5.0.0
+- **Last Updated:** 2026-11-17
 
-The process must protect student profiles, enrollment history, fee obligations, payments, packages, class sessions, meeting-link records, notes, audit history, and import reconciliation records from accidental deletion, corruption, failed migrations, unauthorized changes, and operational mistakes.
+Define a practical backup and recovery process for the Student Management Dashboard, whose canonical datastore is a private Google Spreadsheet comprising four canonical tables (`Students`, `Packages`, `Payments`, `ClassSessions`) and whose backend is a Google Apps Script Web App.
 
-This document defines the minimum viable policy for Version 1. It does not introduce a separate database, a complex disaster-recovery platform, or an automated infrastructure stack.
+The process must protect student profiles, package records, payment transactions, class sessions, attendance history, notes, audit history, and import reconciliation records from accidental deletion, corruption, failed migrations, unauthorized changes, and operational mistakes.
+
+This document defines the minimum viable policy for the system. It does not introduce a separate database, a complex disaster-recovery platform, or an automated infrastructure stack.
 
 ## 2. Scope
 
 The backup scope includes:
 
-- All application tabs in the master spreadsheet.
+- All four canonical application tables in the master spreadsheet (`Students`, `Packages`, `Payments`, `ClassSessions`).
 - Spreadsheet schema and header definitions.
 - Historical and inactive student records.
-- Financial obligations, payment transactions, and their audit history.
-- Packages, class sessions, attendance, meeting links, and notes.
+- Package definitions, payment transactions, and their audit history.
+- Class sessions, attendance, meeting links, and session notes.
 - Import batches and row-level reconciliation results.
 - Non-secret application configuration required to interpret records.
 - Apps Script source code and deployment instructions.
@@ -227,7 +233,7 @@ Before promotion, verify:
 - All required tabs and headers are present.
 - Primary IDs are unique and non-empty.
 - Foreign-key references resolve to existing records where required.
-- Student, enrollment, package, fee, payment, and class relationships are valid.
+- Student, package, payment, and class relationships are valid.
 - Fee balances reconcile with valid payment transactions.
 - Package balances reconcile with class sessions and supported adjustments.
 - Voided transactions are excluded from active calculations.

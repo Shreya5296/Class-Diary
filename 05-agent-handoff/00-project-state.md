@@ -1,64 +1,97 @@
 # 00 — Project State and Recovery Record
 
-## 1. Purpose
+## 1. Document Control
 
-This file is the durable, repository-backed record of implementation progress for the Personal Dashboard (Student Management Dashboard). It is the primary recovery source of truth for developers and AI coding agents.
+- **Product:** Personal Dashboard (Student Management Dashboard)
+- **Document ID:** Handoff-00
+- **Status:** Authoritative Agent Handoff & Project Run State
+- **Version:** 5.0.0 (Post-Audit Canonical Four-Table Architecture)
+- **Last Verified Date:** 2026-11-17
+- **Primary Audience:** AI coding agents, autonomous agents, developers
 
-The Git history and this file are the recovery sources of truth. Chat history and working context are ephemeral and not authoritative state.
+---
 
-## 2. State Management Rules
+## 2. Current Run Snapshot
 
-- Keep this file accurate, concise, and actionable.
-- Update the phase status, commit, test results, blockers, and next action before handing off work.
-- Never mark a phase `PASSED` unless its exit criteria and required tests actually passed.
-- Use `NOT_STARTED`, `IN_PROGRESS`, `PASSED`, `BLOCKED`, or `PARTIAL` for phase status.
-- Record evidence, not assumptions. Distinguish verified facts from inferred or unverified details.
-- Never store passwords, access tokens, private keys, or credentials here.
-- If this file conflicts with the latest committed implementation or test evidence, reconcile the conflict before continuing.
-
-## 3. Strict Project Guardrails
-
-- **Four Google Sheets Tables Only:** Exactly four tables exist: `Students`, `Packages`, `Payments`, and `ClassSessions`. `MeetingLinks` and `StudentNotes` are permanently removed.
-- **No package_id in Packages:** Packages are identified and retrieved by `student_id`.
-- **No session_id or stored end-time in ClassSessions:** Identified by composite key `student_id__schedule_date__schedule_time` (or 1-based row index); end time is derived from `Packages.class_duration`. `session_notes` stores lesson coverage and remarks.
-- **One Primary Meeting Link:** Each student has one `primary_meeting_link` stored in `Students`. Managed on Students page; standalone Meeting Links page removed.
-- **Frontend Stack:** React 18, TypeScript, and Vite.
-- **Backend Stack:** Google Apps Script Web App (API, business logic & HMAC-SHA256 session authentication).
-- **Timezone:** `Asia/Kolkata` (IST, UTC+05:30) is the canonical timezone for all schedules, dates, and live clocks.
-- **Base Currency:** `INR`. Multi-currency transactions retain original currency with manual `in_inr` conversion. Foreign currencies without `in_inr` do not mix into INR totals.
-- **Frontend Hosting:** Vercel SPA.
-- **Access Model:** Single authorized administrator (`ashreya0502@gmail.com`).
-- **Micro-File Rule:** Every source file under `src/` and `public/` must contain strictly <= 149 lines. Catch-all monoliths (`utils.ts`, `helpers.ts`, `app.js`, etc.) are forbidden.
-- **Backend Authority:** The backend is authoritative for authentication, authorization, validation, deduction, and business rules.
-
-## 4. Current Run Snapshot
-
-| Field | Current value |
+| Field | Current Verified Value |
 |---|---|
-| Project | Personal Dashboard / Student Management Dashboard |
-| Execution mode | Four-Table Datastore Simplification & Meeting Links Elimination |
-| Current status | COMPLETED / FULLY_VERIFIED |
-| Current Git branch | `fix/simplify-student-session-data-model` |
-| Canonical Spreadsheet | `Private Class Dashboard` (ID: `1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`, Owner: `ashreya0502@gmail.com`) — Exactly 4 canonical tables |
-| Backup Spreadsheet | `Master Backup (Pre-Launch 2026-10-21T12-13-40-537Z)` (ID: `1kIFYmI81DfNIAqb-ZHsTifiKE6JxhfQrXqpfphrw9eU`) |
-| Apps Script Project | `1CC_ZjGrLBD8BnrAm6CP9oDUJmUPqFy4MCc-MkBiBvCNkMA616uF_pCPL` |
-| Web App Deployment | Active deployment ID: `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w` |
-| Line limit check | PASSED (216 text files across `src` and `public` all <= 149 lines; 0 catch-all files) |
-| TypeScript check | PASSED (`tsc --noEmit` exits with 0 errors) |
-| Test suite status | PASSED (71 test files passed, 508 tests passed, 0 failed, 0 skipped) |
+| Project Name | Personal Dashboard (Student Management Dashboard) |
+| Active Git Branch | `docs/reconcile-project-documentation` |
+| Base Branch & Status | `main` (Synchronized with `origin/main` at commit `620aaf7`) |
+| Current HEAD Commit on `main` | `620aaf75bffc5bb7221260d6db57dad1b544642a` (`merge: complete student, schedule, renewal, and payment workflows`) |
+| Canonical Spreadsheet | `Private Class Dashboard` (ID: `1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`, Owner: `ashreya0502@gmail.com`) |
+| Active Canonical Tables | Exactly 4 physical tables: `Students` (10 cols), `Packages` (12 cols), `Payments` (6 cols), `ClassSessions` (9 cols) |
+| Apps Script Project ID | `1CC_ZjGrLBD8BnrAm6CP9oDUJmUPqFy4MCc-MkBiBvCNkMA616uF_pCPL` |
+| Web App Deployment ID | `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w` |
+| Active Production Deployment Version | **STRICTLY FROZEN** at version **`@52`** (clasp push/deploy prohibited without authorization) |
+| Line Limit Policy Check | **PASSED** (`npm run check:lines`: 198 files across `src` and `public` $\le 149$ lines, 0 catch-alls) |
+| TypeScript Compiler Check | **PASSED** (`npm run typecheck`: `tsc --noEmit` exits with 0 errors) |
+| Vitest Automated Test Suite | **PASSED** (`npx vitest run`: 75 test files passed, 651 tests passed, 0 failed, 0 skipped) |
+| Production Build Verification | **PASSED** (`npm run build`: `tsc && vite build`, dist output generated in 4.81s) |
+| Git Whitespace Diff Check | **PASSED** (`git diff --check`: 0 errors) |
 
-## 5. Canonical Google Sheets Schema (Four Tables)
+---
 
-1. **`Students`** (10 columns): `student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status, primary_meeting_link`
-2. **`Packages`** (12 columns): `student_id, student_name, plan_type, currency, package_price, per_class, classes_purchased, start_date, end_date, next_due_date, class_duration, class_schedule`
-3. **`Payments`** (6 columns): `student_id, student_name, payment_date, amount, currency, in_inr`
-4. **`ClassSessions`** (9 columns): `student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason, session_notes`
+## 3. Strict Project Guardrails & Architectural Invariants
 
-*Archived / Retired Sheets:* `_Archived_Historical_Notes`, `_Backup_PreFourTable_*`, `_Archived_ClassSchedules`, `_Backup_PreCanonical_Packages`, `_Backup_PreCanonical_ClassSchedules`, `StudentId_Migration_Backup`. `MeetingLinks`, `StudentNotes`, `AppConfig`, `Enrollments`, `FeeObligations`, `ImportBatches`, and `ImportRowResults` are permanently retired.
+- **Four Physical Google Sheets Tables Only:** The active datastore consists strictly of `Students`, `Packages`, `Payments`, and `ClassSessions`. `MeetingLinks` and `StudentNotes` are permanently removed from the sheet.
+- **No `package_id` in Packages:** Packages link directly to `Students.student_id`.
+- **No `session_id` or Stored End-Time in ClassSessions:** Identified by composite key `student_id__schedule_date__schedule_time` (or 1-based row index `_rowIndex`); end time is dynamically derived as `schedule_time + Packages.class_duration`.
+- **No Payment Status Column in Payments:** Physical table has exactly 6 columns. Payment voiding physically removes the row via `sheet.deleteRow()` and records a durable tombstone in `ScriptProperties` (`payment_void_<id>`).
+- **One Primary Meeting Link:** Stored directly in `Students.primary_meeting_link`. Managed on the Students page.
+- **Package Renewal Invariant:** Historical package row is preserved untouched; renewal appends a new package row storing solely the new purchase.
+- **Aggregate Balance Derivation:** Aggregate available class balance is dynamically computed across all student packages minus all sessions where `deduct_class === true`.
+- **Financial Accounting Model:** Grouped strictly by currency across lifetime packages and recorded payments. Outstanding balance is $\max(0, \text{Total Package Payable} - \text{Total Recorded Payments})$, never negative. Excess payment is displayed separately as Available Credit. Foreign payments retain original currency with manual `in_inr`.
+- **Schedule Concurrency Protection:** All writes to `Packages.class_schedule` (including `Schedules_save` and `RenewalService`) acquire the shared script lock via `LockManager.withLock`, which supports execution-local reentrancy.
+- **Micro-File Rule:** Every source file under `src/` and `public/` must remain strictly $\le 149$ lines. Catch-all files are forbidden.
 
-## 6. Phase & Milestone Register
+---
 
-| Phase / Batch | Scope / Description | Status | Evidence / Notes |
+## 4. Canonical Google Sheets Physical Schema (Four Tables)
+
+1. **`Students`** (10 columns):
+   `student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status, primary_meeting_link`
+2. **`Packages`** (12 columns):
+   `student_id, student_name, plan_type, currency, package_price, per_class, classes_purchased, start_date, end_date, next_due_date, class_duration, class_schedule`
+3. **`Payments`** (6 columns):
+   `student_id, student_name, payment_date, amount, currency, in_inr`
+4. **`ClassSessions`** (9 columns):
+   `student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason, session_notes`
+
+*Archived / Retired Sheets in Spreadsheet:*
+- `_Archived_Historical_Notes`, `_Archived_ClassSchedules`, `_Backup_PreFourTable_*`, `StudentId_Migration_Backup`, `_Backup_PreCanonical_Packages`, `_Backup_PreCanonical_ClassSchedules`.
+- Permanently retired from application logic: `MeetingLinks`, `StudentNotes`, `AppConfig`, `Enrollments`, `FeeObligations`, `ImportBatches`, `ImportRowResults`.
+
+---
+
+## 5. Security Architecture
+
+- **Zero-GCP:** No Google Cloud Console OAuth consent screens or client IDs.
+- **Server-Side Authorization:** Session tokens signed with HMAC-SHA256 using `ADMIN_AUTH_KEY` stored in Apps Script `ScriptProperties`.
+- **Admin Allowlist:** Single authorized administrator `ashreya0502@gmail.com` configured in `ADMIN_EMAILS`.
+- **Formula Injection Guard:** Leading `+`, `=`, `@`, or `-` characters on user strings and phone numbers are escaped with a leading `'` on sheet write.
+- **Transport:** HTTP POST with `Content-Type: text/plain;charset=utf-8` to eliminate CORS preflight.
+
+---
+
+## 6. Known Limitations & Recovery Runbooks
+
+1. **Absence of Session ID in `ClassSessions`:**
+   - Identified by composite key `student_id__schedule_date__schedule_time` or row index `_rowIndex`.
+   - **Operational Rule:** **Never manually sort, insert, delete, or rearrange `ClassSessions` rows while client operations are in progress.** Stale row indices can misdirect updates among sessions of the same student.
+2. **Fail-Closed Renewal Recovery:**
+   - If execution fails after package insertion before completion checkpoint, or if ScriptProperties state is lost, the renewal recovery flow fails closed with `AMBIGUOUS_RENEWAL_RECOVERY` to prevent duplicate package or payment insertion.
+   - Administrator must inspect the Packages sheet and reconcile manually.
+3. **No External Exchange Rate Conversion:**
+   - Foreign currencies are never automatically converted using third-party APIs. If a foreign currency payment lacks manual `in_inr`, it contributes 0 to INR totals.
+4. **Apps Script Deployment Freeze:**
+   - Backend code in `02-backend/apps-script/` matches `main`, but active deployment `@52` is frozen.
+
+---
+
+## 7. Phase & Milestone Historical Register
+
+| Phase / Milestone | Scope / Description | Status | Evidence / Notes |
 |---|---|---|---|
 | Phase 0–12 | Architecture foundation, tooling, backend services, frontend screens, test suite | PASSED | Initial development cycle; micro-file architecture established. |
 | Phase 13–16 | Operational tabs retirement, ConfigService decoupling, import feature retirement | PASSED | `AppConfig`, `ImportBatches`, `ImportRowResults` retired; ConfigService introduced. |
@@ -67,27 +100,14 @@ The Git history and this file are the recovery sources of truth. Chat history an
 | Phase 28–32 | Meeting links refinement, student editing, status normalization, schedule persistence | PASSED | 4-section student registration, recurring schedules, uppercase status normalization. |
 | Phase 33–36 | UX polish, calendar time grid, auto-expiry calculation, N-4 fee due date, 12h clock | PASSED | Live header clock, calendar 7-day grid, per-class calculation, N-4 fee rule. |
 | Phase 37–39 | Registration recovery, network timeout hardening, async schedule worker | PASSED | Resilient student/package reuse; async schedule worker for large class batches. |
-| Milestone: Canonical 6-Table Migration | FinalCanonicalSchemaMigration.gs: Packages to 12 cols, ClassSessions to 8 cols, ClassSchedules archived | PASSED | Executed schema migration unifying datastore to exactly 6 canonical tables. |
-| Milestone: Session Backdating | Backdate STU_001 48 class sessions to 19 Jan 2026, package start/end/due dates updated | PASSED | Verified live in Google Sheets; package start 2026-01-19, end 2026-05-09. |
-| Batch 2 Fixes | Data accuracy, table layout, status styling, interactions, global date formatting | PASSED | Standardized table cells, phone prefix escaping, date format standardization. |
-| Batch 3 Fixes | Attendance deduction, rescheduling, student expanded details, colgroup layout | PASSED | Refined attendance deduction, replacement slot on waived cancellation. |
-| Batch 4 Fixes | Calendar 3-color status logic, local time slot matching, multi-currency reporting | PASSED | Currency insulation (no foreign amount pollution), 12h local time mapping. |
-| Batch 5 Fixes | Calendar soft muted red/green, STU_005 active classification, session progress | PASSED | Unified calendar color scheme, session progress bar, active threshold rules. |
-| Current Task | Complete Documentation Audit & System Alignment across all docs and instructions | IN_PROGRESS | Verifying code source of truth; updating all specifications; zero code changes. |
+| Milestone: Four-Table Simplification | Retired `MeetingLinks` and `StudentNotes`; embedded primary link in `Students` (10 cols) and session notes in `ClassSessions` (9 cols) | PASSED | Verified four canonical tables in `fourTableMigrationHarness.test.ts`. |
+| Milestone: Package Renewal & Concurrency | Multi-step renewal modal, historical row preservation, aggregate balance math, shared ScriptLock on schedule writes | PASSED | Verified in `approvedSourceCorrectionsRegression.test.ts` and merged to `main` at `620aaf7`. |
+| Current Milestone: Documentation Reconciliation | Complete audit and realignment of all project documentation with verified state on `main` | IN_PROGRESS | Branch `docs/reconcile-project-documentation`; documentation-only modifications. |
 
-## 7. Known Issues & Technical Constraints
+---
 
-1. **Static Dates in Automated Regression Tests (Resolved):**
-   Previously, four test files (`registrationControlsAndPolish.test.ts`, `scheduleSimplificationAndDashboard.test.ts`, `studentManagementEnhancements.test.ts`, `studentRegistrationAndDirectory.test.ts`) contained hardcoded static test dates (`2026-11-02` and `2026-11-03`) that expired. They have now been updated to use deterministic date helpers (`getNextWeekday`, `getFutureDate` in `tests/fixtures/testDateHelpers.ts`), resolving all 7 failures with zero production code changes. All 58 suites (389 tests) pass cleanly.
-2. **Absence of Session ID in Sheet & Mutation Behavior:**
-   Because `ClassSessions` contains no `session_id` column, the backend identifies sessions by composite key `student_id__schedule_date__schedule_time` (normalized ISO date + 24h `HH:mm`) or direct 1-based row index (`_rowIndex`). When `_rowIndex` is provided, `Classes_update` uses direct row access guarded by `updates.student_id === rec.student_id`. If `_rowIndex` is omitted, it falls back to scanning for the composite key. Rescheduling alters the date/time in-place, changing its composite key. If multiple rows share the identical student, date, and time, composite key scanning only targets the first matching row.
-   > [!WARNING]
-   > **Row-Index Safety Limitation & Operational Rule:**
-   > Manual row insertions, deletions, or sorting directly in Google Sheets invalidate client-held `_rowIndex` values. While the `student_id` guard prevents cross-student corruption, it cannot detect row shifts between sessions belonging to the same student.
-   > **Operational Rule:** **Never manually sort, insert, delete, or rearrange `ClassSessions` rows while operations relying on cached row indices may be in progress.** Direct sheet edits must only occur during scheduled offline maintenance windows.
-3. **No External Currency Conversion API:**
-   The application intentionally avoids third-party exchange rate APIs. If a foreign currency payment has no manual `in_inr` entry, it contributes 0 to INR aggregations.
-4. **Apps Script Deployment Synchronization:**
-   Backend code in `02-backend/apps-script/` is deployed via clasp. Active Web App deployment is version `@48` (`AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w`).
-5. **Class Duration Architecture:**
-   Class duration is strictly configured per package on `Packages.class_duration` (valid options: 30, 40, or 60 minutes) and is not globally uniform. `ConfigService.DEFAULT_CLASS_DURATION_MINUTES` (`60`) serves strictly as a server fallback when a package duration is missing. Regional Preferences in Settings manage timezone and currency only, not class duration.
+## 8. Exact Next Recommended Action
+
+1. Complete the documentation cross-reference audit for obsolete terms.
+2. Run full verification commands (`npm run check:lines`, `npm run typecheck`, `npx vitest run`, `npm run build`, `git diff --check`).
+3. Compile and deliver the final Documentation Reconciliation Report for owner review.

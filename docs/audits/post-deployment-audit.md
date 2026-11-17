@@ -1,5 +1,14 @@
 # Consolidated Post-Deployment Audit — Personal Dashboard
 
+> [!NOTE]
+> **HISTORICAL / ARCHIVED RECORD**
+> **Status:** Historical Document (Preserved for Audit Trail)
+> **Superseded By:** Canonical Four-Table Architecture and Merged Implementation on `main` (Date: 2026-11-17)
+> **Authoritative Current Specs:** [`00-documentation/04-google-sheets-data-model.md`](../../00-documentation/04-google-sheets-data-model.md) and [`05-agent-handoff/00-project-state.md`](../../05-agent-handoff/00-project-state.md)
+>
+> *This document represents pre-launch proposals, early migration runbooks, or historical post-deployment audits from earlier project milestones. Its contents describe intermediate architectures (such as legacy six-table schemas, operational tabs, or earlier deployment versions) and are retained solely for historical auditability.*
+
+
 **Audit Date:** 2026-10-21  
 **Target Environment:** Google Apps Script Version `@23` on Deployment `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w`  
 **Canonical Google Sheet:** `Private Class Dashboard` (`1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`)  

@@ -1,3 +1,6 @@
+> [!NOTE]
+> **Historical Archive Notice (2026-11-17):** This document is preserved for historical and audit purposes. For authoritative specifications of the current production system, refer to the active documentation in `00-documentation/`, `01-frontend/`, `02-backend/`, `03-data/`, `04-quality-and-operations/`, and `05-agent-handoff/`.
+
 # Phase 1 — Architecture Feasibility Report
 
 ## 1. Objective

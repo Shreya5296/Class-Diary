@@ -69,9 +69,10 @@ Meeting links entered by the administrator are validated to ensure only safe sch
 - Unsafe schemes (`javascript:`, `data:`, `file:`) are strictly rejected.
 
 ### 4.3 Concurrency & Locking
-To prevent race conditions when updating student class credits or generating batch sessions:
+To prevent race conditions when updating student class credits, generating batch sessions, or modifying recurring schedules:
 - `LockManager.gs` wraps sensitive persistence operations in `LockService.getScriptLock()`.
-- Maximum lock timeout: 10,000–15,000 milliseconds.
+- Maximum lock timeout: up to 30,000 milliseconds.
+- `LockManager.withLock` tracks execution-local lock depth to support safe reentrancy within the same execution context (e.g. `RenewalService` calling `Schedules_save` while holding the renewal lock), avoiding self-deadlock while ensuring single-threaded atomicity against external concurrent executions.
 
 ## 5. Audit Logging Removal & Idempotency Architecture
 

@@ -1,6 +1,13 @@
 # 03 — Deployment and Environment Configuration
 
-## 1. Purpose
+## 1. Document Control & Purpose
+
+- **Product:** Personal Dashboard (Student Management Dashboard)
+- **Document ID:** 04-03
+- **Status:** Authoritative Deployment & Operations Guide
+- **Version:** 5.0.0
+- **Last Updated:** 2026-11-17
+- **Production Status:** Deployment `@52` is frozen. No unreviewed clasp deployments permitted.
 
 This document defines how the Student Management Dashboard is configured, built, deployed, verified, and operated across development, preview, and production environments.
 

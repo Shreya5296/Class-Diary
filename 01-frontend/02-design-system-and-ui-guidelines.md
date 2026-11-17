@@ -1,17 +1,28 @@
 # 02 — Design System and UI Guidelines
 
-## 1. Purpose
+## 1. Document Control
 
-Define the visual and interaction standards for the Student Management Dashboard. The interface is an efficient, private, admin-only tool for managing students, enrollments, fees, payments, packages, classes, meeting links, notes, and historical records.
+- **Product:** Personal Dashboard (Student Management Dashboard)
+- **Document ID:** Frontend-02
+- **Status:** Authoritative UI Guidelines Specification
+- **Version:** 5.0.0 (Canonical Four-Table Datastore & Unified Workflows)
+- **Last Verified Date:** 2026-11-17
+- **Audience:** Frontend developers, UI/UX engineers, AI coding agents
+
+---
+
+## 2. Purpose
+
+Define the visual and interaction standards for the Student Management Dashboard. The interface is an efficient, private, admin-only tool for managing students, packages, payments, classes, primary meeting links, and session notes across the canonical four-table datastore.
 
 This document governs visual presentation and interaction consistency. Product behavior is defined by the product requirements and page specifications; API and data rules remain authoritative in their respective documents.
 
-## 2. Design Principles
+## 3. Design Principles
 
 1. **Clarity over decoration:** prioritize readable information and obvious actions.
 2. **Fast daily workflows:** frequent actions should require few steps and minimal navigation.
 3. **Consistent patterns:** equivalent actions should look and behave alike across pages.
-4. **Financial accuracy:** amounts, due dates, balances, and payment status must be easy to distinguish.
+4. **Financial accuracy:** package prices, payments, outstanding balances, and available credits must be clearly distinguished.
 5. **Privacy by default:** show only the data needed for the current task; do not expose records in public URLs or logs.
 6. **Responsive, not mobile-first:** optimize the main workflow for desktop while keeping core tasks usable on smaller screens.
 7. **Accessible by design:** support keyboard use, visible focus, sufficient contrast, and meaningful labels.
@@ -139,40 +150,39 @@ Use explicit Save and Cancel actions for substantial edits. Inline editing is ap
 
 Financial information requires especially clear presentation.
 
-- Display currency consistently as INR.
-- Distinguish amount due, amount paid, and outstanding balance.
-- Label the relevant due date explicitly.
-- Display partial payment status distinctly from fully paid.
-- Display overdue status with text and a semantic warning treatment.
-- Do not present a missing amount as zero.
-- Do not calculate authoritative balances solely in frontend components.
-- Show transaction dates and amounts in payment history.
-- Keep payment recording separate from editing a fee obligation.
-- Require confirmation for voiding or correcting a financial record and explain that history is retained.
+- Display currency grouped strictly by currency (INR, USD, GBP, EUR).
+- Distinguish total package payable, total paid, net outstanding balance ($\max(0, \text{Payable} - \text{Paid})$), and available credit ($\max(0, \text{Paid} - \text{Payable})$).
+- Net outstanding balance must never become negative.
+- Label the relevant package next due date explicitly.
+- Display available credit separately when recorded payments exceed payable amount.
+- Do not present a missing or invalid amount as zero; mark as unreliable (`isReliable: false`).
+- Show transaction dates and amounts in payment history table.
+- Payment recording appends directly to `Payments` with client idempotency key.
+- Require confirmation for voiding a payment record, explaining that voiding physically removes the row from the sheet and records a durable tombstone in ScriptProperties.
 - Refresh displayed balances from the backend after a successful financial mutation.
 
-Financial summaries should avoid ambiguous labels such as “Fees” when the value could mean total charges, amount collected, or outstanding amount.
+Financial summaries should avoid ambiguous labels such as “Fees” when the value could mean total package payable, collected earnings, or net outstanding balance.
 
-## 10. Student Profile UI
+## 10. Student Profile & Directory UI
 
-The student profile should present the most operationally useful information first:
+The student expanded row and directory should present the most operationally useful information:
 
-1. Student identity and active/inactive status.
-2. Parent or guardian contact details.
-3. Current enrollment and package summary.
-4. Outstanding fees and recent payment activity.
-5. Upcoming class and meeting-link action.
-6. Class and attendance history.
-7. Historical enrollments and packages.
-8. Dated internal notes.
+1. Student identity, enrolled subjects, and active/inactive status.
+2. Parent or guardian contact details (`+` escaped).
+3. Primary meeting link with 1-click launch and copy buttons.
+4. Current and historical packages (preserved upon renewal).
+5. Explicit remaining class balance and class progress bar (`consumed / purchased`).
+6. Package renewal action (`Renew Package` opening `StudentRenewalModal`).
+7. Upcoming class and meeting-link action.
+8. Attendance history with session notes.
 
-Use tabs or clearly separated sections if the profile becomes too long. Do not hide important warnings behind a secondary tab. Archived students must have an unmistakable inactive state, and reactivation must be a deliberate action.
+Archived students must have an unmistakable inactive state, and reactivation must be a deliberate action.
 
-## 11. Meeting-Link UI
+## 11. Primary Meeting-Link UI
 
-- Display provider and a human-readable label beside each link.
-- Clearly identify the preferred link without implying other active links are invalid.
-- Offer an explicit “Join” or “Open meeting” action.
+- Embedded directly in `Students.primary_meeting_link`. Managed on the Students page.
+- Single primary meeting link input field with real-time platform preview and scheme validation.
+- Offer an explicit "Join" or "Open meeting" action button.
 - Open external meeting URLs safely, preferably in a new tab with appropriate browser protections.
 - Validate allowed URL schemes before rendering an actionable link.
 - Show inactive or expired links as historical, not as default join actions.

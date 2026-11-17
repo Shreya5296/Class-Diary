@@ -1,6 +1,12 @@
 # 05 — Autonomous Execution Protocol
 
-## 1. Purpose
+## 1. Document Control & Purpose
+
+- **Product:** Personal Dashboard (Student Management Dashboard)
+- **Document ID:** 05-05
+- **Status:** Authoritative Agent Execution Protocol
+- **Version:** 5.0.0
+- **Last Updated:** 2026-11-17
 
 This document defines how an implementation agent must plan, execute, verify, and report work on the Student Management Dashboard with minimal supervision while preserving the approved product scope, architecture, data integrity, security, and repository state.
 

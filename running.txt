@@ -1,1053 +1,152 @@
-STUDENT MANAGEMENT DASHBOARD — RUNNING PROJECT CONTROL
+# STUDENT MANAGEMENT DASHBOARD — CURRENT RUNNING PROJECT CONTROL
 
-PROJECT
-- Product: Student Management Dashboard
-- Current stage: Documentation-first specification and handoff
-- Version: 1.0 baseline, subject to documented owner-approved changes
-- Primary user: One authorized administrator
+**Document Version:** 5.0.0 (Canonical Four-Table Datastore & Unified Workflows)
+**Last Verified Date:** 2026-11-17
+**Status:** Authoritative Project Control Document
+**Historical Archive:** `docs/audits/running-historical-archive.md` (Preserves Phase 0–39 milestone logs)
 
-CANONICAL STACK
-- Frontend: React + TypeScript + Vite
-- Frontend hosting: Vercel, subject to plan eligibility and terms
-- Backend: Google Apps Script Web App
-- Datastore: One private Google Spreadsheet
-- Source control: Git; GitHub remote only when explicitly configured
-- Application timezone: Asia/Kolkata
-- Currency: INR for Version 1
+---
 
-WORKING RULES
-1. Treat approved project-owner decisions as highest priority.
-2. Follow the authoritative product, architecture, security, data-model, business-rule, API, UI, testing, and deployment documents.
-3. Do not silently resolve conflicting specifications. Record the exact conflict and stop the affected work until resolved.
-4. Finish and review documentation before implementing application code.
-5. Do not scaffold, deploy, connect to production services, or import real student data before the owner authorizes implementation and the security gate passes.
-6. Keep the master spreadsheet private. All application data access must pass through the authenticated Apps Script backend.
-7. Never commit secrets, authentication tokens, private student exports, or real student/parent data.
-8. Use synthetic data for development and tests.
-9. Preserve historical records. Financial corrections and important state changes must be auditable.
-10. Every text source file under frontend src/ and public/ must remain at most 149 lines; split files by responsibility and never minify to evade the limit.
-11. Review the Git diff and status before each commit. Do not overwrite unrelated work, reset branches, or force-push without explicit authorization.
-12. Commit each completed documentation file with a descriptive message. A local commit is not a GitHub push; never claim a push unless a remote is configured and the push succeeds.
-13. When writing Markdown that may be embedded in another interface, write the literal phrase TRIPLE BACKTICK instead of a triple-backtick fence.
-14. Keep this file updated when project stage, key decisions, blockers, or next actions change.
-15. Before adding any new business data field or sheet, verify that it is required by the approved Personal Dashboard requirements. Do not introduce generic CRM fields, duplicate name fields, redundant tables, or speculative columns.
+## 1. Product Identification
+- **Product Name:** Personal Dashboard (Student Management Dashboard)
+- **Primary User:** Single authorized administrator (`ashreya0502@gmail.com`)
+- **System Purpose:** Private, admin-only tutoring management system for student directory, multi-currency package billing, class scheduling, attendance tracking, and financial reconciliation.
 
-DOCUMENTATION WORKFLOW
-1. Check the repository status and existing files before editing.
-2. Follow the approved document index and implementation sequence.
-3. Verify references, filenames, folder paths, and cross-document consistency.
-4. Check for unresolved decisions and contradictory schemas, API contracts, or business rules.
-5. Save the requested file in its specified folder.
-6. Review the saved file and Git diff.
-7. Commit the completed file locally with a focused commit message.
-8. Report the exact path and commit hash; distinguish local commit from remote push.
+---
 
-SECURITY AND RELEASE GATES
-- The cross-origin frontend-to-Apps-Script authentication and request flow must be demonstrated in a real browser before real data is used.
-- Backend identity verification, administrator authorization, input validation, and protected reads/writes are mandatory.
-- Development and production must use separate Apps Script deployments, configuration, and spreadsheets.
-- Do not release with unresolved critical/high security defects or unverified backup/recovery controls.
-- A successful UI action is not proof of persistence; verify the backend result and persisted state.
+## 2. Current Architecture
+- **Frontend Stack:** React 18, TypeScript, Vite SPA (hosted on Vercel).
+- **Backend Stack:** Google Apps Script (GAS) Web App running V8 runtime. Serves REST-like JSON API over HTTP POST with text/plain transport to eliminate CORS preflight.
+- **Authentication Model:** Server-side HMAC-SHA256 signed session tokens verified against `ADMIN_AUTH_KEY` stored in Apps Script `ScriptProperties`. Zero Google Cloud Console / GCP dependencies.
+- **Datastore:** Exactly ONE private Google Spreadsheet (`Private Class Dashboard`, ID: `1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`).
+- **Primary Timezone:** `Asia/Kolkata` (IST, UTC+05:30) for all schedules, dates, calendar grids, and live clocks.
+- **Base Currency:** `INR` (Indian Rupee), with multi-currency tracking (USD, GBP, EUR) and manual `in_inr` conversion.
 
-CURRENT EXECUTION STATUS
-- Phase 0 (Repository and Specification Audit) completed and verified.
-- Phase 1 (Architecture Feasibility Spike) completed and verified (7/7 tests passed; spikes/feasibility/FEASIBILITY_REPORT.md).
-- Phase 2 (Repository Foundation and Tooling) completed and verified (React + TS + Vite, Vitest, line check policy <= 149 lines passing, typecheck passing, production build passing).
-- Phase 3 (Data Schema and Spreadsheet Bootstrap) completed and verified (12 canonical tabs and headers validated, dynamic header mapping, ID generator with standard prefixes, mock spreadsheet engine, 6/6 tests passing).
-- Phase 4 (Backend Foundation) completed and verified (API entry, request parsing, operation router, response factory, server-side auth/admin allowlist guards, RowReader, RowWriter, LockManager, AuditService, and 17/17 tests passing).
-- Phase 5 (Backend Domain Services) completed and verified (Domain services for Students, Enrollments, Packages, Fees, Payments with Idempotency, Classes with Credit Restoration, Meeting Links, Notes, Reports; 23/23 tests passing).
-- Phase 6 (Frontend Foundation) completed and verified (Central API client, session & auth state, AppShell, TopBar, Sidebar, PageHeader, micro-components, formatters, and 37/37 tests passing).
-- Phase 7 (Frontend Product Screens) completed and verified (Dashboard, Students, Enrollments, Packages, Fees, Payments, Classes, Meeting Links, Notes, Reports, Settings screens verified; 40/40 tests passing; production build 859ms).
-- Phase 8 (Import and Migration) completed and verified (Spreadsheet import preview, candidate duplicate detection, batch execution, row-level reconciliation; 42/42 tests passing).
-- Phase 9 (Integration and End-to-End Testing) completed and verified (Full lifecycle regression, credit restoration safeguards, idempotent payment ledger, and 43/43 tests passing).
-- Phase 10 (Deployment Preparation) completed and verified (vercel.json SPA rewrites & security headers, runtimeConfig env aliases, production build passing).
-- Phase 11 (Controlled Data Migration) marked BLOCKED_ON_OWNER (synthetic import pipeline verified; live production data migration requires owner Google account, master spreadsheet, and authorization gate).
-- Phase 12 (Release and Handover) completed and verified (release audit complete, 43/43 tests passing, 0 line limit violations across 111 micro-files, clean production build, complete owner setup & operational runbooks).
-- Git branch: main. Git remote origin confirmed configured.
-- Line limit rule (<= 149 lines in src/ and public/) and architecture constraints confirmed (111 files verified).
-- Implementation mode authorized using synthetic data and isolated local/test environments.
-- Decision: Zero Google Cloud Console / Zero GCP dependency architecture confirmed and implemented.
+---
 
-NEXT ACTION
-- Dashboard functionality audit and adapter alignment complete:
-  * Students: bidirectional field adaptation (full_name, phone, parent_name <-> canonical columns), profile enriched.
-  * Enrollments & Packages: packages.getBalance registered, total_classes/price normalized, student filtering fixed.
-  * Fees & Payments: description/fee_id aliases normalized, in-line "Pay" action added to fee list, payment idempotency verified.
-  * Classes & Attendance: classes.schedule and classes.recordAttendance registered, start_time/duration mapped, student picker added to scheduling.
-  * Reports & Dashboard: camelCase and snake_case metrics aligned across Overview and Financial Summary.
-  * Student Profile: integrated Classes & Attendance and Meeting Links tabs.
-- Full regression suite passing: 65/65 tests across 15 test suites. Clean build in 1.00s. All 111 files <= 149 lines.
-- All 64 backend files synchronized to Apps Script via clasp; deployment AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w redeployed to version 5 in-place.
-- Student directory listing and duplicate header row resolved:
-  * Traced full list flow from StudentsPage.tsx -> studentApi.ts -> StudentService.gs -> StudentRepository.gs -> RowReader.gs.
-  * Root cause: RowReader.gs and RowWriter.gs attempted to read rows via sheet.getData(), which was only defined on the test MockSheet. On a real Google Sheet, sheet.getData was undefined, causing rawData to default to [].
-  * This caused readAllRecords to always return [] in production ("No students found"), and caused appendRecord to falsely believe the sheet was empty and append a duplicate header row (Row 2).
-  * Fixed RowReader.gs and RowWriter.gs to use sheet.getDataRange().getValues() in Google Apps Script with mock fallback.
-  * Added duplicate header row detection in RowReader.gs to automatically ignore Row 2 duplicate headers without deleting or rewriting rows.
-  * Updated StudentService.gs to support query/search and default empty status to ALL.
-  * Enhanced studentApi.ts to robustly parse direct arrays or wrapped { students: [...] } / { items: [...] } response structures.
-  * Added automated regression tests in tests/domains/studentsAndEnrollments.test.ts and tests/frontend/apiClient.test.ts (65/65 passing).
-- Next action: Owner interactive verification of student directory at http://localhost:5173/students.
-- Fee obligation & payment amount constraint issue resolved:
-  * Traced UI button failure and 4951–5001 constraint on Student Profile Fee Obligations tab.
-  * Root cause: FeeObligationForm.tsx, PaymentForm.tsx had min={1} step={50}, which under HTML5 number validation restricts valid entries to 1 + 50k (e.g. 4951, 5001). ₹5,000 was flagged as invalid by the browser, blocking submit silently before React onSubmit fired.
-  * Fix: Changed step={50} to step="any" and min="1" across FeeObligationForm.tsx, PaymentForm.tsx, and PackageForm.tsx.
-  * Form UX & Resilience: Added frontend validation (feeValidation.ts), field-level error display, top-level server error banner, and guaranteed loading state reset.
-  * Success feedback: Added prominent green success banner to FeeObligationList.tsx upon obligation creation.
-  * File limit compliance: Extracted feeColumns.tsx to keep all files <= 149 lines (113 files verified).
-  * Automated testing: Added tests/frontend/feeValidation.test.ts and updated tests/domains/financialLedger.test.ts. 71/71 tests passing across 16 test suites. Clean build verified.
-- Autonomous End-to-End QA & Playwright Test Harness established and verified live:
-  * Installed @playwright/test (v1.64.1) and Chromium headless browser.
-  * Configured playwright.config.ts with deterministic test namespaces and automatic .env.test.local loading.
-  * Apps Script Backend Fixes Deployed to Version @16:
-    - Fixed SHEET_NAMES top-level resolution across all repositories and services using dynamic getters.
-    - Diagnosed and resolved severe global scope name collision: Students_update in StudentRepository.gs and StudentService.gs had identical global names, causing infinite recursion loop upon student edits. Renamed repository function to Students_repoUpdate. Applied identical fix to Enrollments_repoUpdate.
-    - Fixed string coercion in student search and import candidate detection to safely handle numeric phone/parent fields returned by Google Sheets.
-    - Fixed Profile edit view transition in StudentsPage.tsx when editing student from detailed profile view.
-    - Updated FeeObligation TypeScript model with optional fee_obligation_id alias.
-  * Live browser verification against deployed Apps Script endpoint: 13/13 PASSED (100% pass in 1.5m):
-    - tests/e2e/auth.spec.ts (4/4 passed): unauthenticated gate, live invalid key rejection, bundle security check, real session lifecycle.
-    - tests/e2e/students.spec.ts (2/2 passed): student registration, validation, directory search, profile tab loading, and detail editing.
-    - tests/e2e/fees.spec.ts (1/1 passed): ₹5,000 fee obligation creation, constraint checks, and ₹1,000 payment recording.
-    - tests/e2e/packages.spec.ts (1/1 passed): package creation, class count allocation, balance tracking.
-    - tests/e2e/classes.spec.ts (1/1 passed): class scheduling, duration tracking, attendance recording.
-    - tests/e2e/reportsAndCrossCutting.spec.ts (3/3 passed): report metric verification, import preview, mobile/tablet responsive layouts.
-  * Full quality gate verification:
-    - 71/71 Vitest unit/integration tests passing across 16 test suites.
-    - Line-limit check passing (113 files <= 149 lines under src/ and public/).
-    - TypeScript check (tsc --noEmit) passing with 0 errors.
-    - Production build (tsc && vite build) built in clean assets.
-  * System ready for production operation; no GCP dependencies, no real student records modified.
-- Final Read-Only Release Audit completed:
-  * Git working tree clean at commit eff3226; verified all modifications strictly intentional.
-  * Existing Apps Script deployment confirmed at Version @16 (AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w); zero new deployments created.
-  * Live Google Sheets audited: 23 students, 6 fees, 2 payments, 3 packages, 2 class sessions identified and cataloged; safe cleanup proposed.
-  * Verified zero secrets in tracked files or production bundles.
-  * Identified untested workflows and confirmed automated test reproducibility.
-  * Updated 05-agent-handoff/00-project-state.md with release-readiness assessment. Ready for owner acceptance.
-- Pre-Launch Completion, Field Review & Sheet Simplification completed:
-  * Apps Script redeployed in-place to Version @17: resolved ImportHandlers/ImportService globals, note category validation, meeting link aliases.
-  * 18/18 Playwright E2E browser tests passed 100% against live backend in 3.4m:
-    - Student registration, validation, directory search, profile editing, archive, reactivate, refresh persistence.
-    - Fee obligation creation, amount validation, payment recording, payment voiding, fee voiding, refresh persistence.
-    - Package creation, class balance allocation, class session scheduling, attendance marking, credit decrement.
-    - Meeting link creation, HTTPS validation, preferred link toggle, student notes logging, refresh persistence.
-    - Spreadsheet CSV import preview with invalid row filtering, duplicate detection, and batch execution.
-    - Duplicate submission prevention (async button disabling), required field guards, responsive desktop/tablet/mobile layouts.
-    - Security gateway, invalid administrator key rejection, and absence of client bundle secrets.
-  * Quality Gates: 73/73 Vitest unit/integration tests passing; 113/113 files <= 149 lines; TypeScript type check passing; production build clean (499ms).
-  * Documentation Deliverables Finalized:
-    - docs/prelaunch/field-inventory.md: complete catalog across all screens/forms/tables with recommendations.
-    - docs/prelaunch/sheet-simplification-proposal.md: structural analysis proposing reduction from 12 tabs to 7 visible tabs.
-    - docs/prelaunch/owner-decisions.md: 6 concise numbered decisions for owner approval before Vercel deploy or data migration.
-- Minimal Schema Redesign and Safe Implementation proposal completed:
-  * Inspected live master spreadsheet data shapes: 54 students, 5 packages, 20 fees, 10 payments, 5 classes, 5 meeting links, 5 notes.
-  * Validated zero native spreadsheet formulas: all derivations (balances, credit deductions, overdue flags) are authoritative in backend domain services.
-  * Designed 6-tab visible data model: Students, Packages, ClassSessions, FeeObligations, Payments, MeetingLinks.
-  * Preserved internal operational tabs (AuditLog, ImportBatches, ImportRowResults, AppConfig) as hidden tabs; preserved legacy Enrollments tab intact without row deletion.
-  * Added isolated multi-model test suite tests/domains/schemaRedesignMultiModel.test.ts verifying all 4 fee models (prepaid, monthly, yearly, per-class), partial and voided payments, attendance credit deduction safeguards, credit restoration, and student archival.
-  * Comprehensive review of attendance, credit deduction rules, and per-class periodic invoicing completed; schema-owner-decisions.md updated to v2.0.0 clearly separating confirmed requirements from assumptions needing approval.
-  * Regression test status: 77/77 Vitest tests passing across 17 test suites; 18/18 Playwright E2E tests passing live in 3.0m; 113/113 files <= 149 lines; clean production build (756ms).
-  * Documentation Deliverables Finalized:
-    - docs/prelaunch/final-schema-proposal.md: full 6-tab specification and credit calculation invariants.
-    - docs/prelaunch/field-migration-map.md: 1:1 column migration and adapter mapping matrix.
-    - docs/prelaunch/migration-and-rollback-plan.md: step-by-step backup and rollback runbook.
-    - docs/prelaunch/schema-owner-decisions.md: v2.0.0 comprehensive decision matrix distinguishing confirmed vs assumed rules.
-- Execution of Owner-Approved Decisions (Phases A through E) completed:
-  * Phase A: Updated docs/prelaunch/final-schema-proposal.md and field-migration-map.md documenting unapplied credit storage/application and monthly invoice generation workflow.
-  * Phase B: Safely hid the four operational tabs (AuditLog, ImportBatches, ImportRowResults, AppConfig) on master spreadsheet 1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8; verified via isSheetHidden().
-  * Phase C: Created and verified complete pre-launch master backup copy (Master Backup (Pre-Launch 2026-10-21T06-54-52-647Z), ID: 1kAvJZVSnWyVsg2QnfKl5tIIE_X28EySwAVeYnKQT8C4); verified 100% match across all 12 tabs and all row counts.
-  * Phase D: Prepared docs/prelaunch/test-data-cleanup-plan.md with full deletion manifest, referential integrity check, and rollback runbook; zero live rows cleared or deleted.
-  * Phase E: Added isolated tests for overpayments as unapplied credit, late cancellation penalty waivers, and duplicate invoice prevention (78/78 Vitest passed, 18/18 Playwright passed, clean build). Apps Script deployed in-place to version @18. Ready for final owner authorization to execute cleanup.
-- Execution of Owner-Authorized Pre-Launch Test Data Cleanup completed & verified:
-  * Owner authorization explicitly confirmed; pre-flight validations passed 100% on live spreadsheet 1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8 under script lock.
-  * Exactly 135 data rows cleared across the 6 target tabs: Students (72 rows), Packages (8 rows), ClassSessions (8 rows), FeeObligations (26 rows), Payments (13 rows), MeetingLinks (8 rows).
-  * Cell contents cleared via clearContent(); Row 1 headers preserved 100% on all 6 target tabs (now exactly 1 row each).
-  * All 6 protected tabs preserved untouched: Enrollments (1 row), StudentNotes (9 rows, 8 notes), AuditLog (197 rows, 196 historical + 1 cleanup entry), ImportBatches (8 rows), ImportRowResults (14 rows), AppConfig (5 rows).
-  * Zero unauthorized tabs, rows, or cells modified. Spreadsheet ID and auth configuration unchanged.
-  * Live domain APIs verified: Students (0), Packages (0), Fees (0), Payments (0), Classes (0), MeetingLinks (0), StudentNotes (8).
-  * docs/prelaunch/test-data-cleanup-plan.md updated to v3.0.0 (EXECUTED AND VERIFIED).
-- Read-Only Schema Reconciliation Audit completed:
-  * 4-layer comparison executed across original requirements, approved schema, live spreadsheet headers, and code/tests.
-  * Full 157-field matrix produced across all 12 tabs in docs/prelaunch/schema-reconciliation-report.md.
-  * Confirmed backend adaptors seamlessly bridge live headers to simplified UI fields; zero functional breakages.
-  * StudentNotes analyzed: 8 retained rows are orphaned synthetic test notes referencing cleared student IDs; recommended keeping tab visible and clearing rows 2-9 before onboarding real data.
-  * Recommendations categorized into Must Fix, Important Non-Blocking, and Intentional Differences.
-  * Zero live rows, headers, tabs, auth, or deployment settings modified.
-- Authorized StudentNotes Cleanup, Mapping Audit, and UI Improvements completed & verified:
-  * 1. StudentNotes Cleanup: Canonical spreadsheet ID (1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8) pre-flight validated; exactly 8 orphaned synthetic test notes verified in rows 2–9; confirmed student references absent; rows 2–9 cleared via clearContent(); Row 1 headers intact (1 row, 9 cols); 0 rows modified elsewhere.
-  * 2. Field Mappings Audit: Traced concrete data paths across all 4 layers (Requirements, Proposal, Live Sheet, Code/UI). Concrete defects and design reconciliations documented (Subject storage requires authorized schema change if dedicated column desired, handled cleanly via structured summary; unapplied credit handling in PaymentService vs redesign; attendance credit deduction for unexcused cancellations).
-  * 3. UI Improvements Implemented:
-    - A. Explicit Subject field: Added to student types, validation (<= 100 chars), create/edit form, directory list, and profile summary. Seamlessly persists and retrieves via structured summary tag without requiring destructive live schema modification.
-    - B. Monthly invoice generation with preview & duplicate protection: Added MonthlyInvoiceModal and monthlyInvoiceGenerator with period selection, candidate preview, duplicate detection, deterministic idempotency keys, explicit confirmation modal, and safe retry support.
-    - C. Available-credit display: Added creditCalculator and AvailableCreditBadge displaying unapplied student credit grouped strictly by currency (never mixed across INR/USD) in FeeObligationList, StudentSummary, and StudentProfilePage.
-  * 4. Automated Testing & Quality Gates:
-    - 91/91 Vitest tests passing across 20 test suites (including new suites for subject field, monthly invoice generation, and credit calculation).
-    - Line limit policy strictly verified: 117/117 files in src/ and public/ <= 149 lines.
-    - TypeScript type check passing with 0 errors.
-    - Production Vite build built cleanly.
-- Post-Implementation Verification, Backend Safety Fixes & Final Handoff completed:
-  * 1. Real State Verified: Working tree clean, Apps Script deployment AKfycbx4d... active at @22, frontend backend URL and apiVersion '1' confirmed, all callers/implementations traced.
-  * 2. Payment Overpayment / Credit Safety: Detailed 9-stage data path traced. Demonstrated why current 15-column Payments table lacking applied_amount/unapplied_amount cannot safely allocate overpayments to subsequent fees without corrupting total receipts in financial reports. Implemented safe backend capping of fee paid_amount at amount_due and updated creditCalculator to filter void records across both status and payment_status aliases. Provided minimal schema extension proposal for future owner review.
-  * 3. Monthly Invoice Backend Duplicate Protection: Added FeeObligations_findByStudentAndPeriodOrIdempotency in FeeRepository.gs, concurrency locking via withLock in FeeService.gs, request envelope idempotencyKey propagation in apiClient.ts, and idempotent retry response handling to guarantee duplicate invoices cannot be generated under concurrency, retries, or direct API calls.
-  * 4. Subject Persistence & Note Protection: Implemented formatSubjectAndNotes and parseSubjectAndNotes in studentApi.ts and StudentService.gs. Tested bracket handling (Math [AP Calculus]), Unicode/punctuation (Français & हिंदी), independent field editing, clean tag stripping on empty subject, and multi-cycle idempotency.
-  * 5. Attendance & Credit Deduction Rules: Updated ClassService.gs and ClassValidation.gs to enforce approved policies: unexcused no-shows (outcome: 'NO_SHOW' / ABSENT_UNEXCUSED) consume 1 package credit; excused absences (outcome: 'EXCUSED' / ABSENT_EXCUSED) preserve credit; tutor waivers preserve credit; advance cancellation (>=4h notice) preserves credit; late cancellation (<4h notice) consumes 1 credit unless tutor explicitly waives penalty; credit restorations (CREDIT_BACK) supported; cancellation routing seamless.
-  * 6. Regression & Quality Gates:
-    - 103/103 Vitest tests passing across 21 test suites (+9 subject tests, +7 payment/invoice tests, +4 class policy tests).
-    - Line limits verified: 117/117 files in src/ and public/ <= 149 lines.
-    - TypeScript check (tsc --noEmit) passed with 0 errors.
-    - Vite production build clean in 712ms.
-- Requirements-First Field and Schema Reconciliation completed (Read-Only Review):
-  * 1. Original Requirements Re-established: Preserved authentic business requirements across Students (10 fields), Package Details (11 fields), Meeting Links (4 fields), Payment Details (4 fields), Classes & Attendance, and Multi-Model Billing.
-  * 2. Comprehensive 8-Column Field-by-Field Mapping: Produced complete matrix across all required fields, current physical tabs/columns, frontend forms, backend adaptors, status, required actions, and justifications in docs/prelaunch/requirements-reconciliation-report.md.
-  * 3. Confirmed Mismatches Documented: Subject missing physical column (currently tag in notes); student_email missing from sheet; per_class, in_INR, and next_due_date missing from Packages; student_name missing from child tables; MeetingLinks over-engineered (13-col relational table vs link1/link2); first_name/last_name artificially split; Enrollments tab redundant.
-  * 4. Simplest Practical Data Model Defined: Compared Ultra-Minimal 5-Tab and Pragmatic 6-Tab models; rejected proposed PaymentAllocations sub-ledger table for immediate operations, establishing that unapplied credit is safely derived and credited forward on future invoices without enterprise machinery.
-  * 5. Unambiguous Billing Terminology Formulated: Concrete mathematical definitions provided for Package price, Per-class rate, Currency, INR equivalent, Classes purchased, Classes consumed, Classes remaining, Fee amount due, Payment received, Amount applied, Unapplied credit, Outstanding balance, and Next payment due date.
-  * 6. Owner-Facing Workflows & Forms Detailed: Short, practical forms designed for student entry, package setup, class scheduling, 1-click attendance, monthly invoicing preview, and payment recording.
-  * 7. Invariants Preserved: Zero live rows, columns, headers, or tabs modified; zero code regressions; 103/103 tests passing; clean production build.
-- Antigravity Master Implementation — Clean Up The Personal Dashboard Everywhere completed:
-  * 1. Authoritative Target Schemas Implemented:
-    - Students: student_id, student_name, parent_name, parent_phone, student_phone, parent_email, student_email, subject, status, notes, created_at, updated_at, archived_at. Single student_name replaces first_name/last_name. Strictly separate student_email. Physical subject column. Dropped all CRM fluff (preferred_name, dob, etc.).
-    - Packages: package_id, student_id, student_name, plan_name, plan_type, currency, package_price, per_class, classes_purchased, start_date, expiry_date, next_due_date, package_status, notes, created_at, updated_at. Dropped enrollment_id and in_INR. Classes consumed/remaining derived dynamically.
-    - FeeObligations: fee_obligation_id, student_id, student_name, package_id, obligation_description, amount_due, credit_applied, currency, issue_date, due_date, obligation_status, notes, created_at, updated_at, voided_at, void_reason. credit_applied allows forward credits with exact ledger reconciliation and zero double counting.
-    - ClassSessions: class_session_id, student_id, student_name, package_id, meeting_link_id, class_title, scheduled_start, scheduled_end, actual_start, actual_end, session_status, attendance_status, class_credit_effect, cancellation_reason, credit_restoration_for_session_id, notes, created_at, updated_at, completed_at. Dropped enrollment_id.
-    - Payments: payment_id, student_id, student_name, fee_obligation_id, payment_date, amount, currency, payment_method, transaction_reference, idempotency_key, payment_status, notes, created_at, updated_at, voided_at, void_reason.
-    - MeetingLinks: meeting_link_id, student_id, student_name, link_label, meeting_url, provider, is_preferred, link_status, created_at, updated_at.
-    - Enrollments Tab: Deprecated throughout code, tests, and navigation.
-  * 2. Pre-Migration Master Backup: Created and verified (Backup ID: 1kIFYmI81DfNIAqb-ZHsTifiKE6JxhfQrXqpfphrw9eU).
-  * 3. Standalone Schema Migration Runner: Created 02-backend/apps-script/setup/SchemaMigration.gs (runApprovedSchemaMigration) for owner execution in Apps Script editor.
-  * 4. Frontend Forms & Models Updated: StudentForm, StudentList, StudentSummary, StudentProfilePage, studentValidation, studentApi, creditCalculator aligned.
-  * 5. Quality Gates Verified: 107/107 Vitest tests passing across 22 test files (including 4 new regression tests proving single student_name, strict email separation, dedicated subject column, and overpayment ledger reconciliation). Line limit verified (117 files in src/ and public/ <= 149 lines). Strict TypeScript check passing with 0 errors. Clean Vite production build.
-  * Status: IMPLEMENTED AND VERIFIED LOCALLY. READY FOR OWNER ACCEPTANCE.
-- Finalize Dashboard Data Model Documentation and Google Sheet completed:
-  * 1. Authoritative Schema Finalization:
-    - Students: Exactly 9 columns in order (student_id, student_name, parent_name, parent_phone, student_phone, parent_email, student_email, subject, status). Dropped notes, created_at, updated_at, archived_at, and CRM fluff.
-    - Packages: Exactly 11 columns in order (package_id, student_id, student_name, plan_type, currency, package_price, per_class, classes_purchased, start_date, end_date, next_due_date). Uses end_date, dropped plan_name, plan_status, package_status, notes, created_at, updated_at.
-    - Child tables aligned: FeeObligations (16 cols), Payments (16 cols), ClassSessions (19 cols), MeetingLinks (10 cols).
-    - Operational tabs preserved: StudentNotes (9 cols), AuditLog (12 cols), ImportBatches (14 cols), ImportRowResults (9 cols), AppConfig (4 cols).
-    - Enrollments deprecated and removed from active schemas.
-  * 2. Comprehensive Documentation Alignment: Updated 03-data/01-master-spreadsheet-schema.md, 03-data/02-entity-relationships-and-data-dictionary.md, 03-data/03-financial-and-class-balance-calculations.md, 03-data/04-data-validation-and-schema-migrations.md, 00-documentation/04-google-sheets-data-model.md, docs/prelaunch/final-schema-proposal.md, and 05-agent-handoff/00-project-state.md.
-  * 3. Backend & Migration Hardening: Updated SheetRegistry.gs, SchemaMigration.gs, PackageService.gs, PackageValidation.gs. Pushed all 68 files to Apps Script editor HEAD via clasp.
-  * 4. Infrastructure Verification:
-    - Canonical spreadsheet (1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8) inspected via deployed endpoint system.inspectTabs: 1 row per tab, 0 business rows.
-    - Pre-launch backup (1kIFYmI81DfNIAqb-ZHsTifiKE6JxhfQrXqpfphrw9eU) inspected and verified via Drive API; preserved intact.
-    - API boundary documented: Sheets API / Execution API disabled in GCP project 1072944905499; Web App @22 frozen without deploying. Owner can run runApprovedSchemaMigration in Apps Script editor with 1 click.
-  * 5. Quality Gates Verified: 108/108 Vitest tests passing across 23 test suites; line-limit check passing (117 files <= 149 lines); TypeScript strict check (0 errors); clean Vite production build (1.81s).
-  * Status: DOCUMENTATION & CODE FINALIZED. READY FOR OWNER ACCEPTANCE.
-- Antigravity Follow-up: Align All Six Finalized Tables completed:
-  * 1. All Six Finalized Schemas Implemented Across Backend:
-    - Students (9 cols): student_id, student_name, parent_name, parent_phone, student_phone, parent_email, student_email, subject, status.
-    - Packages (11 cols): package_id, student_id, student_name, plan_type, currency, package_price, per_class, classes_purchased, start_date, end_date, next_due_date.
-    - Payments (Payment Details: 6 cols): student_id, student_name, payment_date, amount, currency, in_inr. Manual in_inr never overwritten by automatic conversion.
-    - ClassSessions (8 cols): class_session_id, student_id, scheduled_start, scheduled_end, attendance_status, session_status, cancellation_reason, deduct_class. Present automatically deducts 1 class; absent asks owner; unmarked/cancelled do not deduct unless explicitly applied.
-    - MeetingLinks (4 cols): student_id, student_name, meeting_link_1, meeting_link_2. Flat structure, 1 row per student.
-    - StudentNotes (5 cols): student_id, student_name, note_date, note_text, follow_up_date. Multiple notes per student supported.
-    - Legacy tabs handled safely: Enrollments and FeeObligations deleted if empty, or renamed to Enrollments_Archive / FeeObligations_Archive if non-empty.
-  * 2. Backend Services & Handlers Adapted:
-    - SheetRegistry.gs and SchemaMigration.gs updated with exact 6 target schemas.
-    - PaymentValidation.gs, PaymentRepository.gs, PaymentService.gs, PaymentHandlers.gs aligned to 6 columns.
-    - ClassValidation.gs, ClassRepository.gs, ClassService.gs, ClassHandlers.gs aligned to 8 columns with deduct_class rules.
-    - PackageService.gs balance derivation updated to sum deduct_class === true for student and deduct FIFO by start_date across packages.
-    - MeetingLinkValidation.gs, MeetingLinkRepository.gs, MeetingLinkService.gs, MeetingLinkHandlers.gs aligned to flat 4 columns.
-    - NoteValidation.gs, NoteRepository.gs, NoteService.gs, NoteHandlers.gs aligned to 5 columns.
-  * 3. Authoritative Documentation Aligned:
-    - 03-data/01-master-spreadsheet-schema.md, 03-data/02-entity-relationships-and-data-dictionary.md, 03-data/03-financial-and-class-balance-calculations.md, 03-data/04-data-validation-and-schema-migrations.md, 00-documentation/04-google-sheets-data-model.md, 05-agent-handoff/00-project-state.md, running.txt.
-  * 4. Verification and Quality Gates:
-    - 108/108 Vitest tests passing across all 23 test suites.
-    - Line limit verified: 117/117 files <= 149 lines in src/ and public/.
-    - Strict TypeScript check (tsc --noEmit) passing with 0 errors.
-    - Clean Vite production build in 1.71s.
-  * 5. Strict Guardrails Respected:
-    - Zero live migration execution against canonical sheet 1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8.
-    - Zero new Apps Script deployments (web app remains frozen at version @22).
-    - Pre-launch backup 1kIFYmI81DfNIAqb-ZHsTifiKE6JxhfQrXqpfphrw9eU preserved intact.
-    - Source code ready to be pushed to Apps Script editor HEAD.
-- Consolidated Post-Deployment Audit (Apps Script Version @23) completed & verified:
-  * 1. Live Deployment & Migration Verification: Owner executed physical schema migration on canonical sheet 1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8 and updated deployment AKfycbx4d_... in-place to Version @23.
-  * 2. Quality Gates: 118/118 Vitest unit/integration tests passing across 24 test suites; line-limit check passing (117 files <= 149 lines in src/ and public/); TypeScript strict check passing (0 errors); clean production Vite build in 711ms.
-  * 3. Live Safe Read-Only Verification: Live GET health check returned apiVersion '1'; authenticated POST calls verified across all 6 business tables (students, packages, payments, classes, meeting links, notes) and overview/reports (dashboard.overview, reports.financialSummary) returning HTTP 200 with 0 errors. Deleted legacy tabs (Enrollments, FeeObligations) gracefully return empty arrays without crashing.
-  * 4. Live Browser E2E Testing: Playwright tests executed against live backend; 4/4 auth tests passed (unauthenticated gate, live invalid key rejection, no client bundle secrets, real admin session lifecycle); 4/4 cross-cutting tests passed (financial report metrics, CSV import preview, mobile/tablet viewports).
-  * 5. Release Readiness: System is READY WITH LIMITATIONS (live write operations preserved untouched for owner data hygiene). Post-deployment audit report created at docs/audits/post-deployment-audit.md. Ready for owner interactive smoke test and Vercel frontend launch.
-- Pre-Launch Functional Verification & Workflow Lifecycle completed & verified:
-  * 1. 9 User Workflows Verified End-to-End: Added tests/integration/finalizedWorkflowsLifecycle.test.ts covering: student CRUD, view, edit, archive/reactivate (9 cols); package creation and balance derivation (11 cols); payment recording, idempotency deduplication across retries, safe voiding (6 cols); class scheduling & attendance (8 cols); deduction rules matrix (PRESENT burns 1, ABSENT preserves by default, SCHEDULED preserves, advance cancellation preserves, late cancellation burns unless waived, CREDIT_BACK restores); multi-package FIFO allocation across dates; flat meeting links (4 cols); multiple student notes (5 cols); dynamic dashboard metrics & financial rollup; import preview without sheet mutation & explicit execution commit gate.
-  * 2. Quality Gates: 125/125 Vitest tests passing across 25 suites; 117/117 files <= 149 lines under src/ and public/; TypeScript strict check 0 errors; clean production build in 776ms.
-  * 3. Safety Boundary Respected: Zero writes performed on live canonical spreadsheet; pristine post-migration state preserved.
-  * 4. Next Step: Owner authorization to deploy frontend to Vercel.
-- Comprehensive Frontend UI/UX Redesign completed & verified:
-  * 1. Design System & Tokens: Complete tokens overhaul in tokens.css, global.css, forms.module.css, tables.module.css, Button.module.css, layout.module.css, and confirmDialog.module.css establishing restrained modern blue primary, accessible contrast, coherent spacing scale, refined card elevations, and custom table scrollbars.
-  * 2. Icon System: Built pure SVG icon micro-components (NavIcons.tsx, ActionIcons.tsx) eliminating all casual emoji substitutes.
-  * 3. Shell & Navigation: Responsive AppShell with off-canvas slide-out drawer on mobile/tablet, sticky TopBar with admin profile and environment badge, intentional two-line brand mark, and PageHeader component.
-  * 4. All 8 Product Screens Redesigned:
-    - Dashboard: Summary metric cards with tabular numbers, Quick Actions bar, upcoming class session preview, outstanding obligations preview, and empty states.
-    - Students: Aligned search and status filters, "+ Add Student" header action, initialed student table cards, responsive 2-column edit/creation form, detailed profile hero card with unapplied credit badge, and ConfirmDialog archive gating.
-    - Fees & Payments: Tabbed layout for invoices vs payment ledger, tabular currency alignments, inline payment modal with pre-filled amounts, and void confirmation dialogs.
-    - Classes & Attendance: Logical scheduling form, clean session schedule table, status pills, and credit restoration confirmation.
-    - Meeting Links: Global directory displaying associated students, Google Meet/Zoom provider tags, 1-click clipboard copy with feedback, and primary link toggle.
-    - Import & Reconcile: 3-step sequential progress indicator, synthetic sample loader, monospace input, summary statistics, preview validation table, and explicit confirmation safety gate.
-    - Financial Reports: Metric cards, date range filters, collection performance ratio bar, and CSV export.
-    - Settings & Diagnostics: Administrator session details, backend connectivity status indicator, and regional/currency defaults.
-  * 5. Isolated Mock Mode for Owner Review: Configured VITE_USE_MOCK_DATA and mockDataStore.ts enabling visual review across all screens with rich synthetic fixtures without modifying live spreadsheet data.
-  * 6. Quality Gates & Viewport Coverage:
-    - 125/125 Vitest tests passing across 25 test suites.
-    - 4/4 responsive Playwright browser tests passing (Desktop 1440px, Desktop 1280px, Tablet 768px, Mobile 390px).
-    - Line limit policy strictly verified: 122/122 files in src/ and public/ <= 149 lines.
-    - Strict TypeScript check (tsc --noEmit) passing with 0 errors.
-    - Production Vite build clean (736ms).
-- Complete Removal of Import & Reconcile Feature completed & verified:
-  * 1. Navigation and Routing:
-    - Removed 'imports' from NavSection type union, navItems array, and removed ImportsIcon from Sidebar.tsx and NavIcons.tsx.
-    - Sidebar spacing verified: .nav uses dynamic flex column layout (gap: 3px); 7 active navigation items contract cleanly without gaps or height artifacts.
-    - Removed 'imports' route mapping from appRoutes.tsx and ROUTE_CONFIGS in routeAccess.ts. Direct navigation to 'imports' safely defaults to Dashboard.
-    - Removed "Spreadsheet Import" button from Quick Actions in DashboardPage.tsx.
-  * 2. Frontend Feature Code Removal:
-    - Deleted src/domains/imports/ directory completely (ImportPage.tsx, ImportPreview.tsx, ImportResults.tsx, importApi.ts, importTypes.ts).
-    - Preserved all shared UI components (DataTable, Button, ConfirmDialog, InlineNotice, PageHeader).
-  * 3. Backend & Apps Script:
-    - Deleted 02-backend/apps-script/imports/ directory completely (ImportHandlers.gs, ImportService.gs, ImportRepository.gs, ImportValidation.gs).
-    - Removed bulk-import endpoints 'imports.preview' and 'imports.execute'.
-    - Intentionally retained operational tab definitions and schemas for ImportBatches and ImportRowResults in SheetRegistry.gs, SpreadsheetBootstrap.gs, SchemaMigration.gs, SystemHandlers.gs, CleanupHandlers.gs, and IdGenerator.gs to preserve historical setup/migration records on the master spreadsheet and protect spreadsheet integrity.
-    - General-purpose student CRUD, validation, audit, locking, and 6 business-table schemas left completely untouched.
-    - Zero Apps Script deployments executed; canonical Google Sheet and Vercel untouched.
-  * 4. Tests and Documentation:
-    - Deleted tests/domains/importAndMigration.test.ts and tests/e2e/imports.spec.ts.
-    - Updated tests/backend/operationAdapters.test.ts, tests/integration/finalizedWorkflowsLifecycle.test.ts, tests/frontend/screens.test.ts, tests/e2e/redesignScreensVisual.spec.ts, and tests/e2e/reportsAndCrossCutting.spec.ts.
-    - Marked historical migration specs 00-documentation/09-data-import-and-migration.md and 03-data/05-existing-sheets-import-and-reconciliation.md as archived.
-    - Updated 05-agent-handoff/00-project-state.md and running.txt.
-  * 5. Quality Gates & Verification:
-    - 121/121 Vitest unit/integration tests passing across 24 test suites.
-    - Line limit policy strictly verified: 117/117 files in src/ and public/ <= 149 lines.
-    - Strict TypeScript check (tsc --noEmit) passing with 0 errors.
-    - Clean Vite production build in 842ms.
-    - Responsive Playwright visual tests passing (4/4) and reports & cross-cutting tests passing (3/3).
-    - Zero remaining active references to retired feature.
-- Profile, Navigation, Branding & Dashboard Extension completed:
-  * 1. Profile & Preferences Extension:
-    - Added IANA timezone dropdown with clear labels (default: Asia/Kolkata) and safe persistence in userPreferences.ts.
-    - Added supported display currency dropdown (default: INR) and safe persistence without automatic FX conversions or altering original records.
-    - Preserved administrator display-name editor and read-only email.
-    - Center-aligned Profile & Preferences container horizontally (maxWidth: 720px, margin: 0 auto).
-  * 2. Top Bar & Branding:
-    - Removed Development / Mock badge from top bar.
-    - Updated single brand name to "Student Manager", removing secondary subtitle line.
-  * 3. Meeting Links Dual Link Display:
-    - Displayed both meeting_link_1 (Primary meeting link) and meeting_link_2 (Secondary meeting link) with copy/open actions and overflow protection.
-    - Form supports creating and editing both links simultaneously without modifying 4-column schema.
-  * 4. Reports Renamed to Earnings:
-    - Renamed navigation item and user-facing headings to "Earnings Overview", communicating collected earnings vs invoiced obligations accurately while keeping routes stable.
-  * 5. Dashboard Calendar:
-    - Added weekly class schedule calendar starting on Monday and ending on Sunday, with prev/next/this week navigation and timezone-aware formatting.
-  * 6. Quality Gates & Verification:
-    - 128/128 Vitest tests passing across 25 suites.
-    - Line limit policy strictly verified: 124/124 files in src/ and public/ <= 149 lines.
-    - Strict TypeScript check passing with 0 errors.
-    - Production Vite build clean in 752ms.
-    - All Playwright test suites (accountDropdown, redesignScreensVisual, auth, reportsAndCrossCutting) passing 100%.
-- Earnings Calculations Fix & Operational Sheets Audit completed:
-  * 1. Earnings Calculations Fix:
-    - Root cause: ReportService.gs previously queried the deprecated FeeObligations sheet to compute totalBilled. In the finalized 6-sheet model, billing agreements reside in the Packages sheet (11 columns). Because FeeObligations was absent/empty on the canonical spreadsheet, totalBilled evaluated to 0, which forced totalOutstanding to Math.max(0, 0 - 166800) = 0.
-    - Updated ReportService.gs (Reports_getFinancialSummary and Reports_getDashboardOverview):
-      * Primary Invoiced total derived from Packages.package_price (excluding void/cancelled packages), with backwards-compatible fallback to FeeObligations if packages are absent.
-      * Collected Earnings derived from Payments.amount / Payments.in_inr, excluding voided payments.
-      * Total Outstanding calculated per-student: sum of max(0, student_billed - student_paid). This prevents a student with an overpayment/credit balance from improperly offsetting another student's debt.
-      * Preserved currency without artificial FX conversions; preserved manual in_inr values.
-      * Added support for startDate and endDate date filters across both packages and payments.
-      * Updated Reports_getDashboardOverview to derive outstandingFeesTotal and overdueFeesTotal from the unified financial calculation.
-    - Canonical figures verified:
-      * Packages: Rehaan (₹1,00,000) + Vivaan (₹1,00,000) + Seerat (₹16,800) = ₹2,16,800 Total Invoiced / Package Value.
-      * Payments: Rehaan (₹75,000) + Vivaan (₹75,000) + Seerat (₹16,800) = ₹1,66,800 Collected Earnings.
-      * Outstanding: ₹50,000 (Rehaan ₹25,000 + Vivaan ₹25,000 + Seerat ₹0).
-    - Frontend Updates:
-      * ReportsPage.tsx: updated metric labels to "Total Invoiced / Package Value", "Collected Earnings", and "Total Outstanding" with descriptive explanatory subtitles and CSV export.
-      * reportApi.ts: updated fetchFinancialSummary to accept filter parameters.
-      * mockDataStore.ts: updated mock reports.financialSummary and dashboard.overview to return ₹2,16,800 / ₹1,66,800 / ₹50,000.
-      * All modified frontend files strictly verified under 149-line limit (ReportsPage: 99 lines, reportApi: 24 lines, mockDataStore: 98 lines).
-  * 2. Operational Sheets Audit:
-    - AuditLog: RETAINED. Critical immutable audit trail for security and idempotency deduplication (PaymentService.gs checks AuditLog.request_id). Hidden in Google Sheets UI.
-    - AppConfig: RETAINED. Active configuration store for runtime metadata (schema_version = 2.0.0). Hidden in Google Sheets UI.
-    - ImportBatches & ImportRowResults: RETIRED FROM ACTIVE WORKFLOWS. Zero frontend or backend business workflows query or mutate these sheets following the removal of bulk imports. Retained as inert schema definitions in SheetRegistry.gs to preserve spreadsheet integrity without dropping production tabs.
-  * 3. Quality Gates & Verification:
-    - 135/135 Vitest tests passing across 26 test suites (added tests/domains/earningsCalculations.test.ts covering canonical data, multiple packages, partial payments, fully paid packages, overpayment credit insulation, date filters, inactive students, voided records, and empty sheets).
-    - Line limit policy strictly verified: 124/124 files in src/ and public/ <= 149 lines.
-    - Strict TypeScript check (tsc --noEmit) passing with 0 errors.
-    - Production Vite build clean in 972ms.
-    - 10/10 Playwright e2e tests passing in 20.2s.
-- Operational Tabs Retirement (AppConfig, ImportBatches, ImportRowResults Complete Removal) completed:
-  * 1. Dependency Tracing & Decoupling:
-    - Traced every active runtime dependency on AppConfig, ImportBatches, and ImportRowResults across backend services, repositories, and setup scripts.
-    - Zero business repositories or services (Students, Packages, Payments, Classes, MeetingLinks, Notes, Reports, Auth, Audit) read or write to these three sheets.
-    - Decoupled setup and utility scripts (SheetRegistry.gs, SpreadsheetBootstrap.gs, RunBootstrap.gs, SchemaMigration.gs, SystemHandlers.gs, CleanupHandlers.gs).
-  * 2. Replacement of AppConfig with ConfigService:
-    - Implemented ConfigService.gs (Config_get, Config_getAll) reading from native ScriptProperties with resilient in-code defaults (SCHEMA_VERSION: '2.0.0', APP_NAME: 'Student Manager', DEFAULT_CURRENCY: 'INR', DEFAULT_TIMEZONE: 'Asia/Kolkata', DEFAULT_CLASS_DURATION_MINUTES: '60').
-    - Hardcoded secrets strictly avoided; authorization, authentication, HMAC session security, and deployment settings preserved.
-  * 3. Removal of Obsolete Schemas & Re-creation Safeguards:
-    - Removed ImportBatches, ImportRowResults, and AppConfig from SHEET_NAMES and SHEET_SCHEMAS in SheetRegistry.gs.
-    - Removed AppConfig row seeding from SpreadsheetBootstrap.gs and RunBootstrap.gs; bootstrap will never recreate the absent tabs.
-    - Updated SchemaMigration.gs preflight and post-migration checks: only requires operational tab AuditLog.
-    - Updated CleanupHandlers.gs protectedTabs: removed obsolete tabs from required preflight checks.
-    - Updated SystemHandlers.gs: system.hideOperationalTabs targets AuditLog only.
-    - Preserved AuditLog (12 cols) and the six approved business sheets and their exact schemas (Students 9 cols, Packages 11 cols, Payments 6 cols, ClassSessions 8 cols, MeetingLinks 4 cols, StudentNotes 5 cols).
-  * 4. Regression Testing & Verification:
-    - Added tests/schema/absentOperationalTabsRegression.test.ts verifying bootstrap, CRUD, reports, dashboard overview, ConfigService defaults, and schema migration execute without errors when AppConfig, ImportBatches, and ImportRowResults are absent.
-    - 140/140 Vitest tests passing across 27 test suites.
-    - Line limit policy strictly verified: 124/124 files in src/ and public/ <= 149 lines.
-    - Strict TypeScript check (tsc --noEmit) passing with 0 errors.
-    - Production Vite build clean in 958ms.
-    - 10/10 Playwright e2e tests passing in 21.2s.
-- Earnings Calculation Bug Resolution & Deduplication Hardening completed:
-  * 1. Data Flow & Root Cause Analysis:
-    - Traced end-to-end data flow: Google Sheets -> OperationRouter -> ReportHandlers.gs -> ReportService.gs (Reports_getFinancialSummary & Reports_getDashboardOverview) -> apiClient.ts -> reportApi.ts -> ReportsPage.tsx.
-    - Identified why live sheet rendered ₹0 invoiced and ₹0 outstanding: Apps Script deployment @23 previously queried the deprecated FeeObligations sheet. Following manual deletion of FeeObligations from the canonical sheet, getSheetByName returned null, yielding totalBilled = 0. totalReceived evaluated to ₹1,66,800 from Payments, driving totalOutstanding = Math.max(0, 0 - 166800) = 0.
-  * 2. Calculation Implementation & Safeguards in ReportService.gs:
-    - Primary Invoiced Derivation: Computed from Packages.package_price (excluding CANCELLED and VOID packages) with backward-compatible fallback to FeeObligations only if Packages is absent/empty in older test mock environments.
-    - Package Deduplication: Deduplicated packages by package_id (or synthetic deterministic key when missing) taking the latest row, strictly preventing double-counting of duplicated or historical revision rows.
-    - Bidirectional Student Identity Resolution: Implemented resolveStudentKey mapping student_name <-> student_id across Students, Packages, and Payments, allowing payments with missing student_id or packages with student_name to link reliably.
-    - Currency Handling: INR payments use amount; payments with manual in_inr use in_inr; foreign payments lacking manual in_inr are excluded from INR totals without inventing exchange rates.
-    - Outstanding Balance Aggregation: Derived per student as sum of max(0, billed - paid), strictly insulating each learner's balance against cross-subsidization from overpayments or credits.
-    - Date Filters: Preserved startDate and endDate filtering across packages (start_date) and payments (payment_date).
-  * 3. Canonical Figures Verified:
-    - Rehaan: ₹1,00,000 package, 3 x ₹25,000 = ₹75,000 paid -> ₹25,000 outstanding.
-    - Vivaan: ₹1,00,000 package, 3 x ₹25,000 = ₹75,000 paid -> ₹25,000 outstanding.
-    - Seerat: ₹16,800 package, 1 x ₹16,800 = ₹16,800 paid -> ₹0 outstanding.
-    - Total Invoiced / Package Value: ₹2,16,800.
-    - Collected Earnings: ₹1,66,800.
-    - Total Outstanding: ₹50,000.
-  * 4. Regression Testing & Verification:
-    - Added comprehensive regression tests in tests/domains/earningsCalculations.test.ts (10 tests covering canonical data, deduplication, student name matching, foreign currency, multiple packages per student, debtor balance insulation, date filters, archived students, voided records, and zero handling).
-    - 143/143 Vitest tests passing across 27 test files (100% pass rate).
-    - Line limit check: all 124 files in src/ and public/ <= 149 lines.
-    - Strict TypeScript check (tsc --noEmit): 0 errors.
-    - Production Vite build: clean build in 2.42s.
-    - Playwright e2e tests (reportsAndCrossCutting.spec.ts & accountDropdown.spec.ts): 10/10 passed in 30.9s.
-- Apps Script Deployment Update (@25) & Live API Verification completed:
-  * 1. Deployment Execution:
-    - Pushed all 65 Apps Script files via clasp.
-    - Created Version 24 and Version 25 (`Personal Dashboard earnings calculation fix @25`).
-    - Redeployed deployment `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w` in-place to Version @25. Deployment ID, URL, execution policy (executeAs: USER_DEPLOYING, access: ANYONE_ANONYMOUS), and script properties preserved 100%. Zero new deployments created.
-  * 2. Live Sheet Discrepancy Diagnosis & Fix:
-    - Shared package_id: Both Rehaan and Viwaan had package_id PKG_001 in the canonical spreadsheet. Initial package deduplication indexed by package_id alone, causing Viwaan to overwrite Rehaan (billing 116,800 instead of 216,800). Fixed by scoping deduplication per student (`studentKey + '_' + package_id`).
-    - Dash placeholder in in_inr: Payments sheet stored '-' in the in_inr column for domestic INR payments. Previous `hasInInr` treated any non-empty string as a manual override, resulting in `Number('-') || 0 = 0` and totalReceived = 0. Fixed by validating `numInInr > 0 && !isNaN(numInInr) && rawInInr !== '-'`, correctly falling back to domestic INR `amount`.
-  * 3. Live Authenticated Endpoint Verification:
-    - Authenticated via `auth.login` obtaining HMAC session token.
-    - Verified `reports.financialSummary` on live deployed URL:
-      * totalInvoiced / totalBilled: ₹2,16,800
-      * totalCollected / totalReceived: ₹1,66,800
-      * totalOutstanding: ₹50,000
-    - Verified `dashboard.overview` on live deployed URL:
-      * outstandingFeesTotal: ₹50,000
-      * overdueFeesTotal: ₹50,000
-  * 4. Quality Gates:
-    - 144/144 Vitest tests passing across 27 test files (added test 11 covering shared package_id and dash in in_inr).
-    - Line limit check: all 124 files in src/ and public/ <= 149 lines.
-    - TypeScript strict check: 0 errors.
-    - Production Vite build: 910ms clean build.
-    - Playwright e2e tests: 10/10 passed in 21.5s.
-- Unified Finances Consolidation & Ledger Single Source completed:
-  * 1. Navigation & Page Unification:
-    - Replaced separate 'Fees & Payments' and 'Earnings' sidebar items with a single 'Finances' sidebar item using FeesIcon.
-    - Preserved backward-compatible routing for legacy `/fees` and `/reports` aliases redirecting/rendering FinancesPage.
-    - Updated dashboard quick actions ('Record Payment' and 'Review outstanding balances') to navigate cleanly to 'finances'.
-    - Removed obsolete src/domains/reports/ components (ReportsPage.tsx, ReportFilters.tsx, ExportAction.tsx).
-  * 2. Component Architecture (under src/domains/finances/):
-    - financeTypes.ts (30 lines): Data structures for summaries, filters, student balances, and active tab states.
-    - FinanceSummaryCards.tsx (96 lines): 3 responsive summary cards (Total Invoiced, Collected Earnings, Total Outstanding) plus collection rate progress bar.
-    - FinanceToolbar.tsx (108 lines): Unified search, date range pickers (startDate, endDate), and CSV export button.
-    - FinancialHistoryTable.tsx (114 lines): Complete payment transaction ledger with student name, date, formatted amount, payment method, reference note, void/active status badge, and void action button.
-    - StudentBalanceTable.tsx (89 lines): Per-student aggregated financial ledger displaying agreed package value, collected earnings, pending outstanding balance, and transaction count.
-    - useFinancesData.ts (134 lines): Reactive custom hook aggregating data from reports.financialSummary, payments.list, and packages.list, with search/date filtering and optimistic payment voiding.
-    - financeCsvExport.ts (40 lines): CSV generator combining high-level financial summary metadata and itemized transaction rows.
-    - FinancesPage.tsx (114 lines): Unified page integrating header, summary cards, search toolbar, tabs ('Payment History' and 'Student Balances'), tables, and void confirmation modal.
-  * 3. Regression Testing & Verification:
-    - Added tests/frontend/financesConsolidation.test.ts (74 lines) verifying route registration, legacy alias handling, and CSV generation.
-    - Unit tests: 147/147 passing across 28 test files in 1.28s (Vitest).
-    - Line limit check: node scripts/check-line-limits.js passing across 129 files in src/ and public/ (all <= 149 lines).
-    - TypeScript strict check: tsc --noEmit passed with 0 errors.
-    - Production Vite build: 539ms clean build, 0 warnings.
-    - Playwright E2E suites: 14/14 passed in 18.7s (accountDropdown.spec.ts, reportsAndCrossCutting.spec.ts, redesignScreensVisual.spec.ts).
-- Finances & Meeting Links Refinements completed:
-  * 1. Finances Summary Cards & Payment History Refinements:
-    - Updated summary card titles and descriptions to exact approved labels: 'Total Invoice' with 'Total agreed package value', 'Collected Earnings' with 'Received Payments', and 'Total Outstanding' with 'Uncollected Balance'.
-    - Simplified Payment History table to exactly 4 columns: 'Student ID', 'Student Name', 'Date', and 'Amount'. Method, Reference, and Actions columns completely removed without blank cells or unused headers.
-    - Preserved original payment amounts and currencies using formatCurrency(amount, true, currency).
-    - Implemented ascending chronological sorting in financeSorting.ts by payment_date (oldest first, newest last) with deterministic secondary sort on same-day payments and safe handling of missing/invalid dates.
-    - Updated payment status wording to display 'RECORDED' as 'Received' in textFormat.ts and CSV exports.
-  * 2. Meeting Links Platform Identification & Columnar Layout:
-    - Implemented platformDetector.ts identifying 'Google Meet' (meet.google.com and subdomains), 'Zoom' (zoom.us, subdomains, zoomgov.com), and 'Other meeting platform' safely from parsed URL hostnames with protocol safety against javascript: schemes.
-    - Created MeetingPlatformBadge.tsx with platform-specific branding dots and color themes.
-    - Replaced shared links area with distinct MeetingLinkCard.tsx rendering two columns on desktop (stacking on tablet/mobile) for 'Primary Meeting Link' and 'Secondary Meeting Link' via MeetingLinkSlot.tsx.
-    - Implemented missing-link behavior: displays 'Add Meeting Link' button when a slot is empty/unconfigured; Copy and Open controls only display when a link exists.
-    - Upgraded MeetingLinkForm.tsx to support targetSlot ('primary' or 'secondary'), preselecting the student, indicating the target slot, and strictly preserving existing links in the other slot upon save.
-  * 3. Testing and Quality Gates:
-    - Added tests/frontend/financesRefinements.test.ts (6 unit tests) and tests/frontend/meetingLinksRefinements.test.ts (6 unit tests).
-    - Added tests/e2e/meetingLinksAndFinancesRefinements.spec.ts (2 Playwright tests).
-    - Unit tests: 159/159 passing across 30 test files in 1.52s.
-    - Line limit check: 134 files in src/ and public/ <= 149 lines (PASS).
-    - TypeScript strict check: 0 errors.
-    - Production Vite build: 503ms clean build.
-    - Playwright E2E suites: 16/16 passed in 29.8s.
-- Finances Workflow & Meeting Links Table Redesign completed:
-  * 1. Student Balances as Default Tab:
-    - Reordered Finances page tabs to 1. Student Balances, 2. Payment History.
-    - Set Student Balances as the active default tab upon page visit without stale local storage persistence.
-    - Added WAI-ARIA tab semantics (role="tablist", role="tab", aria-selected, aria-controls, tabIndex, role="tabpanel").
-  * 2. Add Payment Action & Popup Modal:
-    - Added visible "+ Add Payment" button in FinanceToolbar next to Export Finances CSV.
-    - Built AddPaymentModal with backdrop, keyboard escape handling, and student searchable filter.
-    - Preselected package currency when unambiguous per student, defaulting to INR otherwise.
-    - Defaulted payment date to today in application timezone (Asia/Kolkata).
-    - Required positive amount and manual in_inr equivalent for foreign currency payments without silent conversions.
-    - Validated all fields inline and prevented duplicate submission while saving.
-    - Integrated with recordPayment backend API and triggered full ledger/summary refresh with success feedback banner.
-  * 3. Meeting Links Compact Table & Popup Modal:
-    - Redesigned Meeting Links page into a compact, responsive DataTable with columns for Student, Primary Meeting Link, Secondary Meeting Link, and Actions.
-    - Displayed platform badge (Google Meet, Zoom, Other), truncated URL, 1-click Copy, and Open ↗ controls for configured links.
-    - Displayed "No link configured" and slot-targeted "Add Meeting Link" button for empty slots.
-    - Built MeetingLinkModal to open Add / Edit link in a clean popup form instead of in-page expansion.
-  * 4. Testing and Quality Gates:
-    - Added tests/frontend/financesWorkflowAndMeetingLinksTable.test.ts (6 unit tests) covering currency resolution, validations, timezone date formatting, and platform detection.
-    - Updated tests/e2e/meetingLinksAndFinancesRefinements.spec.ts to verify Student Balances default selection, Add Payment modal, 4-column history, and Meeting Links table modal behavior.
-    - Unit tests: 165/165 passing across 31 test files (Vitest).
-    - Line limit policy strictly verified: 140/140 files in src/ and public/ <= 149 lines (PASS).
-    - Strict TypeScript check (tsc --noEmit): 0 errors.
-    - Production Vite build: 511ms clean build, 0 warnings.
-    - Playwright E2E suites: 16/16 passed in 30.4s.
-- Blank Screen Startup Recovery completed:
-  * 1. Diagnosis and Root Cause Identification:
-    - Reproduced startup failure on http://localhost:5173 using Playwright and Chromium.
-    - Captured uncaught exception: 'RangeError: Invalid time value at Date.toISOString (<anonymous>) at getDateKeyInTz (DashboardCalendar.tsx:35:14)'.
-    - Root cause: Live Google Sheet returned ISO timestamp strings with space-padded single-digit hours (e.g. '2026-10-24T 4:38:00.000Z'). Date constructor produced an Invalid Date, which caused Intl.DateTimeFormat to fail, and the catch fallback called d.toISOString(), throwing an uncaught RangeError.
-    - Absence of an ErrorBoundary caused React to unmount the entire component tree, leaving the user with a blank white page while keeping the browser tab title.
-  * 2. Resilient Date Parsing and Normalization:
-    - Added parseClassDate in DashboardCalendar.tsx and parseIsoDate helper in dateFormat.ts normalizing space-padded hours (/T\s+(\d:)/ -> 'T0$1') and returning null safely on invalid date values.
-    - Protected getDateKeyInTz against Invalid Date objects, avoiding unsafe .toISOString() calls.
-    - Deduplicated React child keys across calendar day cards and upcoming follow-ups using compound keys (${id}_${student_id}_${idx}).
-  * 3. Top-Level Error Boundary:
-    - Implemented ErrorBoundary.tsx (82 lines) with accessible fallback UI, diagnostic logging, and 'Reload Application' recovery button.
-    - Wrapped root React tree in ErrorBoundary in App.tsx.
-  * 4. Testing and Quality Gates:
-    - Added tests/frontend/dashboardCalendarSafety.test.ts (2 unit tests) verifying space-padded hours and invalid dates do not throw.
-    - Verified real browser startup at http://localhost:5173, confirming Administrative Dashboard rendered, calendar cards loaded, and page reloads cleanly.
-    - Unit tests: 167/167 passing across 32 test files (Vitest).
-    - Line limit policy strictly verified: 141/141 files in src/ and public/ <= 149 lines (PASS).
-    - Strict TypeScript check (tsc --noEmit): 0 errors.
-    - Production Vite build: clean build, 0 warnings.
-    - Playwright E2E suites: 16/16 passed.
-- Student Manager UI, Permanent Student IDs, and Student Registration Workflow completed:
-  * 1. Record Student Payment Form Refinements:
-    - Replaced duplicate filter and dropdown with a single SearchableStudentSelect component (133 lines).
-    - Supports searching by student name and permanent student ID with format 'Rehaan — STU_002'.
-    - Removed visible field labels from AddPaymentModal, replacing them with clean placeholders ('Select or search student...', 'Payment date', 'Currency', 'Amount in INR', 'Amount in original currency') and accessible aria-label attributes.
-    - Added consistent right padding (2.5rem) to student selector and currency dropdowns preventing text overlap with indicators.
-    - Preserved payment integrity: validated student selection, date, currency, amount, manual INR conversion, disabled submit during submission, and refreshed ledger on backend confirmation.
-  * 2. Permanent Sequential Student IDs:
-    - Authoritative backend generator in IdGenerator.gs formats new IDs as STU_001, STU_002, ..., STU_999, STU_1000.
-    - Case-sensitive regex (/^STU_(\d+)$/) prevents collision with legacy stu_xxx random hex IDs.
-    - StudentService.gs wraps creation in Apps Script withLock(10000), checks existing IDs, detects highest sequence number, avoids collisions, and returns persisted student_id.
-    - Existing student IDs are never mutated or regenerated on edit, status update, archiving, package allocation, schedule update, or payment.
-  * 3. Meeting Links Page Alignment and Actions:
-    - Aligned compact tabular layout with fixed column widths (Student: 24%, Primary: 33%, Secondary: 33%, Actions: 10%), text truncation with ellipsis, and responsive table container.
-    - Removed 'Open ↗' actions per prompt specification; retained only the 'Copy' action with clipboard feedback.
-    - Retained platform badge detection (Google Meet, Zoom, Other) based on URL.
-    - Corrected modal header: centered 'Edit Meeting Links' title with prominent left-aligned student name (17px bold).
-    - Removed '(HTTPS)' UI wording from labels ('Primary Meeting Link', 'Secondary Meeting Link (Optional)') while preserving validation.
-    - Preserved link updates: explicit clearing supported for secondary links, leaving secondary empty is valid, editing one link preserves the other.
-  * 4. Students Directory Alignment & Status Colors:
-    - Aligned directory table columns (Student: 22%, Subject: 16%, Parent Contact: 20%, Student Email: 18%, Status: 10%, Actions: 14%).
-    - Status badge styling updated: ACTIVE -> green (success), INACTIVE -> red (danger), ARCHIVED -> neutral grey.
-    - Subject and email cells truncated cleanly with text-overflow: ellipsis.
-  * 5. 4-Section Student Registration Workflow:
-    - Implemented unified StudentRegistrationForm with 4 distinct sections: 1. Student Details, 2. Parent Details, 3. Package Details, 4. Class Schedule.
-    - Added weekly recurring schedule entry with Day of Week, Start Time, End Time, + Add Schedule entry, and remove action.
-    - Safe sequential persistence: student created first; on partial failure (package/schedule save failure), persisted student state is retained to prevent duplicate student creation on retry.
-  * 6. Recurring Schedule Data Model & Migration Plan:
-    - Designed ClassSchedules schema (schedule_id, student_id, day_of_week, start_time, end_time, is_active, created_at, updated_at).
-    - Created detailed migration plan in docs/prelaunch/recurring-schedules-migration-plan.md.
-    - Added ClassScheduleService.gs and ClassScheduleHandlers.gs with graceful fallback to Script Cache when the ClassSchedules sheet is not yet physically created in the canonical spreadsheet.
-  * 7. Quality Gates & Test Verification:
-    - Line limit check: 152/152 files in src/ and public/ strictly <= 149 lines (PASS).
-    - TypeScript strict check (tsc --noEmit): 0 errors (PASS).
-    - Vitest unit/integration suite: 179/179 tests passing across 34 test files (PASS).
-    - Production Vite build: clean build in 802ms (PASS).
-    - Playwright E2E suites: 28 passed, 1 skipped (0 failures) (PASS).
-- Student ID Consistency Audit & Legacy ID Migration Plan completed:
-  * 1. Canonical Spreadsheet Audit:
-    - Audited live Google Spreadsheet (Private Class Dashboard, ID: 1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8).
-    - Identified 25 total students: 3 standard sequential IDs (STU_001, STU_002, STU_003) and 22 synthetic test rows created by past test runs with legacy IDs (stu_mvm...).
-    - Audited referential integrity across all dependent tables: 3 Packages (pkg_mvmiosa2xm00wvg2, pkg_mvmiuwumsjttw5lo, pkg_mvmiyle2ecyeq5u4), 3 MeetingLinks, 3 StudentNotes, 0 Payments, 0 ClassSessions, and 22 AuditLog entries reference legacy IDs.
-  * 2. Migration Engine Implementation:
-    - Created 02-backend/apps-script/setup/StudentIdMigration.gs (119 lines).
-    - Computes safe sequential mapping (STU_004 to STU_025) starting from next number after highest existing standard STU_\d+ ID.
-    - Cascades foreign-key updates across Students, Packages, Payments, ClassSessions, MeetingLinks, StudentNotes, ClassSchedules, and AuditLog.
-    - Creates StudentId_Migration_Backup audit tab recording original_id, migrated_id, and migrated_at for full recovery and rollback.
-    - Idempotent: running migration multiple times performs 0 updates and makes no changes once migrated.
-  * 3. Mock Data Synchronization:
-    - Synchronized src/api/mockDataInitial.ts to use STU_001, STU_002, STU_003, STU_004 across MOCK_STUDENTS, MOCK_FEES, MOCK_PAYMENTS, MOCK_CLASSES, MOCK_LINKS, MOCK_PACKAGES, and MOCK_NOTES.
-  * 4. Safe Execution Boundary Preserved:
-    - In accordance with Critical Rules 1 & 2, no deployment to Apps Script/Vercel was executed and no live spreadsheet data was modified.
-    - Full migration plan, mapping table, and step-by-step owner execution instructions documented in docs/prelaunch/student-id-migration-plan.md.
-  * 5. Testing and Quality Gates:
-    - Added tests/backend/studentIdMigration.test.ts (6 tests) covering mapping calculation, gap handling, 7-table foreign-key cascading, idempotency, read-only integrity verification, and rollback engine.
-    - 35 test files passed, 185 tests passed in Vitest.
-    - Line limit check: 152 files in src/ and public/ <= 149 lines (PASS).
-    - Strict TypeScript check: 0 errors (PASS).
-    - Production Vite build: 919ms (PASS).
-    - Playwright students e2e test: 2/2 passed.
-- Student ID Migration Safety Hardening, Preflight & Recovery Engine completed:
-  * 1. Revalidated Live Canonical Spreadsheet Data:
-    - Conducted authenticated read-only audit of canonical spreadsheet (Private Class Dashboard, ID: 1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8).
-    - Verified exact counts: 26 total students (3 standard STU_001-003, 23 legacy synthetic stu_... records).
-    - Verified 0 orphaned foreign keys across Packages (6), Payments (7), ClassSessions (7), MeetingLinks (6), and StudentNotes (7).
-    - Proposed mapping sequentially maps all 23 legacy IDs to STU_004 through STU_026 without gaps or collisions.
-  * 2. Dedicated Read-Only Preflight Tooling:
-    - Authored 02-backend/apps-script/setup/StudentIdPreflight.gs (134 lines) with runStudentIdMigrationPreflight().
-    - Preflight strictly performs non-mutating analysis of duplicate IDs, orphaned foreign keys, schema headers, and collision hazards.
-    - Verified against live data: reports status: 'READY', ready: true, reasons: [].
-  * 3. Hardened Migration State Machine & Concurrency Protection:
-    - Hardened 02-backend/apps-script/setup/StudentIdMigration.gs (133 lines) with LockService.getScriptLock() concurrency guard.
-    - Guaranteed pre-write backup creation and verification in StudentId_Migration_Backup before any business records change.
-    - Added resume-on-retry: if interrupted, subsequent runs detect the existing backup and use the persisted mapping without generating new or conflicting IDs.
-    - Complete idempotence: re-running on completed data returns alreadyCompleted: true with 0 mutations.
-  * 4. Safe Rollback Engine:
-    - Enhanced 02-backend/apps-script/setup/StudentIdVerification.gs (128 lines) with concurrency locking and ambiguous mapping guards.
-    - Inverts the persisted backup to restore all tables to their exact pre-migration state and logs a rollback event in AuditLog.
-  * 5. Recurring Schedule Storage Analysis:
-    - Physical ClassSchedules tab is absent in canonical sheet; schedules.list returns UNKNOWN_OPERATION on deployed Web App @25.
-    - Migration engine cascades updates to ClassSchedules when present and safely skips when absent.
-  * 6. Audit History Preservation:
-    - Selectively updates AuditLog.entity_id only when entity_type === 'STUDENT' and entity_id matches a mapped legacy ID.
-    - Historical summary text, descriptions, and non-student audit events remain authentic and untruncated.
-  * 7. Comprehensive Tests & Quality Gates:
-    - Added 10 unit tests in tests/backend/studentIdMigration.test.ts covering preflight analysis, 7-table cascading, resume-on-retry, idempotence, safe rollback, empty backup handling, and referential integrity audit.
-    - Vitest unit/integration suite: 189/189 tests passing across 35 test files (PASS).
-    - Line limit check: 152 files in src/ and public/ <= 149 lines; setup scripts <= 134 lines (PASS).
-    - Strict TypeScript check: 0 errors (PASS).
-    - Production Vite build: 839ms (PASS).
-- Student ID Migration Live Execution & Post-Migration Verification completed:
-  * 1. Deployment & Source Sync:
-    - Pushed 71 Apps Script source files to Apps Script project (1CC_ZjGrLBD8BnrAm6CP9oDUJmUPqFy4MCc-MkBiBvCNkMA616uF_pCPL).
-    - Created Apps Script Version @26.
-    - Updated Web App deployment AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w in-place to Version @26.
-  * 2. Preflight Audit:
-    - Executed runStudentIdMigrationPreflight() on canonical spreadsheet: verified status 'READY', 26 total students (3 standard, 23 legacy), 0 dangling foreign keys.
-  * 3. Live Migration Execution:
-    - Executed runStudentIdMigration() against canonical spreadsheet (ID: 1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8).
-    - Created StudentId_Migration_Backup tab (24 rows) with status COMPLETED.
-    - Preserved existing standard IDs STU_001, STU_002, STU_003 exactly as stored.
-    - Converted all 23 legacy IDs sequentially to STU_004 through STU_026.
-    - Cascaded foreign-key updates across Packages (3 rows), MeetingLinks (3 rows), StudentNotes (3 rows), and AuditLog.
-  * 4. Post-Migration Verification:
-    - Executed verifyStudentIdReferentialIntegrity(): confirmed totalStudents: 26, standardStudentCount: 26, nonStandardStudentIds: [], danglingReferences: {}.
-    - Zero broken foreign keys or unmapped legacy IDs.
-    - Full backup and rollback mechanism available in StudentId_Migration_Backup via rollbackStudentIdMigration().
-  * 5. Testing and Documentation:
-    - 189/189 Vitest tests passing across 35 test files.
-    - TypeScript strict check: 0 errors.
-    - Line limit check: 152 files in src/ and public/ <= 149 lines.
-    - Production Vite build: clean build in 815ms.
-    - Zero manual owner action required.
-- Meeting Links & Student Details UI Fixes completed:
-  * 1. Fix 1: Meeting Links Styling and One-Click Copy:
-    - Removed separate provider labels ("Google Meet", "Zoom") and separate "Copy" buttons.
-    - Created MeetingLinkButton component rendering links as styled clickable buttons (Google Meet green: #ecfdf5 bg / #065f46 text / #a7f3d0 border; Zoom blue: #eff6ff bg / #1d4ed8 text / #bfdbfe border; Other: #f5f3ff bg / #6d28d9 text).
-    - URL platform determined dynamically via detectMeetingPlatform from the URL itself across primary and secondary slots.
-    - 1-click clipboard copy with immediate in-button feedback ('✓ Copied!') and notification banner toast ('Meeting link copied to clipboard.').
-    - Prevents dashboard navigation without leaving the page.
-  * 2. Fix 2: Meeting Links Missing Link State:
-    - Unavailable links render strictly 'No link configured' in subtle italic text.
-    - Removed inline 'Add Meeting Link' button next to missing link messages.
-    - Kept page-level '+ Add Meeting Link' and table row 'Edit' actions intact.
-  * 3. Fix 3: Add Meeting Link Neutral Student Selection:
-    - Removed automatic selection of first student from initial state and fetch effect in MeetingLinkForm.
-    - Form opens with unselected student and neutral placeholder option 'Select student'.
-    - Enforced client-side required validation: blocks submission with 'Please select a student.' error when unselected.
-    - Selecting a student updates only derived fields without mutating other link fields.
-  * 4. Fix 4: Students Compact Default Rows & Inline Expandable Details:
-    - Redesigned StudentList with compact default rows displaying exactly 4 fields: Student Name (with initial avatar and ID), Subjects, Class schedule (formatted day and time via formatWeeklySchedule), and Classes consumed/total (formatted consistently with leading zeros like '01/48' via formatClassBalance).
-    - Interactive row click toggles inline expanded details panel (<StudentExpandedDetails>); clicking row again collapses it.
-    - Action buttons ('Edit', 'View Full Profile') call stopPropagation, preventing accidental row expansion/collapse.
-    - Expanded details reveal remaining information: Parent/guardian name, parent & student phone/email, primary & secondary meeting link buttons, package balance & expiry, and financial overview (total invoiced, received, outstanding).
-  * 5. Quality Gates & Test Verification:
-    - Line limit check: 158/158 files in src/ and public/ strictly <= 149 lines (PASS).
-    - Strict TypeScript check (tsc --noEmit): 0 errors (PASS).
-    - Production Vite build: clean build in 795ms (PASS).
-    - Vitest unit/integration suite: 202/202 tests passing across 36 test files (added tests/frontend/meetingLinksAndStudentDetailsFixes.test.ts) (PASS).
-- Student Management — Editing, Scheduling, Active/Inactive Tabs completed & verified:
-  * 1. Edit Student (Requirement 1):
-    - Extended Edit Student form (EditStudentForm.tsx) to view, load, and edit recurring weekly schedules, meeting links, and package details.
-    - Loaded existing student records on edit via fetchMeetingLinks, fetchPackages, and fetchSchedules.
-    - Modularized into EditStudentPersonalSection, EditStudentLinksSection, and EditStudentPackageSection (all <= 149 lines).
-    - Added Packages_update in PackageService.gs and registered packages.update in PackageHandlers.gs with full audit tracking.
-    - Preserved payment history, completed attendance, and credit deductions without deleting or recreating package rows.
-    - Clearly distinguished editing existing package from assigning new package/purchasing additional classes.
-  * 2. New Student Form Class Schedule (Requirement 2):
-    - Preserved multi-entry recurring schedule in StudentRegistrationForm.tsx and ScheduleDetailsSection.tsx.
-    - Supported independent day of week, start time, and end time per entry (different days allow different times).
-    - Enforced start/end time validation (end_time > start_time) and day validation.
-    - Guaranteed schedule visibility in expanded details and edit forms.
-  * 3. Aligned Full Student Details (Requirement 3):
-    - Re-architected StudentExpandedDetails.tsx into a responsive grid with consistent headings, column spacing, and alignment.
-    - Enforced minWidth: 0 on all grid items and maxWidth: 100% on MeetingLinkButton to prevent link overflow or overlapping adjacent columns.
-    - Added overflowWrap: anywhere and wordBreak: break-word to long email addresses and phone lines.
-    - Maintained compact visual style and design language across desktop, tablet, and mobile.
-  * 4. Auto-Schedule Purchased Classes (Requirement 4):
-    - Built classGenerator.ts to calculate and distribute exact purchased class sessions chronologically from configured recurring schedules and starting date in Asia/Kolkata timezone.
-    - Created AutoScheduleModal.tsx and AutoSchedulePreviewTable.tsx providing unambiguous date selection, proposed dates preview, and conflict/duplicate detection against existing sessions.
-    - Required explicit acknowledgment before scheduling over conflicting sessions.
-    - Guaranteed that scheduling sessions does not consume classes (deduct_class: false, attendance_status: NOT_MARKED); only marking attendance as Present deducts a class.
-  * 5. Active and Inactive Tabs on Students Page (Requirement 5):
-    - Added WAI-ARIA accessible StudentTabs.tsx component above directory table with All Students, Active, and Inactive tabs and live counters.
-  * 6. Student Balance Classification Rules (Requirement 6):
-    - Implemented studentStatusClassifier.ts classifying learners into Active (> 0 remaining classes, not archived/inactive) and Inactive (0 remaining classes or archived/inactive).
-    - Filtered dynamically in StudentList.tsx without modifying, deleting, or archiving records in Google Sheets.
-  * 7. Testing & Quality Gates:
-    - Added tests/frontend/studentManagementEnhancements.test.ts (7 tests covering schedules, auto-scheduling math, conflict detection, and balance classification).
-    - 209/209 Vitest unit/integration tests passing across 37 test suites.
-    - Line limit policy strictly verified: 167/167 files under src/ and public/ <= 149 lines.
-    - Strict TypeScript check (tsc --noEmit): 0 errors.
-    - Clean Vite production build in 881ms.
-    - Playwright browser E2E tests passing 100% (students.spec.ts, notesAndLinks.spec.ts).
-- Student Management — Inactive Fields and Configurable Class Duration completed & verified:
-  * 1. Inactive Student Fields (Requirement 1):
-    - Made Student Email, Student Phone, and Notes inactive in both student registration (StudentDetailsSection) and editing (EditStudentPersonalSection, StudentForm).
-    - Inputs marked disabled={true} and readOnly={true} with cursor: not-allowed and subtle background styling.
-    - Users cannot enter or edit values in these fields through the student forms.
-    - Preserved existing data in Google Sheets: backend update logic in StudentService.gs guards student_phone, student_email, and notes so empty strings never overwrite existing values.
-    - Mock data store (mockDataStore.ts) also protects existing saved values.
-    - Existing notes history workflow (StudentNotes.tsx, noteApi.ts) remains completely untouched and operational.
-  * 2. Configurable Class Duration (Requirement 2):
-    - Added Class Duration dropdown to package interfaces (PackageDetailsSection, EditStudentPackageSection, PackageForm) strictly offering: 30 minutes, 40 minutes, 60 minutes.
-    - Extended SheetRegistry.gs (Packages tab schema now includes class_duration).
-    - Validated in PackageValidation.gs that duration must be 30, 40, or 60.
-    - Preserved and enriched class_duration in PackageService.gs; historical packages without duration display explicit "Not configured" state without guessing or corrupting data.
-  * 3. Recurring Schedules Ask Only for Start Time (Requirement 3):
-    - Removed manual end-time input from recurring schedule forms (ScheduleDetailsSection).
-    - Schedule forms prompt only for Day of Week and Start Time.
-    - End time is calculated automatically from configured package Class Duration (e.g. 30m: 16:00 -> 16:30, 40m: 16:00 -> 16:40, 60m: 16:00 -> 17:00) using scheduleDurationCalculator.ts.
-    - Displayed end time immediately as a clean read-only badge.
-    - When package duration changes, recurring schedule end times recalculate automatically while historical/completed sessions are preserved intact.
-    - Start times crossing midnight are detected and rejected with clear validation error.
-    - Auto-schedule generator (classGenerator.ts) and conflict detection in AutoScheduleModal.tsx use configured class duration.
-  * 4. Testing & Quality Gates:
-    - Added tests/frontend/inactiveFieldsAndDuration.test.ts (6 unit tests covering duration restrictions, end-time calculation, midnight rejection, form validation, and duration-aware conflict detection).
-    - Updated tests/e2e/students.spec.ts to assert inactive fields are disabled.
-    - 215/215 Vitest tests passing across 38 test suites.
-    - Line limit check: 168/168 files in src/ and public/ strictly <= 149 lines (PASS).
-    - Strict TypeScript check (tsc --noEmit): 0 errors (PASS).
-    - Clean Vite production build in 913ms (PASS).
-- Meeting Links, Navigation, Layout, and End-to-End Data Persistence Fixes completed & verified:
-  * 1. Fix Meeting Links Table Layout (Requirement 1):
-    - Added DataTable fixedLayout prop with table-layout: fixed; width: 100% and text-overflow/word-break cell styling.
-    - Configured balanced, predictable column widths: Student (~28%), Primary Link (~30%), Secondary Link (~30%), Actions (~12%).
-    - Safe wrapping / truncation with min-width: 0 and max-width: 100% to eliminate table and page horizontal scrolling.
-    - Preserved green Google Meet and blue Zoom button styling and clean 'No link configured' fallback.
-  * 2. Side Drawer Fixed Navigation (Requirement 2):
-    - Updated AppShell layout styling: shell set to height: 100vh with overflow: hidden.
-    - Navigation drawer remains stationary at full viewport height (height: 100vh).
-    - Main content area (.mainArea) scrolls vertically with overflow-y: auto and overflow-x: hidden.
-    - Eliminated nested scrollbars and horizontal scrolling while preserving responsive mobile drawer overlay.
-  * 3. Meeting Links Hover Actions for Copy and Delete (Requirement 3):
-    - Removed automatic URL copy on clicking the link button.
-    - Hover/focus/touch revealed Copy and Delete buttons inside MeetingLinkButton.
-    - Explicit clipboard copy on clicking Copy with visual tooltip confirmation.
-    - Delete confirms with window.confirm, clears only the selected link slot (primary or secondary) to empty string while strictly preserving the other link slot and all other student fields.
-    - Persisted changes to backend/Google Sheets via meetingLinks.update with toast feedback.
-  * 4. Reorder Navigation (Requirement 4):
-    - Exactly reordered navigation menu in Sidebar.tsx: 1. Dashboard, 2. Students, 3. Class Schedule, 4. Finances, 5. Meeting Links.
-    - Renamed 'Classes' to 'Class Schedule' while preserving its existing route ('classes') and all underlying views/flows.
-  * 5. Remove Student-Row Arrow (Requirement 5):
-    - Removed triangle indicator beside Edit button in StudentRow.tsx.
-    - Preserved row expansion toggle on name/row click with stopPropagation on Edit and Actions buttons.
-  * 6. End-to-End Google Sheets Persistence Verification (Requirement 6):
-    - Deployed Apps Script backend updates in-place to Version @29 on deployment AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w (added packages.update handler, resolved recursion in PackageService.gs, adjusted RowWriter header bounds).
-    - Executed live persistence suite (tests/live-e2e-sheets-verification.js) against live canonical spreadsheet.
-    - Verified live persistence for: Student creation & editing (PASS), Package creation & updates (PASS), Meeting-link creation, updates, and individual-link deletion (PASS), Generated class sessions (PASS), Attendance & class-balance deductions (PASS), Payments (PASS), Student notes & note history (PASS).
-    - Documented honest status for Recurring class schedules and Class duration (NOT VERIFIED due to absent physical sheet/column in canonical spreadsheet).
-    - Verified safe archiving of test student records.
-  * 7. Quality Gates:
-    - 220/220 Vitest unit/integration tests passing across 39 test suites.
-    - All 168 files in src/ and public/ strictly <= 149 lines (check:lines PASS).
-    - Strict TypeScript check (tsc --noEmit): 0 errors (PASS).
-    - Clean Vite production build in 1.08s (PASS).
-- Student Schedule Saving, Success Feedback, and Google Sheets Synchronization completed & verified:
-  * 1. Fix Edit Student Save Button & Root Cause:
-    - Root Cause 1: Form validation rejected existing student records whose read-only inactive student_email was '-' (e.g. STU_001 Seerat), silently preventing submission without displaying top-level form errors. Backend StudentValidation.gs also rejected '-' emails.
-    - Root Cause 2: Canonical Google Spreadsheet lacked physical ClassSchedules sheet tab; ClassScheduleService fell back to ephemeral memory cache (_memorySchedules) with persistentSheet: false, which was lost upon Apps Script recycling.
-    - Root Cause 3: Physical Packages sheet tab was missing the class_duration column in Row 1 (only 11 columns existed), dropping class_duration on persistence.
-    - Root Cause 4: Google Sheets automatically coerced raw time strings (e.g. '16:00') into Date objects (1899-12-30T10:38:50.000Z), causing deserialization and comparison mismatches.
-    - Root Cause 5: In StudentsPage.tsx, editing a student from the StudentProfilePage returned StudentProfilePage directly, omitting feedback toast rendering.
-    - Fixes:
-      - Updated studentValidation.ts and StudentValidation.gs to safely allow '-' placeholder emails for inactive/read-only fields.
-      - Extracted initial fetch logic from EditStudentForm.tsx into useEditStudentInitialData.ts (73 lines) to satisfy <= 149-line constraint.
-      - Refactored EditStudentForm.tsx (133 lines) to display top-level serverError notifications on validation/API failures, prevent duplicate submissions with disabled state, validate package duration & calculated end times, and await both student update and schedule persistence.
-      - Implemented _normalizeTimeStr in ClassScheduleService.gs to handle Date objects, formatted time strings, and leading apostrophes, and prepended "'" on appendRow to enforce text storage.
-      - Enhanced StudentsPage.tsx with refreshKey invalidation to force immediate re-render and re-fetch of student aggregates (schedules, packages, balances), and rendered feedback toasts in both directory and profile views.
-  * 2. Success Feedback and Modal Closure:
-    - On successful completion of all save operations, displays the exact notification: "Student details saved successfully".
-    - Automatically closes the Edit Student Details modal/form.
-    - Does not close modal or show success if any save or validation operation fails.
-  * 3. Google Sheets Migration & Persistence:
-    - Updated SheetRegistry.gs to register CLASS_SCHEDULES: 'ClassSchedules' and SHEET_SCHEMAS.PACKAGES with class_duration at column 12.
-    - Updated SchemaMigration.gs and SystemHandlers.gs with runRecurringSchedulesMigration() and system.migrateRecurringSchedules.
-    - Safely created physical ClassSchedules tab (8 columns) and added class_duration column 12 to Packages sheet without shifting or altering existing data.
-    - Deployed Apps Script backend in-place to Version @33 preserving existing deployment ID AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w.
-  * 4. End-to-End Verification Against Live Google Sheets:
-    - Executed genuine live verification suite tests/live-e2e-schedule-verification.js against live Apps Script Web App and canonical Google Spreadsheet (ID: 1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8).
-    - All 11 verification steps PASSED:
-      - Step 1: Created synthetic test student (STU_041).
-      - Step 2: Created package with 40-minute duration.
-      - Step 3: Saved recurring schedule (MONDAY 16:00-16:40) with persistentSheet: true.
-      - Steps 4 & 5: Read back physical ClassSchedules sheet record; verified schedule_id, student_id, day_of_week, start_time (16:00), end_time (16:40), is_active (true).
-      - Step 6: Verified class_duration (40) in physical Packages tab.
-      - Step 7: Re-fetched student and verified schedule remains visible.
-      - Step 8: Updated schedule to WEDNESDAY 17:00-17:40 and verified deduplication (exactly 1 record in ClassSchedules).
-      - Step 9: Updated package duration to 60 min and verified persistence in Packages tab.
-      - Step 10: Tested validation failure (end_time <= start_time); confirmed proper rejection with VALIDATION_ERROR.
-      - Step 11: Safely archived test student and cleaned up synthetic records.
-  * 5. Testing & Quality Gates:
-    - Added tests/frontend/schedulePersistenceAndFeedback.test.ts (6 tests).
-    - Added tests/backend/classSchedulePersistence.test.ts (4 tests).
-    - 230/230 Vitest tests passing across 41 test files (PASS).
-    - Line limit check: 169/169 files in src/ and public/ strictly <= 149 lines (PASS).
-    - Strict TypeScript check (tsc --noEmit): 0 errors (PASS).
-    - Clean Vite production build in 852ms (PASS).
-- Student Schedule Save Validation and Calendar Synchronization completed & verified:
-  * 1. Fix Status Validation on Student Edit (Issue 1):
-    - Root Cause: Legacy students in Google Sheets (e.g., STU_001, STU_002, STU_003) stored status with title-case 'Active' or 'Inactive'. Frontend EditStudentForm state initialized from student.status, leaving status as 'Active'. When submitted, backend StudentValidation.gs checked ['ACTIVE', 'INACTIVE', 'ARCHIVED'].indexOf(statusVal), which strictly failed for 'Active', returning 'Validation failed: Status must be ACTIVE, INACTIVE, or ARCHIVED'.
-    - Fixes:
-      - Normalized status in frontend EditStudentPersonalSection select value/onChange, EditStudentForm state initialization and preservation, studentApi adaptStudentInput and enrichStudentData, and studentValidation.ts.
-      - Updated backend StudentValidation.gs to normalize rawStatus to uppercase (.trim().toUpperCase()) before checking against allowed set, preserving the strict validation rule.
-      - Updated backend StudentService.gs (Students_update, Students_create, Students_enrich) to normalize status to canonical uppercase and persist 'ACTIVE' / 'INACTIVE' to Google Sheets.
-      - Updated ReportService.gs to count active students with case-insensitive check.
-  * 2. Fix Dashboard Calendar Scheduled Classes (Issue 2):
-    - Root Cause: DashboardPage only fetched classes.list (dated sessions in ClassSessions sheet). It never loaded recurring schedules from ClassSchedules (via schedules.list), leaving recurring classes completely missing from the weekly calendar. In addition, scheduleApi.fetchSchedules had a guard if (!studentId) return [] preventing fetching all schedules, and calendar date parsing lacked timezone-aware weekday-to-date mapping and deduplication against dated sessions.
-    - Fixes:
-      - Updated scheduleApi.ts to allow fetchSchedules(undefined, token) for all schedules, and enhanced cleanTime() with timezone-aware parsing for legacy 1899 epoch date values and text strings.
-      - Created calendarEventGenerator.ts (121 lines) providing pure, timezone-safe getMondayForDateStr, getWeekDates, makeIsoInTz, and generateCalendarEvents.
-      - Maps recurring weekdays (MONDAY..SUNDAY) to the 7 calendar dates of the visible week without UTC date shifts.
-      - Distinguishes recurring schedules (is_recurring: true, badge: 'Recurring') from actual dated sessions (COMPLETED, ATTENDED, CANCELLED, SCHEDULED).
-      - Deduplicates: when an actual dated class session already exists for that student on that date at that time, suppresses the recurring placeholder so the event is not duplicated.
-      - Preserved existing attendance and credit-deduction logic without fabricating database session records.
-      - Updated DashboardCalendar.tsx (137 lines) with timezone-safe Monday navigation (getMondayForDateStr, shiftMondayStr) and refresh capability.
-      - Updated DashboardPage.tsx (127 lines) to fetch dated sessions, recurring schedules, and students in parallel and pass them to DashboardCalendar.
-  * 3. Deployment and Live Verification:
-    - Pushed 71 files to Apps Script via clasp and deployed in-place to Version @34 (preserved deployment ID AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w).
-    - Executed live verification suite tests/live-e2e-status-and-calendar-verification.js:
-      - Created synthetic student STU_043 with status 'Active' -> normalized to 'ACTIVE'.
-      - Updated student with status 'Active' -> succeeded without validation error!
-      - Updated student with invalid status 'INVALID_STATUS' -> properly rejected with 'Validation failed: Status must be ACTIVE, INACTIVE, or ARCHIVED'.
-      - Saved recurring schedule MONDAY 16:00-16:40 -> verified in ClassSchedules tab.
-      - Listed schedules with schedules.list -> verified student_name enriched.
-      - Updated schedule to WEDNESDAY 17:00-18:00 (60m) -> deduplication verified (exactly 1 record).
-      - Cleaned up test records safely.
-  * 4. Testing & Quality Gates:
-    - Added tests/frontend/studentStatusAndCalendarSync.test.ts (7 tests).
-    - 237/237 Vitest tests passing across 42 test files (PASS).
-    - Line limit check: 170/170 files in src/ and public/ strictly <= 149 lines (PASS).
-    - Strict TypeScript check (tsc --noEmit): 0 errors (PASS).
-    - Clean Vite production build in 1.13s (PASS).
-- Student Manager UX, Scheduling & Calendar Batch completed & verified:
-  * 1. Global Application Header:
-    - Aligned topBar height and padding (1rem 1.25rem, 58px) to match the sidebar's brand row.
-    - Updated greeting to `Welcome Back <Username>!` using authenticated user's display name.
-    - Added live ticking date and 12-hour AM/PM time in Asia/Kolkata (`useLiveHeaderTime.ts`).
-    - Responsive layout prevents date/time from colliding with user menu on narrow viewports.
-  * 2. Dashboard — Things That Need Attention:
-    - Added dedicated section (`ThingsThatNeedAttention.tsx`, `attentionAlerts.ts`) identifying actionable issues for active students:
-      * Missing meeting link configured.
-      * Missing class schedule configured.
-      * Four or fewer classes remaining based on package class limits and consumed balance.
-    - Avoids duplicate alerts; excludes inactive/archived students; surfaces error states rather than silent empty list.
-  * 3. Dashboard — Today's Classes:
-    - Added `TodayClassesSection.tsx` showing classes for current date in Asia/Kolkata.
-    - Displays student name, 12-hour time range, session status, and `Join Class ↗` button when valid meeting link is available.
-    - Prevents duplicates between recurring templates and dated sessions.
-  * 4. Student Information Layout:
-    - Redesigned `StudentExpandedDetails.tsx` to 3 columns on desktop, 2 on tablet, 1 on mobile.
-    - Moved Meeting Links to the first slot of Row 2.
-    - Preserved all actions and details.
-  * 5. Student Edit Form Modal:
-    - Encapsulated Edit Student form in `EditStudentModal.tsx` dialog over directory and profile views.
-    - Added background scroll lock, internal dialog scrolling (maxHeight: 90vh), escape/cancel handlers.
-    - Preserved status normalization and schedule persistence without losing unsaved edits on error.
-  * 6. Scheduling and Auto-Scheduling Workflow:
-    - Removed standalone "Auto-Schedule Classes" button from student detail view.
-    - Integrated First Class Date and "Automatically schedule classes according to package" into `ScheduleDetailsSection.tsx` and `EditStudentForm.tsx`.
-    - `autoScheduleHelper.ts` and `editStudentSubmitter.ts` generate dated sessions from first class date, respecting package balance and expiry, skipping exact duplicates, and reporting created vs skipped counts.
-  * 7 & 8. Class Schedule Page Enhancements:
-    - Added student filter dropdown to `ClassesPage.tsx` with "All Students" and clear filter action.
-    - Enhanced `ClassSchedule.tsx` with 12-hour AM/PM date/time ranges, recurring slot indicators, consumed/purchased class counts, and today's `Join Class ↗` button.
-  * 9. New Weekly Calendar Navigation Page:
-    - Added `Calendar` item to sidebar navigation (`NavIcons.tsx`, `Sidebar.tsx`, `routeAccess.ts`, `appRoutes.tsx`).
-    - Created `CalendarPage.tsx`, `WeeklyTimeGrid.tsx`, `calendarGridBuilder.ts` with 7-day Google Calendar style time-grid (7:00 AM - 10:00 PM in 12-hour format).
-    - Rendered booked slots in green, visually distinguishing confirmed sessions (solid green) from recurring templates (dashed green).
-    - Full week navigation (‹ Prev Week, This Week, Next Week ›) in Asia/Kolkata.
-  * 10. Quality Gates & Verification:
-    - 249/249 Vitest unit/integration tests passing across 43 test suites (+12 new tests in `tests/frontend/uxSchedulingAndCalendarBatch.test.ts`).
-    - Strict line limit check: all 188 files in src/ and public/ strictly <= 149 lines (PASS).
-    - Strict TypeScript check (tsc --noEmit): 0 errors (PASS).
-    - Clean Vite production build in 586ms (PASS).
-    - Playwright live tests passing (auth, cross-cutting responsiveness, visual layout).
-- Next Fix Batch — Package Logic, Scheduling Reliability, Calendar, and Global UI Polish completed & verified:
-  * 1. Automatic Package Expiry & Date Calculations:
-    - Removed manual editable Package Expiry Date field from student package forms.
-    - Created `packageCalculations.ts` calculating projected last class date based on first class date, recurring weekly schedules, and purchased class count.
-    - Handled multiple days per week, uneven weekly distributions, and partial-week final classes.
-    - Handled reschedule recalculations dynamically without mutating historical attendance.
-  * 2. Per-Class Rate & Yearly Class Count Calculations:
-    - Created `calculatePerClassRate` (Package price ÷ Classes purchased) with safe handling for zero/empty classes.
-    - Created `AnnualPackageMetricsCard.tsx` deriving yearly class counts from actual calendar year and weekdays without hardcoded 4 weeks/month assumption.
-    - Distinguished annual calendar-year counts from total package entitlement.
-  * 3. Responsive & Asynchronous Scheduling:
-    - Updated `editStudentSubmitter.ts` to save student, package, and recurring schedule first, displaying immediate feedback: "Class schedule saved. Scheduling classes now…".
-    - Returned user to interactive UI immediately while delegating session generation to non-blocking background worker (`asyncScheduleWorker.ts`, `asyncScheduleTypes.ts`).
-    - Added floating non-blocking progress indicator (`SchedulingProgressToast.tsx`) mounted in `AppShell.tsx` showing progress and final created/skipped/failed counts.
-    - Supported session recovery from localStorage to prevent duplicate sessions on page refresh.
-  * 4. Enforce Active Status for Scheduled Students:
-    - Updated backend `StudentService.gs`: `Students_update` and `Students_archive` invoke `_hasActiveSchedulesOrSessions`, blocking transitions to `INACTIVE` or archive with code `ACTIVE_SCHEDULE_EXISTS` and actionable error message if active recurring schedules or upcoming sessions exist.
-    - Added frontend pre-validation in `EditStudentForm.tsx` and `StudentProfilePage.tsx` explaining deactivation blocks clearly.
-  * 5. Improved Dashboard and Calendar Events:
-    - Calendar cards in `WeeklyTimeGrid.tsx`, `calendarGridBuilder.ts`, and `DashboardCalendar.tsx` display Student Name, Subject, 12-hour Start/End Time with AM/PM, and Join Class button when eligible meeting link exists.
-    - Removed 'Recurring Slot' as primary event title.
-    - Styled past classes with explicit attendance colors: Green for attended, Red for absent, Yellow for unrecorded. Preserved full legibility without date-based fading.
-    - Styled cancelled sessions with strike-through styling and disabled Join Class button.
-  * 6. Profile and Logout Relocated to Sidebar:
-    - Removed profile dropdown and logout control from top header.
-    - Added user identity (avatar, display name, email/role) and accessible `Logout` + `Settings` actions in dedicated bottom section of `Sidebar.tsx` (`sidebarFooter.module.css`).
-  * 7. Live Date and Time Relocated to Top-Right:
-    - Relocated live ticking date and 12-hour AM/PM time in `Asia/Kolkata` to far right of `TopBar.tsx`.
-    - Aligned greeting `Welcome Back <Username>!` to the left.
-    - Responsive layout prevents collisions on mobile viewports.
-  * 8. Reordered Dashboard Hierarchy:
-    - Reordered `DashboardPage.tsx`: (1) `TodayClassesSection`, (2) `ThingsThatNeedAttention`, (3) `DashboardCalendar`.
-    - `TodayClassesSection` features hero highlight card for the next imminent class with Join Class button, followed by other today's classes.
-    - Removed fee obligations section from Dashboard.
-  * 9. Add Student Modal Dialog:
-    - Created `AddStudentModal.tsx` matching `EditStudentModal.tsx` with centered dialog, backdrop, Escape key, body scroll lock, internal scrolling, and Cancel button.
-    - Updated `StudentsPage.tsx` to launch registration modal instead of rendering inline form.
-  * 10. Scheduling Conflict Prevention:
-    - Hardened backend `ClassService.gs`: concurrency lock checks interval overlap `[S1, E1)` and `[S2, E2)`. Authoritatively rejects overlapping sessions with code `SCHEDULING_CONFLICT` and detailed student/slot error message.
-    - Allows non-overlapping adjacent sessions.
-    - Added frontend validation in `classGenerator.ts` and `editStudentSubmitter.ts`.
-  * 11. Redesigned Class Schedule Page:
-    - `ClassSchedule.tsx` and `classScheduleColumns.tsx` display Student name, Weekday & Date, 12-hour Start/End time, Consumed vs Purchased classes, Join Class action, and attendance controls.
-    - Join Class strictly enabled only for today's date in `Asia/Kolkata` on active sessions with valid meeting link.
-  * 12. Display NIL for Zero Outstanding Balances:
-    - Implemented `formatOutstandingBalance` in `balanceFormat.ts`.
-    - Returns `NIL` in neutral grey (`#64748b`) when balance is zero or `<= 0`. Never displays `₹0` in green.
-    - Applied consistently across `StudentBalanceTable.tsx`, `FinanceSummaryCards.tsx`, and `StudentExpandedDetails.tsx`.
-  * 13. Cohesive Student Details Record:
-    - Redesigned `StudentExpandedDetails.tsx` and `studentExpandedDetails.module.css` into a single unified container with top identity banner and subtle internal dividers across all 6 sections.
-  * 14. Global UI/UX Consistency & Quality Gates:
-    - Aligned design tokens, typography, surfaces, and spacing across all pages.
-    - Apps Script backend deployed in-place to Version @35 on deployment ID `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w`.
-    - Live Apps Script Web App responding normally (`doGet` and authenticated `doPost`).
-    - 270/270 Vitest tests passing across 45 test files (PASS).
-    - Source-file line limit check: all 197 files in `src/` and `public/` strictly <= 149 lines (PASS).
-    - Strict TypeScript check (`tsc --noEmit`): 0 errors (PASS).
-    - Clean Vite production build in 677ms (PASS).
-- UI Consistency and Student Registration Fixes completed & verified.
-- First Class Date, Schedule Simplification, Meeting Link Tracking & Dashboard Reorganization completed & verified:
-  * 1. First Class Date in New Student Registration:
-    - Added required `first_class_date` field (`type="date"`) to New Student Registration form and `ScheduleDetailsSection`.
-    - Validated format (`YYYY-MM-DD`), non-past constraint (`>= today`), and weekday match against configured recurring schedule days with actionable error message.
-    - Used `first_class_date` as package `start_date` and initial recurring schedule generation baseline.
-  * 2. Removed Topic / Session Name from Class Scheduling:
-    - Removed Topic / Session Name form input and validation requirement from `ClassSessionForm`.
-    - Automatically defaults topic and `class_title` to `${student.student_name} - Class Session` (or `'Class Session'`).
-    - Updated `classScheduleColumns.tsx` to display student name, subject, and time prominently without requiring a unique topic.
-  * 3. Date-Only Class Scheduling:
-    - Replaced `datetime-local` input with clean date-only picker (`type="date"`, labeled "Class Date").
-    - Validated valid calendar date selection before submitting.
-  * 4. Auto-Derived Duration & Start Time:
-    - Automatically retrieves active package `class_duration` (or falls back to 60 min default) and displays read-only indicator.
-    - Automatically derives class start time from the student's recurring schedule matching the chosen date's weekday, with manual time input fallback for unconfigured days. Never defaults to midnight.
-    - Automatically calculates class end time and rejects schedules crossing the midnight boundary.
-  * 5. Missing Meeting Link Tracking & Attention Alerts:
-    - `MeetingLinkList` loads registered active students and merges unconfigured students with "No link configured" status and a prominent "Configure" button.
-    - `attentionAlerts.ts` generates action item `reason: 'Meeting link not configured'`, `actionLabel: 'Configure Link'`, targeting `meeting-links`, clearing automatically once saved.
-  * 6. Reorganized Dashboard Sections:
-    - Exact display order implemented: 1. Today's Classes, 2. Active Students, 3. Upcoming Classes (7 Days), 4. Outstanding Fees, 5. Weekly Class Schedule, 6. Things That Need Attention.
-  * 7. Removed Quick Actions from Dashboard:
-    - Completely removed Quick Actions section and container from `DashboardPage`.
-  * 8. Quality Gates & Verification:
-    - 288/288 Vitest unit/integration tests passing across 47 test suites (+6 new tests in `scheduleSimplificationAndDashboard.test.ts`).
-    - Strict line limit check: all 202 files in `src/` and `public/` strictly <= 149 lines (PASS).
-    - Strict TypeScript check (`tsc --noEmit`): 0 errors (PASS).
-    - Clean Vite production build in 3.18s (PASS).
-- Fix Student Data, Class Generation, Calendar Accuracy, Fee Dates, and Global Spacing completed & verified:
-  * 1. International Phone Numbers Formula Error Fix:
-    - In `HeaderMapper.gs`, prepended single quote `'` to values starting with `+` or `=` when mapping records to spreadsheet rows (`recordToRow`), preventing Google Sheets from evaluating strings like `+66 83 167 5035` as invalid formulas `#ERROR!`.
-    - In `rowToRecord`, stripped leading single quote so frontend reads always receive pure phone strings without apostrophe artifacts.
-    - In `StudentService.gs`, added `_cleanPhone` sanitizer during student enrichment.
-    - In `SpreadsheetBootstrap.gs`, applied plain-text number format (`@`) to `parent_phone` and `student_phone` columns.
-  * 2. Calendar Event Start Date Boundary & Accurate Classes:
-    - In `calendarEventGenerator.ts`, filtered recurring schedule occurrences so slots falling prior to the student's `first_class_date` / package `start_date` or after package `end_date` are excluded.
-    - Today's Classes populated by actual dated sessions in `Asia/Kolkata`.
-  * 3. Calendar Positioning & 30-Minute Duration Height:
-    - In `WeeklyTimeGrid.tsx`, eliminated artificial `50px` min-height clamping.
-    - Calculated exact event height: `Math.max(22, Math.round((duration / 60) * 56) - 2)` (26px for 30 minutes, 54px for 60 minutes), with `overflow: hidden` and compact single-line layout for `<= 30` minutes.
-    - Passed packages to `buildDayColumns` in `CalendarPage.tsx` and `DashboardCalendar.tsx`.
-  * 4. Automatic Package End Date & Next Fee Due Date Derivation:
-    - In `packageCalculations.ts` and `PackageService.gs` (`_calcPkgDates`), calculated package `end_date` (occurrence $N$) and `next_due_date` (occurrence $N - 4$, ensuring 4 classes remain through final occurrence) from `start_date`, recurring days, and purchased class count across month/year boundaries.
-    - Persisted `start_date`, `end_date`, and `next_due_date` in Google Sheets `Packages`.
-  * 5. Individual Dated Class Sessions Generation & Persistence:
-    - Added `class_date` column to `ClassSessions` schema in `SheetRegistry.gs` and `SchemaMigration.gs`.
-    - Added `Classes_batchSchedule` endpoint with script locking and idempotency to batch-insert dated sessions.
-    - Automatically batch-scheduled all $N$ purchased classes in `useStudentRegistrationForm.ts` upon registration with explicit `class_date`.
-  * 6. 12-Hour Clock Parsing & Simplified Schedule Columns:
-    - In `scheduleApi.ts`, updated `cleanTime` to accurately parse 12-hour AM/PM time strings (`6:00 PM` -> `18:00`, `12:15 AM` -> `00:15`).
-    - In `ClassScheduleService.gs`, updated `_normalizeTimeStr` to normalize AM/PM strings.
-    - In `classScheduleColumns.tsx`, renamed header to `Class Time`, displaying 12-hour start time and duration without redundant end time.
-  * 7. Standardized Section Spacing Across Dashboard & App:
-    - Standardized spacing on Dashboard by wrapping sections in a single layout container with `display: flex`, `flexDirection: column`, `gap: var(--space-6)`.
-    - Removed conflicting child-level margins from `TodayClassesSection.tsx`, `DashboardSummary.tsx`, `ThingsThatNeedAttention.tsx`, and `dashboardCalendar.module.css`.
-  * 8. Quality Gates & Verification:
-    - 299/299 Vitest unit/integration tests passing across 48 test suites (+11 new tests in `packageDatesAndScheduling.test.ts`).
-    - Strict line limit check: all 202 files in `src/` and `public/` strictly <= 149 lines (PASS).
-    - Strict TypeScript check (`tsc --noEmit`): 0 errors (PASS).
-    - Clean Vite production build in 1.24s (PASS).
-- Critical Bug Fix: Unknown Operation `classes.batchSchedule` & Incomplete Registration Recovery completed & verified:
-  * 1. Root Cause Analysis:
-    - Running Web App deployment `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w` was active at Version `@35`, which predated the addition of `classes.batchSchedule` to `ClassHandlers.gs` and `HeaderMapper.gs` leading `'` escape.
-    - When student registration called `classes.batchSchedule`, the deployed Version 35 router rejected the operation with `Unknown operation: classes.batchSchedule`.
-  * 2. Backend Router & Handler Hardening:
-    - Verified registration of `classes.batchSchedule` in `ClassHandlers.gs` forwarding `payload` / `data` to `Classes_batchSchedule`.
-    - Added package ownership validation in `ClassService.gs` (`Classes_batchSchedule`) verifying package belongs to student.
-    - Enforced idempotency skipping existing sessions matching `scheduled_start` timestamps.
-  * 3. Resilient Client Fallback:
-    - In `classApi.ts` (`batchScheduleClasses`), if backend returns `Unknown operation: classes.batchSchedule`, automatically falls back to sequential `scheduleClass` calls, ensuring registration never fails even against older deployment versions.
-  * 4. Safe Recovery Mechanism for Partial Registration (`STU_001`):
-    - In `useStudentRegistrationForm.ts`, added automatic detection of existing active student matching name ("Seerat" / `STU_001`).
-    - Reuses `activeStudent = existingMatch`, preventing generation of duplicate student (`STU_002`).
-    - Updates corrupted `#ERROR!` phone numbers on the existing student record with clean phone numbers from the form.
-    - Reuses existing package via `fetchPackages(studentId)` preventing duplicate package creation.
-    - Saves schedules and batch-schedules the 48 dated sessions with `class_date`.
-  * 5. Quality Gates & Verification:
-    - Added router registration & idempotency test in `tests/backend/operationAdapters.test.ts`.
-    - Added fallback regression test in `tests/domains/packageDatesAndScheduling.test.ts`.
-    - 301/301 Vitest unit/integration tests passing across 48 test suites.
-    - Strict line limit check: all 202 files in `src/` and `public/` strictly <= 149 lines (PASS).
-    - Strict TypeScript check (`tsc --noEmit`): 0 errors (PASS).
-    - Clean Vite production build in 959ms (PASS).
-- Critical Bug Fix: Student Registration Hangs and Fails with "Network request failed" completed & verified:
-  * 1. Root Cause Analysis:
-    - In commit `6dc81da`, `batchScheduleClasses` fell back to a client-side sequential `for (const s of sessions)` loop executing 48 individual HTTP requests when `classes.batchSchedule` returned `Unknown operation` against deployed Version `@35`.
-    - 48 sequential round-trips over HTTPS took ~50-80 seconds, colliding with the 60s timeout in `apiClient.ts` or Google Cloud concurrency throttling, throwing an abort/network exception while blocking the submit button in "Processing...".
-  * 2. Live Spreadsheet Inspection (Read-Only):
-    - Verified all 7 working tabs (`Students`, `Packages`, `ClassSchedules`, `ClassSessions`, `MeetingLinks`, `Payments`, `StudentNotes`) have `rows: 1` (header row only, 0 data rows).
-    - Confirmed no residual data rows exist on the live spreadsheet.
-  * 3. Robust Error Reporting & Asynchronous Delegation:
-    - Hardened `apiClient.ts` (90 lines <= 149) to distinguish timeouts (`Request timed out after Xs`) and non-JSON responses from generic network errors, preserving the underlying error message.
-    - Extracted `registrationSubmitter.ts` (111 lines <= 149) and updated `useStudentRegistrationForm.ts` (72 lines <= 149):
-      - If `classes.batchSchedule` returns `Unknown operation`, it delegates session scheduling to `startAsyncScheduling` worker instead of freezing the form for 60+ seconds.
-      - User sees immediate feedback while `SchedulingProgressToast` tracks progress (1 to 48) in the background.
-      - Detects existing sessions via `fetchClasses` before generating sessions to prevent duplicate sessions on retries.
-      - Reuses existing student without duplicating records, repairing phone/email fields.
-      - Reuses existing package via `fetchPackages` without creating duplicate packages.
-      - Guarantees `isSubmitting` is reset to `false` in `finally` block so the form is never stuck in "Processing...".
-  * 4. Quality Gates & Verification:
-    - Added `tests/domains/registrationFailureAndRecovery.test.ts` covering all 12 required failure/recovery modes (all 12 PASS).
-    - 313/313 Vitest tests passing across 49 test suites.
-    - Line limit check: all 203 files in `src/` and `public/` strictly <= 149 lines (PASS).
-    - Strict TypeScript check (`tsc --noEmit`): 0 errors (PASS).
-    - Clean Vite production build in 1.22s (PASS).
-- Next Action: Present completion report with root cause, live spreadsheet state, deployment requirements, and registration verification runbook.
+## 3. Canonical Four-Table Schema
+The active application datastore consists of **strictly four physical Google Sheets tables**. No other operational tables exist.
+
+### 3.1 Table 1: `Students` (10 columns)
+`student_id, student_name, parent_name, parent_phone, parent_email, student_phone, student_email, subject, status, primary_meeting_link`
+- `student_id`: Unique immutable identifier (`STU_001` to `STU_026` format). Primary key.
+- `status`: Enum (`ACTIVE`, `INACTIVE`, `ARCHIVED`).
+- `primary_meeting_link`: Embedded primary virtual classroom link. Managed directly in Students directory.
+
+### 3.2 Table 2: `Packages` (12 columns)
+`student_id, student_name, plan_type, currency, package_price, per_class, classes_purchased, start_date, end_date, next_due_date, class_duration, class_schedule`
+- **No `package_id` column** exists in the physical sheet; packages link directly to `Students.student_id`.
+- `class_duration`: Duration in minutes (default 60).
+- `class_schedule`: Serialized weekly recurring schedule pattern (e.g. `Mon - 6:00 PM, Wed - 6:00 PM`).
+
+### 3.3 Table 3: `Payments` (6 columns)
+`student_id, student_name, payment_date, amount, currency, in_inr`
+- **No payment status column** exists in the physical sheet.
+- Voided payments are physically removed via `sheet.deleteRow()` with a durable tombstone recorded in `ScriptProperties` (`payment_void_<id>`).
+- Foreign payments retain original currency; unconverted foreign amounts contribute 0 to INR totals.
+
+### 3.4 Table 4: `ClassSessions` (9 columns)
+`student_id, student_name, schedule_date, schedule_time, attendance_status, session_status, deduct_class, cancellation_reason, session_notes`
+- **No `session_id` column** and **no stored end-time column** exist in the physical sheet.
+- Sessions are addressed by composite key `student_id__schedule_date__schedule_time` (or 1-based row index `_rowIndex`).
+- End time is dynamically derived as `schedule_time + Packages.class_duration`.
+- `session_notes` stores pedagogical lesson coverage and remarks independently from `cancellation_reason`.
+
+### 3.5 Retired & Archived Sheets
+- Permanently retired from application management: `MeetingLinks`, `StudentNotes`, `Enrollments`, `FeeObligations`, `ClassSchedules`, `AppConfig`, `ImportBatches`, `ImportRowResults`.
+- Archived for reference in spreadsheet: `_Archived_Historical_Notes`, `_Archived_ClassSchedules`, `_Backup_PreFourTable_*`, `StudentId_Migration_Backup`.
+
+---
+
+## 4. Non-Negotiable Technical and Business Invariants
+1. **Four Physical Tables Only:** Never introduce additional operational tables or add surrogate ID columns (`package_id`, `payment_id`, `session_id`) to the physical sheets.
+2. **Micro-File Limit:** Every source file under `src/` and `public/` must remain strictly $\le 149$ lines. Catch-all files (`utils.ts`, `helpers.ts`, `app.js`, etc.) are prohibited. Checked via `npm run check:lines`.
+3. **Package Renewal & Balance Derivation:**
+   - On renewal, a new package row is appended storing only the newly purchased classes (`classes_purchased = newClasses`).
+   - The historical package row remains intact and is never overwritten or deleted.
+   - Aggregate student available balance is dynamically derived:
+     $$\text{Remaining Balance} = \sum(\text{classes\_purchased across all packages}) - \sum(\text{ClassSessions where deduct\_class = true})$$
+   - Carried-forward classes do not increase the new package price. Remaining classes are not monetary credit.
+4. **Financial Accounting Rules:**
+   - Grouped strictly by currency; foreign currency amounts (USD, GBP, EUR) are never added directly to INR without manual `in_inr`.
+   - Outstanding amount is:
+     $$\text{Outstanding} = \max(0, \text{Total Package Payable} - \text{Total Recorded Payments})$$
+   - Excess payment is displayed separately as available credit ($\max(0, \text{Paid} - \text{Payable})$); outstanding balance never becomes negative.
+   - Missing or invalid numeric values must be treated as unreliable/unavailable (`isReliable: false`), not silently coerced to zero.
+   - No FIFO obligation allocation, no physical payment status column, and no automatic third-party exchange rate conversion.
+5. **Class Attendance & Cancellation Deduction:**
+   - Attended sessions (`PRESENT`/`ATTENDED`): `deduct_class = true`.
+   - Advance cancellation ($\ge 4$h notice) or explicit credit waiver: `deduct_class = false`, `attendance_status = 'CANCELLED'`. Automatically schedules a replacement session at the next available recurring slot and extends package `end_date`.
+   - Late cancellation ($< 4$h notice without waiver): `deduct_class = true`, `attendance_status = 'CANCELLED_LATE'`.
+   - User must supply explicit cancellation reason, stored in `ClassSessions.cancellation_reason`. `session_notes` is preserved independently.
+6. **Schedule Persistence & Concurrency:**
+   - `Packages.class_schedule` is the canonical storage for recurring weekly schedule patterns.
+   - All writers to `Packages.class_schedule` (including `Schedules_save` and `RenewalService`) must hold the shared script lock (`LockManager.withLock`) to prevent race conditions.
+   - `LockManager.withLock` supports execution-local reentrancy, allowing nested calls within the same execution context without self-deadlock.
+
+---
+
+## 5. Security Restrictions
+- **Zero Frontend Secrets:** No API keys, service account credentials, or spreadsheet write access in frontend code or Git.
+- **Server-Side Enforcement:** Every protected backend operation verifies HMAC-SHA256 identity tokens against `ADMIN_AUTH_KEY` and the `ADMIN_EMAILS` allowlist (`ashreya0502@gmail.com`).
+- **Input Sanitization:** Leading `+`, `=`, `@`, or `-` characters on text and phone inputs are escaped to prevent spreadsheet formula injection.
+- **No Public GCP Infrastructure:** Zero GCP projects, Google Cloud Console setups, or OAuth consent screens.
+
+---
+
+## 6. Git Workflow and Branch Rules
+- **Repository:** `Personal-Dashboard` (`git@github.com:Shreya5296/Personal-Dashboard.git`)
+- **Default Branch:** `main` (synchronized with `origin/main`).
+- **Feature/Task Branches:** Create branch from latest `main`, complete verification, and merge via non-fast-forward merge (`--no-ff`).
+- **Safety Gate:** Never commit directly to `main` without explicit authorization. Never force push (`git push -f`) or force delete (`git branch -D`).
+- **Working Tree Cleanliness:** Do not leave uncommitted changes or untracked files after branch integration.
+
+---
+
+## 7. Production Deployment Restrictions
+- **Deployment Status:** Apps Script production backend deployment is **STRICTLY FROZEN** at deployment version **`@52`** (Deployment ID: `AKfycbx4d_VG4CsZIEAomX_OjNMuej06ktTYmKLME5ennLsI7mx3Fn5b-YBu9CRqe7NwrUVH3w`).
+- **Prohibited Deployment Actions:**
+  - DO NOT run `clasp push` or `clasp deploy`.
+  - DO NOT modify production Google Sheets live tabs directly.
+  - DO NOT execute Vercel production deployment without explicit authorization.
+- **Environment Distinction:** Code merged into `main` is authoritative in GitHub, but is not live in production until authorized deployment synchronization occurs.
+
+---
+
+## 8. Current Verified Project State
+- **Active Git Branch:** `docs/reconcile-project-documentation`
+- **Base Commit on `main`:** `620aaf7` (`merge: complete student, schedule, renewal, and payment workflows`)
+- **Verification Metrics Gate (Exit code 0 on all checks):**
+  - Line-Limit Policy (`npm run check:lines`): **PASSED** (198 files across `src` and `public` $\le 149$ lines, 0 catch-all files)
+  - Full Vitest Suite (`npx vitest run`): **PASSED** (651/651 tests passed across 75 test files)
+  - TypeScript Compiler (`npm run typecheck`): **PASSED** (`tsc --noEmit`, 0 errors)
+  - Production Build (`npm run build`): **PASSED** (`tsc && vite build`, bundle generated in `dist/`)
+  - Git Diff Check (`git diff --check`): **PASSED** (clean whitespace)
+
+---
+
+## 9. Known Limitations and Recovery Rules
+1. **Absence of Session ID in ClassSessions:**
+   - Sessions are identified by composite key `student_id__schedule_date__schedule_time` or row index `_rowIndex`.
+   - **Operational Rule:** Never manually sort, insert, or delete rows directly in Google Sheets while application operations are in progress. Manual shifts invalidate client-held `_rowIndex` values.
+2. **Fail-Closed Renewal Interruption Recovery:**
+   - If execution fails between package insertion and completion persistence, or if ScriptProperties state is lost, the renewal recovery flow fails closed with `AMBIGUOUS_RENEWAL_RECOVERY` to prevent duplicate package or payment insertion.
+   - In ambiguous states, administrator must inspect the Packages sheet and reconcile manually.
+3. **No External Currency Conversion API:**
+   - The application does not call third-party exchange rate APIs. If a foreign currency transaction lacks manual `in_inr`, it contributes 0 to INR totals.
+
+---
+
+## 10. Current Next Action
+1. Complete documentation reconciliation across `00-documentation/`, `01-frontend/`, `02-backend/`, `03-data/`, `04-quality-and-operations/`, and `05-agent-handoff/`.
+2. Verify all quality gates pass on the documentation branch.
+3. Submit comprehensive final report for owner review.
+
+---
+
+## 11. Documentation Authority Hierarchy
+1. **Source of Truth:** Verified merged source code in `main` (`src/`, `02-backend/apps-script/`, `tests/`).
+2. **Authoritative Specifications:** `00-documentation/` (00 through 13).
+3. **Domain References:** `01-frontend/`, `02-backend/`, `03-data/`, `04-quality-and-operations/`.
+4. **Operational Control & Handoff:** `running.txt` and `05-agent-handoff/`.
+5. **Historical Archive:** `docs/audits/` and `docs/prelaunch/` (Preserved for auditability; superseded by current specs).

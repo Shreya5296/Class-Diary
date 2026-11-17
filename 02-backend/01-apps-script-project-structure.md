@@ -5,7 +5,9 @@
 - **Product:** Personal Dashboard (Student Management Dashboard)
 - **Document ID:** Backend-01
 - **Status:** Authoritative Backend Code Structure Specification
-- **Version:** 4.0.0 (Strict Six-Table Architecture)
+- **Version:** 5.0.0 (Strict Four-Table Architecture)
+- **Last Verified Date:** 2026-11-17
+- **Audience:** Backend engineers, developers, AI coding agents
 
 ---
 
@@ -34,42 +36,43 @@
 │   ├── IdentityVerifier.gs     # HMAC-SHA256 signature verification & mock guards
 │   ├── AdminAuthorization.gs   # Admin allowlist check (ashreya0502@gmail.com)
 │   └── TokenValidation.gs      # Token parsing & cryptographic verification
-├── students/                   # Students domain
+├── students/                   # Students domain (Table 1: 10 columns)
 │   ├── StudentHandlers.gs      # students.list, get, create, update, archive, reactivate
-│   ├── StudentService.gs       # Business rules, name normalization, status guards
-│   ├── StudentRepository.gs    # CRUD persistence for Students sheet (9 cols)
+│   ├── StudentService.gs       # Business rules, name normalization, primary_meeting_link
+│   ├── StudentRepository.gs    # CRUD persistence for Students sheet (10 cols)
 │   └── StudentValidation.gs    # Input validation (required names, phone format)
-├── packages/                   # Packages domain
-│   ├── PackageHandlers.gs      # packages.list, get, create, update, getBalance
+├── packages/                   # Packages domain (Table 2: 12 columns)
+│   ├── PackageHandlers.gs      # packages.list, get, create, update, getBalance, renew, students.renew
 │   ├── PackageService.gs       # Dynamic balance derivation, N-4 fee due date, schedule serialization
 │   ├── PackageRepository.gs    # CRUD persistence for Packages sheet (12 cols, no package_id)
-│   └── PackageValidation.gs    # Package pricing & total classes validation
-├── payments/                   # Payments domain
+│   ├── PackageValidation.gs    # Package pricing & total classes validation
+│   ├── RenewalService.gs       # Package renewal business logic under shared ScriptLock
+│   ├── RenewalIdempotency.gs   # Checkpoint persistence & fail-closed recovery
+│   ├── RenewalValidation.gs    # Input and expected package snapshot validation
+│   ├── RenewalSessionTransition.gs # Future session alignment on renewal
+│   └── IdempotencyRetention.gs # Durable idempotency cleanup and retention
+├── payments/                   # Payments domain (Table 3: 6 columns)
 │   ├── PaymentHandlers.gs      # payments.list, record, void
-│   ├── PaymentService.gs       # Idempotency caching, currency validation, in_inr handling
+│   ├── PaymentService.gs       # Idempotency caching, currency validation, physical row deletion on void
 │   ├── PaymentRepository.gs    # Persistence for Payments sheet (6 cols)
 │   └── PaymentValidation.gs    # Amount > 0, date format validation
-├── classes/                    # Class Sessions domain
+├── classes/                    # Class Sessions domain (Table 4: 9 columns)
 │   ├── ClassHandlers.gs        # classes.list, schedule, batchSchedule, complete, cancel, restoreCredit
 │   ├── ClassService.gs         # Session scheduling, conflict detection, attendance deduction, auto-replacement
 │   ├── ClassRepository.gs      # Persistence for ClassSessions (9 cols, composite key matching, session_notes)
 │   ├── ClassValidation.gs      # Session time & date validation
 │   ├── ClassScheduleHandlers.gs# schedules.list, save
-│   └── ClassScheduleService.gs # Recurring schedule string parser & persistence
-├── students/                   # Students domain (10 cols, includes primary_meeting_link)
+│   └── ClassScheduleService.gs # Recurring schedule string parser & persistence under shared ScriptLock
 ├── reports/                    # Reports domain
 │   ├── ReportHandlers.gs       # dashboard.overview, reports.financialSummary
 │   └── ReportService.gs        # Multi-currency financial aggregations & debtor insulation
-├── setup/                      # Setup & migration engines
-│   ├── FourTableMigration.gs   # Four-table datastore migration, backup & verification engine
-│   └── ...
 ├── sheets/                     # Core Google Sheets data access layer (Strictly 4 canonical tables)
-│   ├── SheetRegistry.gs        # Canonical sheet names and expected headers
+│   ├── SheetRegistry.gs        # Canonical sheet names and expected headers (4 tables)
 │   ├── HeaderMapper.gs         # Dynamic header name to index mapping, + escape, date conversion
 │   ├── RowReader.gs            # Generic sheet record reading
 │   ├── RowWriter.gs            # Generic row appending and update by key/index
 │   ├── DateFormatService.gs    # Standardizes date format to dd/MM/yyyy
-│   ├── LockManager.gs          # Concurrency protection via LockService.getScriptLock()
+│   ├── LockManager.gs          # Concurrency protection with execution-local reentrancy support
 │   ├── SpreadsheetProvider.gs  # Resolves active spreadsheet
 │   ├── SpreadsheetBootstrap.gs # Creates canonical sheets if missing
 │   └── SchemaValidator.gs      # Verifies headers against canonical schemas
@@ -83,8 +86,9 @@
 │   ├── Money.gs                # Currency & rounding helpers
 │   └── InputRules.gs           # General string sanitation
 ├── setup/                      # Migrations & maintenance operations
-│   ├── FinalCanonicalSchemaMigration.gs # Migrates Packages to 12 cols, ClassSessions to 8 cols, archives schedules
-│   ├── StudentIdMigration.gs   # Migrates 23 legacy IDs to STU_001..STU_026
+│   ├── FourTableMigration.gs   # Four-table datastore migration, backup & verification engine
+│   ├── FinalCanonicalSchemaMigration.gs # Historical canonical migration
+│   ├── StudentIdMigration.gs   # Migrated 23 legacy IDs to STU_001..STU_026
 │   ├── StudentIdVerification.gs# Referential integrity verifier & rollback engine
 │   ├── StudentIdPreflight.gs   # Read-only preflight analysis engine
 │   ├── StudentIdHandlers.gs    # API endpoints for student ID migration tools

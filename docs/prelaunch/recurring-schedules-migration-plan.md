@@ -1,5 +1,14 @@
 # Recurring Class Schedules Schema and Migration Plan
 
+> [!NOTE]
+> **HISTORICAL / ARCHIVED RECORD**
+> **Status:** Historical Document (Preserved for Audit Trail)
+> **Superseded By:** Canonical Four-Table Architecture and Merged Implementation on `main` (Date: 2026-11-17)
+> **Authoritative Current Specs:** [`00-documentation/04-google-sheets-data-model.md`](../../00-documentation/04-google-sheets-data-model.md) and [`05-agent-handoff/00-project-state.md`](../../05-agent-handoff/00-project-state.md)
+>
+> *This document represents pre-launch proposals, early migration runbooks, or historical post-deployment audits from earlier project milestones. Its contents describe intermediate architectures (such as legacy six-table schemas, operational tabs, or earlier deployment versions) and are retained solely for historical auditability.*
+
+
 ## 1. Context and Objective
 
 The Personal Dashboard manages live learning for individual students. Students frequently attend recurring weekly classes on one or more days of the week, with identical or varying start/end times.
