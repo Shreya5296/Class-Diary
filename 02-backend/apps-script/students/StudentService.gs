@@ -211,7 +211,7 @@ function Students_update(spreadsheet, studentId, updates, actor) {
     var f = allowedFields[i];
     if (normalized[f] !== undefined) {
       var val = normalized[f] !== null ? String(normalized[f]).trim() : '';
-      if ((f === 'student_phone' || f === 'student_email' || f === 'notes') && val === '' && existing[f]) {
+      if ((f === 'student_phone' || f === 'student_email') && val === '' && existing[f]) {
         safeUpdates[f] = existing[f];
       } else if (f === 'status') {
         safeUpdates[f] = String(val).trim().toUpperCase();

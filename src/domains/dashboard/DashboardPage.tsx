@@ -58,7 +58,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
       <PageHeader
         title="Administrative Dashboard"
-        subtitle="Operational overview of student enrollments, upcoming class sessions, and pending collections."
+        subtitle="Operational overview of student enrollments and upcoming class sessions."
       />
 
       {/* 1. Today's Classes */}

@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { FinancialSummary, FinanceFilter, StudentBalanceRecord } from './financeTypes';
+import { FinancialSummary, FinanceFilter, StudentFinancialRecord, CurrencyTotals } from './financeTypes';
 import { Payment } from '../payments/paymentTypes';
 import { Package } from '../packages/packageTypes';
 import { fetchFinancialSummary } from '../reports/reportApi';
-import { fetchPayments, voidPayment } from '../payments/paymentApi';
+import { fetchPayments } from '../payments/paymentApi';
 import { fetchPackages } from '../packages/packageApi';
-import { sortPaymentsByDateAscending } from './financeSorting';
+import { sortPaymentsByDateDescending } from './financeSorting';
 
 export function useFinancesData(token?: string | null) {
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
@@ -13,14 +13,12 @@ export function useFinancesData(token?: string | null) {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FinanceFilter>({});
-  const [voidingId, setVoidingId] = useState<string | null>(null);
-  const [isVoiding, setIsVoiding] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [sum, payList, pkgList] = await Promise.all([
-        fetchFinancialSummary(token, { startDate: filter.startDate, endDate: filter.endDate }),
+        fetchFinancialSummary(token, { startDate: filter.startDate, endDate: filter.endDate }).catch(() => null),
         fetchPayments(undefined, undefined, token).catch(() => []),
         fetchPackages(undefined, token).catch(() => []),
       ]);
@@ -32,9 +30,30 @@ export function useFinancesData(token?: string | null) {
     }
   }, [token, filter.startDate, filter.endDate]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const currencyTotals = useMemo(() => {
+    const packagesByCurrency: CurrencyTotals = {};
+    for (const pkg of packages) {
+      const cur = (pkg.currency || 'INR').trim().toUpperCase();
+      const price = Number(pkg.package_price || pkg.price || 0);
+      if (price > 0) packagesByCurrency[cur] = (packagesByCurrency[cur] || 0) + price;
+    }
+
+    const paymentsByCurrency: CurrencyTotals = {};
+    let totalRecordedInr = 0;
+    for (const p of payments) {
+      const cur = (p.currency || 'INR').trim().toUpperCase();
+      const amt = Number(p.amount || 0);
+      if (amt > 0) paymentsByCurrency[cur] = (paymentsByCurrency[cur] || 0) + amt;
+      if (cur === 'INR') {
+        totalRecordedInr += amt;
+      } else if (p.in_inr && Number(p.in_inr) > 0) {
+        totalRecordedInr += Number(p.in_inr);
+      }
+    }
+    return { packagesByCurrency, paymentsByCurrency, totalRecordedInr };
+  }, [packages, payments]);
 
   const filteredPayments = useMemo(() => {
     const q = (filter.search || '').trim().toLowerCase();
@@ -47,45 +66,47 @@ export function useFinancesData(token?: string | null) {
       if (end && pDate && pDate > end) return false;
       if (q) {
         const name = (p.student_name || '').toLowerCase();
-        const ref = (p.reference_number || p.payment_id || '').toLowerCase();
-        const method = (p.payment_method || '').toLowerCase();
-        return name.includes(q) || ref.includes(q) || method.includes(q);
+        const sid = (p.student_id || '').toLowerCase();
+        return name.includes(q) || sid.includes(q);
       }
       return true;
     });
 
-    return sortPaymentsByDateAscending(filtered);
+    return sortPaymentsByDateDescending(filtered);
   }, [payments, filter]);
 
-  const studentBalances = useMemo<StudentBalanceRecord[]>(() => {
-    const map = new Map<string, StudentBalanceRecord>();
+  const studentBalances = useMemo<StudentFinancialRecord[]>(() => {
+    const map = new Map<string, StudentFinancialRecord>();
 
     for (const pkg of packages) {
       const sid = pkg.student_id || '_unknown_';
       const name = pkg.student_name || sid;
+      const cur = (pkg.currency || 'INR').trim().toUpperCase();
       const price = Number(pkg.package_price || pkg.price || 0);
       const existing = map.get(sid) || {
-        student_id: sid, student_name: name, totalInvoiced: 0, totalPaid: 0,
-        outstandingBalance: 0, paymentCount: 0, currency: pkg.currency || 'INR',
+        student_id: sid, student_name: name,
+        packageTotalsByCurrency: {}, paymentTotalsByCurrency: {},
+        paymentCount: 0,
       };
-      if (pkg.currency) existing.currency = pkg.currency;
-      existing.totalInvoiced += price;
+      existing.packageTotalsByCurrency[cur] = (existing.packageTotalsByCurrency[cur] || 0) + price;
       map.set(sid, existing);
     }
 
     for (const p of payments) {
-      if (p.status === 'VOID') continue;
       const sid = p.student_id || '_unknown_';
       const name = p.student_name || sid;
+      const cur = (p.currency || 'INR').trim().toUpperCase();
       const amt = Number(p.amount || 0);
       const existing = map.get(sid) || {
-        student_id: sid, student_name: name, totalInvoiced: 0, totalPaid: 0,
-        outstandingBalance: 0, paymentCount: 0, currency: p.currency || 'INR',
+        student_id: sid, student_name: name,
+        packageTotalsByCurrency: {}, paymentTotalsByCurrency: {},
+        paymentCount: 0,
       };
-      if (p.currency && (!existing.currency || existing.currency === 'INR')) existing.currency = p.currency;
-      if (p.in_inr && Number(p.in_inr) > 0) existing.inInr = (existing.inInr || 0) + Number(p.in_inr);
-      existing.totalPaid += amt;
+      existing.paymentTotalsByCurrency[cur] = (existing.paymentTotalsByCurrency[cur] || 0) + amt;
       existing.paymentCount += 1;
+      if (p.in_inr && Number(p.in_inr) > 0) {
+        existing.recordedInrEquivalent = (existing.recordedInrEquivalent || 0) + Number(p.in_inr);
+      }
       if (!existing.lastPaymentDate || p.payment_date > existing.lastPaymentDate) {
         existing.lastPaymentDate = p.payment_date;
       }
@@ -93,38 +114,20 @@ export function useFinancesData(token?: string | null) {
     }
 
     const q = (filter.search || '').trim().toLowerCase();
-    return Array.from(map.values())
-      .map((r) => ({
-        ...r,
-        outstandingBalance: Math.max(0, r.totalInvoiced - r.totalPaid),
-      }))
-      .filter((r) => !q || r.student_name.toLowerCase().includes(q) || r.student_id.toLowerCase().includes(q));
+    return Array.from(map.values()).filter(
+      (r) => !q || r.student_name.toLowerCase().includes(q) || r.student_id.toLowerCase().includes(q)
+    );
   }, [packages, payments, filter.search]);
-
-  const handleConfirmVoid = async () => {
-    if (!voidingId) return;
-    setIsVoiding(true);
-    try {
-      await voidPayment(voidingId, token);
-      setVoidingId(null);
-      await loadData();
-    } finally {
-      setIsVoiding(false);
-    }
-  };
 
   return {
     summary,
     packages,
     filteredPayments,
     studentBalances,
+    currencyTotals,
     loading,
     filter,
     setFilter,
-    voidingId,
-    setVoidingId,
-    isVoiding,
-    handleConfirmVoid,
     refresh: loadData,
   };
 }

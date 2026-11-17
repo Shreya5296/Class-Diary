@@ -26,8 +26,7 @@ import RowReader from '../../02-backend/apps-script/sheets/RowReader.gs';
 // @ts-ignore
 import HeaderMapper from '../../02-backend/apps-script/sheets/HeaderMapper.gs';
 
-import { calculateStudentCredits } from '../../src/domains/fees/creditCalculator';
-import { FeeObligation } from '../../src/domains/fees/feeTypes';
+import { calculateStudentCredits, FeeObligation } from '../fixtures/legacyFeeCreditHelper';
 import { Payment } from '../../src/domains/payments/paymentTypes';
 
 describe('Clean Single-Truth Requirements & Ledger Reconciliation Regression Tests', () => {

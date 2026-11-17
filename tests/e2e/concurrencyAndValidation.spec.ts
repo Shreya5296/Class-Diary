@@ -17,6 +17,9 @@ test.describe('E2E — Concurrency, Validation, and Responsive Layouts', () => {
     await page.getByLabel(/Student Name|Full Name/i).fill('Concurrency Test Student');
     await page.getByLabel('Parent Name').fill('Parent Concurrency');
     await page.getByLabel('Parent Phone').fill('+919876543299');
+    await page.getByLabel('Package Price').fill('5000');
+    await page.getByLabel('Classes Purchased').fill('10');
+    await page.getByLabel('First Class Date').fill('2026-11-20');
 
     const submitBtn = page.locator('button[type="submit"]');
     await expect(submitBtn).toBeEnabled();
@@ -33,12 +36,11 @@ test.describe('E2E — Concurrency, Validation, and Responsive Layouts', () => {
     // 1. Finances validation
     await navigateTo(page, 'Finances');
     await page.locator('#tab-history').click();
-    await expect(page.locator('table thead th:has-text("Student ID")')).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('table thead th', { hasText: /^Student$/ })).toBeVisible({ timeout: 25000 });
 
-    // 2. Profile & Preferences validation via account menu
-    await page.locator('button[aria-label="Account menu"]').click();
-    await page.locator('button[role="menuitem"]:has-text("Profile")').click();
-    await expect(page.getByRole('heading', { name: 'Administrator Profile' })).toBeVisible({ timeout: 20000 });
+    // 2. Profile & Preferences validation via sidebar footer
+    await page.locator('button[aria-label="Settings & Regional Preferences"]').click();
+    await expect(page.locator('h1:has-text("Profile & Preferences")')).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole('heading', { name: /Regional Defaults/ })).toBeVisible();
   });
 

@@ -4,6 +4,7 @@ export interface StudentDetails {
   subjects?: string[];
   student_phone: string;
   student_email: string;
+  primary_meeting_link?: string;
 }
 
 export interface ParentDetails {

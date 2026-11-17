@@ -26,18 +26,15 @@ function _normalizeScheduleKey(data) {
 
 function _checkRenewalIdempotency(spreadsheet, key, data) {
   if (!key) return null;
-  var mem = _getIdempMem(), rec = mem[key], ds = _getDurableStore();
-  if (!rec && typeof CacheService !== 'undefined' && CacheService.getScriptCache) {
-    try { var c = CacheService.getScriptCache().get('renewal_idemp_' + key); if (c) { rec = JSON.parse(c); mem[key] = rec; } } catch (e) {}
-  }
-  if (rec && (rec.outcome === 'SUCCESS' || rec.resultData) && ds) {
+  var ds = _getDurableStore();
+  var rec = null;
+  // An in-memory fallback is never treated as durable recovery state:
+  // Durable recovery state must be verified in the durable property store (ScriptProperties).
+  if (ds && typeof ds.getProperty === 'function') {
     try {
-      var dRaw = ds.getProperty('renewal_idemp_' + key);
-      if (dRaw) { var dP = JSON.parse(dRaw); if (dP.outcome !== 'SUCCESS') { rec = dP; mem[key] = dP; } }
+      var raw = ds.getProperty('renewal_idemp_' + key);
+      if (raw) rec = JSON.parse(raw);
     } catch (e) {}
-  }
-  if (!rec && ds) {
-    try { var raw = ds.getProperty('renewal_idemp_' + key); if (raw) { rec = JSON.parse(raw); mem[key] = rec; } } catch (e) {}
   }
   if (!rec) return null;
 
@@ -90,14 +87,36 @@ function _checkRenewalIdempotency(spreadsheet, key, data) {
     if ((rec.payment_date !== undefined || rPayDate) && String(rPayDate || '').trim().slice(0, 10) !== dPayDate) return _cf('Key reused with different payment date');
   }
   if (rec.outcome === 'SUCCESS' || rec.resultData) return { completed: true, data: rec.resultData || rec };
-  return { inProgress: true, targetCumulative: rec.target_cumulative, initialPurchased: rec.initial_purchased, targetSlots: rec.target_slots || rec.planned_slots || [], oldSchedule: rec.old_schedule || '', createdSessionIds: rec.created_session_ids || [] };
+  return {
+    inProgress: true,
+    targetCumulative: rec.target_cumulative,
+    initialPurchased: rec.initial_purchased,
+    initialPkgCount: rec.initial_pkg_count,
+    preInsertLastRow: rec.pre_insert_last_row,
+    insertedRowIndex: rec.inserted_row_index,
+    targetSlots: rec.target_slots || rec.planned_slots || [],
+    oldSchedule: rec.old_schedule || '',
+    createdSessionIds: rec.created_session_ids || [],
+    planType: rec.plan_type,
+    currency: rec.currency,
+    packagePrice: rec.package_price,
+    perClass: rec.per_class,
+    classDuration: rec.class_duration,
+    startDate: rec.start_date,
+    endDate: rec.end_date,
+    nextDueDate: rec.next_due_date,
+    expectedPackage: rec.expected_package || null
+  };
 }
 
-function _recordRenewalInitiated(spreadsheet, key, studentId, initialPurchased, targetCumulative, data, actor, targetSlots, oldScheduleStr) {
+function _recordRenewalInitiated(spreadsheet, key, studentId, initialPurchased, targetCumulative, data, actor, targetSlots, oldScheduleStr, initialPkgCount, preInsertLastRow, expectedPkgSnapshot) {
   if (!key) return { success: false, code: 'VALIDATION_ERROR', message: 'idempotency_key is mandatory for durable intent' };
   var pay = (data && data.payment) || {}, payAmt = pay.amount !== undefined && pay.amount !== null && pay.amount !== '' ? Number(pay.amount) : 0;
   var summary = {
     student_id: studentId, new_classes: Number(data.new_classes_purchased), initial_purchased: initialPurchased, target_cumulative: targetCumulative,
+    initial_pkg_count: initialPkgCount !== undefined ? initialPkgCount : null,
+    pre_insert_last_row: preInsertLastRow !== undefined ? preInsertLastRow : null,
+    inserted_row_index: null,
     currency: String(data.currency || '').trim().toUpperCase(), start_date: data.start_date || '', end_date: data.end_date || '', next_due_date: data.next_due_date || '',
     package_price: data.package_price !== undefined && data.package_price !== null && data.package_price !== '' ? Number(data.package_price) : null,
     per_class: data.per_class !== undefined && data.per_class !== null && data.per_class !== '' ? Number(data.per_class) : null,
@@ -105,6 +124,32 @@ function _recordRenewalInitiated(spreadsheet, key, studentId, initialPurchased, 
     schedule_key: _normalizeScheduleKey(data), target_slots: targetSlots || [], old_schedule: oldScheduleStr || '', created_session_ids: [],
     record_payment: pay.record_payment !== undefined ? Boolean(pay.record_payment) : (payAmt > 0), payment_amount: payAmt, payment_currency: pay.currency ? String(pay.currency).trim().toUpperCase() : '',
     in_inr: pay.in_inr !== undefined && pay.in_inr !== null && pay.in_inr !== '' ? Number(pay.in_inr) : null, payment_date: pay.payment_date || '', reference_number: pay.reference_number || '',
+    expected_package: expectedPkgSnapshot !== undefined ? expectedPkgSnapshot : (function() {
+      var stuName = (data && (data.student_name || data.studentName)) || '';
+      if (!stuName && spreadsheet && studentId) {
+        try {
+          var stuRepo = typeof Students_getById === 'function' ? { Students_getById: Students_getById } : (typeof require !== 'undefined' ? require('../students/StudentRepository.gs') : null);
+          if (stuRepo && stuRepo.Students_getById) {
+            var sObj = stuRepo.Students_getById(spreadsheet, studentId);
+            if (sObj) stuName = sObj.student_name || sObj.full_name || '';
+          }
+        } catch (e) {}
+      }
+      return {
+        student_id: studentId,
+        student_name: stuName,
+        plan_type: String(data.plan_type || 'Per Class').trim(),
+        currency: String(data.currency || 'INR').trim().toUpperCase(),
+        package_price: data.package_price !== undefined && data.package_price !== null && data.package_price !== '' ? Number(data.package_price) : '',
+        per_class: data.per_class !== undefined && data.per_class !== null && data.per_class !== '' ? Number(data.per_class) : '',
+        classes_purchased: Number(data.new_classes_purchased !== undefined ? data.new_classes_purchased : (data.classes_purchased || 0)),
+        start_date: data.start_date || '',
+        end_date: data.end_date || '',
+        next_due_date: data.next_due_date || '',
+        class_duration: data.class_duration !== undefined && data.class_duration !== null && data.class_duration !== '' ? Number(data.class_duration) : '',
+        class_schedule: data.class_schedule || ''
+      };
+    })(),
     inProgress: true, outcome: 'STARTED'
   };
   var ds = _getDurableStore();
@@ -137,11 +182,34 @@ function _saveRenewalIdempotency(spreadsheet, key, studentId, record, actor, dat
   return { success: true };
 }
 
+function _recordRenewalPackageRow(spreadsheet, key, rowIndex) {
+  if (!key || !rowIndex) return { success: false, code: 'VALIDATION_ERROR', message: 'Missing key or rowIndex' };
+  var ds = _getDurableStore();
+  if (!ds || typeof ds.getProperty !== 'function' || typeof ds.setProperty !== 'function') {
+    return { success: false, code: 'DURABLE_PERSIST_FAILED', message: 'Durable property store unavailable' };
+  }
+  try {
+    var raw = ds.getProperty('renewal_idemp_' + key);
+    if (!raw) {
+      return { success: false, code: 'INTENT_NOT_FOUND', message: 'Intent record not found for row update' };
+    }
+    var parsed = JSON.parse(raw);
+    parsed.inserted_row_index = Number(rowIndex);
+    ds.setProperty('renewal_idemp_' + key, JSON.stringify(parsed));
+    var mem = _getIdempMem();
+    if (mem && mem[key]) mem[key].inserted_row_index = Number(rowIndex);
+    return { success: true };
+  } catch (e) {
+    return { success: false, code: 'DURABLE_PERSIST_FAILED', message: 'Failed updating row index: ' + (e.message || String(e)) };
+  }
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     _normalizeScheduleKey: _normalizeScheduleKey,
     _checkRenewalIdempotency: _checkRenewalIdempotency,
     _recordRenewalInitiated: _recordRenewalInitiated,
+    _recordRenewalPackageRow: _recordRenewalPackageRow,
     _saveRenewalIdempotency: _saveRenewalIdempotency,
     _getDurableStore: _getDurableStore
   };

@@ -98,6 +98,7 @@ export function generateCalendarEvents(params: {
         duration_minutes: dur,
         scheduled_start: startIso,
         scheduled_end: endIso,
+        meeting_url: c.meeting_url || stuMap.get(c.student_id)?.primary_meeting_link || '',
       };
     });
 
@@ -137,6 +138,7 @@ export function generateCalendarEvents(params: {
           topic: stu?.subject || 'Class Session', start_time: startIso, scheduled_start: startIso,
           scheduled_end: endIso, duration_minutes: duration, status: 'SCHEDULED', session_status: 'SCHEDULED',
           attendance_status: 'NOT_MARKED', class_credit_effect: 'PENDING', is_recurring: true,
+          meeting_url: stu?.primary_meeting_link || '',
         } as ClassSession & { is_recurring?: boolean });
       }
     }

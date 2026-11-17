@@ -29,15 +29,3 @@ export async function recordPayment(
   );
   return response.data!;
 }
-
-export async function voidPayment(
-  paymentId: string,
-  token?: string | null
-): Promise<Payment> {
-  const response = await sendApiRequest<Payment>(
-    'payments.void',
-    { payment_id: paymentId },
-    { token }
-  );
-  return response.data!;
-}

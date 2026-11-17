@@ -54,8 +54,12 @@ describe('Third-Round Engineering Challenge: Renewal Failure Boundaries & Durabi
     expect(ren.success).toBe(true);
     expect(ren.data.cumulative_purchased).toBe(20);
     expect(ren.data.new_available_balance).toBe(20);
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.classes_purchased).toBe(20);
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(10);
+    expect(pkgs[1].classes_purchased).toBe(10);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(20);
   });
 
   it('Section 1: Test failure boundary 2 (package update completed, failure before payment append)', () => {
@@ -109,7 +113,16 @@ describe('Third-Round Engineering Challenge: Renewal Failure Boundaries & Durabi
     const preIds = preSessions.map((s: any) => s.class_session_id || s.session_id);
 
     // Initial attempt recorded intent tracking these 4 session IDs before crashing
-    RenewalIdempotency._recordRenewalInitiated(spreadsheet, idempKey, sid, 10, 20, { new_classes_purchased: 10, currency: 'INR', payment: { amount: 5000, currency: 'INR' }, schedules: schedules, start_date: '2026-11-02' }, actor);
+    const renSnapshot = {
+      student_id: sid, student_name: 'Boundary 4 Student', plan_type: 'Per Class',
+      currency: 'INR', package_price: 0, per_class: 0, classes_purchased: 10,
+      start_date: '2026-11-02', end_date: '', next_due_date: '', class_duration: 60,
+      class_schedule: 'Mon - 17:00'
+    };
+    RenewalIdempotency._recordRenewalInitiated(spreadsheet, idempKey, sid, 10, 20, { new_classes_purchased: 10, currency: 'INR', payment: { amount: 5000, currency: 'INR' }, schedules: schedules, start_date: '2026-11-02', class_duration: 60 }, actor, [], '', 1, 1, renSnapshot);
+    const renPkg = PackageRepository.Packages_insert(spreadsheet, renSnapshot);
+    RenewalIdempotency._recordRenewalPackageRow(spreadsheet, idempKey, renPkg._rowIndex);
+
     const ds = RenewalIdempotency._getDurableStore();
     const stored = ds ? ds.getProperty('renewal_idemp_' + idempKey) : null;
     const summary = stored ? JSON.parse(stored) : {};
@@ -124,7 +137,7 @@ describe('Third-Round Engineering Challenge: Renewal Failure Boundaries & Durabi
     // Execute retry of renewal requesting 10 classes with same key
     const ren = RenewalService.Packages_renew(spreadsheet, {
       student_id: sid, new_classes_purchased: 10, currency: 'INR', idempotency_key: idempKey,
-      schedules: schedules, start_date: '2026-11-02',
+      schedules: schedules, start_date: '2026-11-02', class_duration: 60,
       payment: { amount: 5000, currency: 'INR' }
     }, actor);
 
@@ -161,11 +174,15 @@ describe('Third-Round Engineering Challenge: Renewal Failure Boundaries & Durabi
     expect(retry.data.cumulative_purchased).toBe(20);
     expect(retry.meta.idempotentRetry).toBe(true);
 
-    // Payments and packages remained exactly 1
+    // Payment was recorded exactly once
     const pays = PaymentRepository.Payments_getAll(spreadsheet).filter((p: any) => p.student_id === sid);
     expect(pays.length).toBe(1);
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.classes_purchased).toBe(20);
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(10);
+    expect(pkgs[1].classes_purchased).toBe(10);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(20);
   });
 
   it('Section 2: Challenge durable store durability & mismatch rejection', () => {

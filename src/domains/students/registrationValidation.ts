@@ -1,5 +1,6 @@
 import { RegistrationFormData, RegistrationErrors } from './registrationTypes';
 import { isValidClassDuration, calculateEndTime } from '../classes/scheduleDurationCalculator';
+import { isValidHttpOrHttpsUrl } from '../../lib/urlSafety';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -19,6 +20,11 @@ export function validateRegistrationForm(data: RegistrationFormData): {
   }
   if (data.student.student_email.trim() && !EMAIL_REGEX.test(data.student.student_email.trim())) {
     studentErrors.student_email = 'Invalid student email format.';
+    valid = false;
+  }
+  const meetingLink = data.student.primary_meeting_link?.trim();
+  if (meetingLink && !isValidHttpOrHttpsUrl(meetingLink)) {
+    studentErrors.primary_meeting_link = 'Invalid meeting link URL format.';
     valid = false;
   }
   if (Object.keys(studentErrors).length > 0) errors.student = studentErrors;

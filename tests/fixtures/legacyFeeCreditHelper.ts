@@ -1,5 +1,28 @@
-import { FeeObligation } from './feeTypes';
-import { Payment } from '../payments/paymentTypes';
+import { Payment } from '../../src/domains/payments/paymentTypes';
+
+export interface FeeObligation {
+  fee_id: string;
+  fee_obligation_id?: string;
+  student_id: string;
+  student_name?: string;
+  package_id?: string;
+  description: string;
+  obligation_description?: string;
+  amount_due: number;
+  credit_applied?: number;
+  currency?: string;
+  issue_date?: string;
+  due_date: string;
+  status: 'OPEN' | 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'VOID' | string;
+  obligation_status?: string;
+  amount_paid: number;
+  paid_amount?: number;
+  outstanding_balance: number;
+  outstanding_amount?: number;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface CurrencyCreditSummary {
   currency: string;
@@ -51,7 +74,6 @@ export function calculateStudentCredits(
     const totalBilled = currFees.reduce((sum, f) => sum + (Number(f.amount_due) || 0), 0);
     const totalCreditApplied = currFees.reduce((sum, f) => sum + (Number(f.credit_applied) || 0), 0);
 
-    // Track payment applied per fee obligation (capped at net payable)
     const appliedPerFee: Record<string, number> = {};
     for (const p of currPayments) {
       const fid = p.fee_id || p.fee_obligation_id;

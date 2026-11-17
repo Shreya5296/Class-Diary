@@ -71,8 +71,15 @@ export const EditStudentPersonalSection: React.FC<EditStudentPersonalSectionProp
         </FormField>
       </div>
 
-      <FormField label="Administrative Notes (Inactive)" error={errors.notes}>
-        <textarea className={formStyles.textarea} value={values.notes || ''} disabled={true} readOnly={true} rows={2} placeholder="Field inactive" title="Administrative Notes on student details is inactive" />
+      <FormField label="Administrative Notes" error={errors.notes}>
+        <textarea
+          className={formStyles.textarea}
+          value={values.notes || ''}
+          onChange={(e) => onChange('notes', e.target.value)}
+          disabled={disabled}
+          rows={3}
+          placeholder="Internal notes about the student..."
+        />
       </FormField>
     </div>
   );

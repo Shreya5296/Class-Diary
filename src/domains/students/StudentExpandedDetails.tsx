@@ -10,7 +10,6 @@ import { Button } from '../../components/buttons/Button';
 import { formatCurrency } from '../../lib/currencyFormat';
 import { formatDate } from '../../lib/dateFormat';
 import { formatTimeTo12Hour } from '../../lib/time12Format';
-import { formatOutstandingBalance } from '../../lib/balanceFormat';
 
 export interface StudentExpandedDetailsProps {
   student: Student;
@@ -29,7 +28,6 @@ export const StudentExpandedDetails: React.FC<StudentExpandedDetailsProps> = ({
   const primaryUrl = student.primary_meeting_link || meetingLink?.meeting_link_1 || meetingLink?.meeting_url || '';
   const remaining = Math.max(0, balance.totalPurchased - balance.totalConsumed);
   const primaryPkg = balance.packages[0];
-  const out = formatOutstandingBalance(financials.outstanding, financials.currency);
   const inrEquiv = financials.currency !== 'INR'
     ? (financials.inInr && financials.inInr > 0 ? formatCurrency(financials.inInr, true, 'INR') : 'Not available')
     : null;
@@ -111,14 +109,14 @@ export const StudentExpandedDetails: React.FC<StudentExpandedDetailsProps> = ({
         </div>
 
         <div className={styles.section}>
-          <div className={styles.heading}>Financial Overview</div>
-          <div className={styles.textWrap}>Agreed: <strong style={{ color: 'var(--color-text-main)' }}>{formatCurrency(financials.totalInvoiced, true, financials.currency)}</strong></div>
-          <div className={styles.textWrap}>Received: <strong style={{ color: '#059669' }}>{formatCurrency(financials.totalPaid, true, financials.currency)}</strong></div>
-          {inrEquiv && <div className={styles.textWrap} style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>INR equiv: {inrEquiv}</div>}
-          <div style={{ marginTop: '2px' }}>
-            <span style={{ color: 'var(--color-text-muted)', marginRight: '4px' }}>Outstanding:</span>
-            <strong style={{ color: out.color }}>{out.text}</strong>
-          </div>
+          <div className={styles.heading}>Financial Records</div>
+          <div className={styles.textWrap}>Agreed Value: <strong style={{ color: 'var(--color-text-main)' }}>{formatCurrency(financials.totalInvoiced, true, financials.currency)}</strong></div>
+          <div className={styles.textWrap}>Received Total: <strong style={{ color: 'var(--color-success)' }}>{formatCurrency(financials.totalPaid, true, financials.currency)}</strong></div>
+          <div className={styles.textWrap}>Outstanding: <strong style={{ color: financials.outstanding > 0 ? '#dc2626' : 'var(--color-success)' }}>{financials.outstanding > 0 ? `${formatCurrency(financials.outstanding, true, financials.currency)} due` : '✓ Settled'}</strong></div>
+          {financials.availableCredit && financials.availableCredit > 0 ? (
+            <div className={styles.textWrap} style={{ color: '#2563eb' }}>Excess Credit: <strong>{formatCurrency(financials.availableCredit, true, financials.currency)}</strong></div>
+          ) : null}
+          {inrEquiv && <div className={styles.textWrap} style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Recorded INR: {inrEquiv}</div>}
         </div>
       </div>
 

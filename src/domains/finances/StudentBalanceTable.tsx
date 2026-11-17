@@ -1,13 +1,12 @@
 import React from 'react';
-import { StudentBalanceRecord } from './financeTypes';
+import { StudentFinancialRecord } from './financeTypes';
 import { DataTable, Column } from '../../components/tables/DataTable';
 import { formatCurrency } from '../../lib/currencyFormat';
 import { formatDate } from '../../lib/dateFormat';
 import { EmptyState } from '../../components/feedback/EmptyState';
-import { formatOutstandingBalance } from '../../lib/balanceFormat';
 
 export interface StudentBalanceTableProps {
-  records: StudentBalanceRecord[];
+  records: StudentFinancialRecord[];
 }
 
 export const StudentBalanceTable: React.FC<StudentBalanceTableProps> = ({ records }) => {
@@ -15,16 +14,16 @@ export const StudentBalanceTable: React.FC<StudentBalanceTableProps> = ({ record
     return (
       <EmptyState
         title="No student financial records"
-        description="No student packages or balances found matching your filters."
+        description="No student packages or transaction history found matching your filters."
       />
     );
   }
 
-  const columns: Column<StudentBalanceRecord>[] = [
+  const columns: Column<StudentFinancialRecord>[] = [
     {
       key: 'student_name',
       header: 'Student',
-      width: '24%',
+      width: '22%',
       render: (r) => (
         <div>
           <span style={{ fontWeight: 600, color: 'var(--color-text-main)', display: 'block' }}>
@@ -37,67 +36,96 @@ export const StudentBalanceTable: React.FC<StudentBalanceTableProps> = ({ record
       ),
     },
     {
-      key: 'totalInvoiced',
-      header: 'Agreed Package Value',
+      key: 'packageTotalsByCurrency',
+      header: 'Lifetime Package Value',
       width: '20%',
-      render: (r) => (
-        <div>
-          <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, display: 'block' }}>
-            {formatCurrency(r.totalInvoiced, true, r.currency || 'INR')}
-          </span>
-          {r.currency && r.currency !== 'INR' && r.inInr ? (
-            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-              (₹{r.inInr.toLocaleString('en-IN')})
-            </span>
-          ) : null}
-        </div>
-      ),
+      render: (r) => {
+        const entries = Object.entries(r.packageTotalsByCurrency);
+        if (entries.length === 0) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {entries.map(([cur, amt]) => (
+              <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                {formatCurrency(amt, true, cur)}
+              </span>
+            ))}
+          </div>
+        );
+      },
     },
     {
-      key: 'totalPaid',
-      header: 'Collected Payments',
-      width: '18%',
-      render: (r) => (
-        <div>
-          <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: '#059669', display: 'block' }}>
-            {formatCurrency(r.totalPaid, true, r.currency || 'INR')}
-          </span>
-          {r.currency && r.currency !== 'INR' && r.inInr ? (
-            <span style={{ fontSize: '11px', color: '#059669' }}>
-              (₹{r.inInr.toLocaleString('en-IN')})
-            </span>
-          ) : null}
-        </div>
-      ),
+      key: 'paymentTotalsByCurrency',
+      header: 'Lifetime Payments Received',
+      width: '20%',
+      render: (r) => {
+        const entries = Object.entries(r.paymentTotalsByCurrency);
+        if (entries.length === 0) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {entries.map(([cur, amt]) => (
+              <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: '#059669' }}>
+                {formatCurrency(amt, true, cur)}
+              </span>
+            ))}
+          </div>
+        );
+      },
     },
     {
       key: 'outstandingBalance',
       header: 'Outstanding Balance',
       width: '18%',
       render: (r) => {
-        const out = formatOutstandingBalance(r.outstandingBalance, r.currency || 'INR');
+        const allCurrencies = Array.from(new Set([
+          ...Object.keys(r.packageTotalsByCurrency),
+          ...Object.keys(r.paymentTotalsByCurrency),
+        ]));
+        if (allCurrencies.length === 0) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
         return (
-          <span
-            style={{
-              fontVariantNumeric: 'tabular-nums',
-              fontWeight: 700,
-              color: out.color,
-            }}
-          >
-            {out.text}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {allCurrencies.map((cur) => {
+              const billed = r.packageTotalsByCurrency[cur] || 0;
+              const paid = r.paymentTotalsByCurrency[cur] || 0;
+              const diff = billed - paid;
+              if (diff > 0) {
+                return (
+                  <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: '#dc2626' }}>
+                    {formatCurrency(diff, true, cur)} due
+                  </span>
+                );
+              }
+              if (diff === 0) {
+                return (
+                  <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#16a34a' }}>
+                    ✓ Settled
+                  </span>
+                );
+              }
+              return (
+                <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#2563eb' }}>
+                  {formatCurrency(Math.abs(diff), true, cur)} credit
+                </span>
+              );
+            })}
+          </div>
         );
       },
     },
     {
       key: 'paymentCount',
-      header: 'Transactions',
+      header: 'Payment Activity',
       width: '20%',
       render: (r) => (
-        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-          {r.paymentCount} payment(s)
-          {r.lastPaymentDate ? ` (last: ${formatDate(r.lastPaymentDate)})` : ''}
-        </span>
+        <div>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', display: 'block' }}>
+            {r.paymentCount} payment(s) {r.lastPaymentDate ? `• last: ${formatDate(r.lastPaymentDate)}` : ''}
+          </span>
+          {r.recordedInrEquivalent ? (
+            <span style={{ fontSize: '11px', color: 'var(--color-text-subtle)' }}>
+              Total INR: ₹{r.recordedInrEquivalent.toLocaleString('en-IN')}
+            </span>
+          ) : null}
+        </div>
       ),
     },
   ];

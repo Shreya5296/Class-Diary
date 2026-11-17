@@ -68,6 +68,17 @@ export const StudentDetailsSection: React.FC<StudentDetailsSectionProps> = ({
           />
         </FormField>
       </div>
+
+      <FormField label="Primary Meeting Link" error={errors?.primary_meeting_link}>
+        <input
+          type="url"
+          className={`${formStyles.input} ${errors?.primary_meeting_link ? formStyles.inputError : ''}`}
+          placeholder="https://meet.google.com/..."
+          value={values.primary_meeting_link || ''}
+          onChange={(e) => onChange('primary_meeting_link', e.target.value)}
+          disabled={disabled}
+        />
+      </FormField>
     </div>
   );
 };

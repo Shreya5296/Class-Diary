@@ -21,7 +21,7 @@ export function buildClassScheduleColumns(params: {
   getStudentConsumedClasses: (id: string) => { consumed: number; purchased: number };
   getStudentMeetingLink: (id: string) => any;
   getProgress?: (session: ClassSession) => SessionProgress | undefined;
-  handleUpdateStatus: (sessionId: string, outcome: string) => Promise<void>;
+  handleUpdateStatus: (sessionId: string, outcome: string, cancellationReason?: string) => Promise<void>;
   handleRestore: (sessionId: string) => Promise<void>;
   onEditNotes?: (session: ClassSession) => void;
 }): Column<ClassSession>[] {
@@ -134,7 +134,7 @@ export function buildClassScheduleColumns(params: {
         <AttendanceControl
           status={c.status}
           creditEffect={c.class_credit_effect || 'PENDING'}
-          onUpdateStatus={(outcome) => handleUpdateStatus(c.session_id, outcome)}
+          onUpdateStatus={(outcome, reason) => handleUpdateStatus(c.session_id, outcome, reason)}
           onRestoreCredit={() => handleRestore(c.session_id)}
         />
       ),

@@ -4,7 +4,7 @@ import { RenewalFormData, RenewalStudentSummary, isSessionCreditConsumed } from 
 import { fetchPackages } from './packageApi';
 import { fetchClasses } from '../classes/classApi';
 import { fetchPayments } from '../payments/paymentApi';
-import { fetchSchedules } from '../classes/scheduleApi';
+import { parseCanonicalScheduleString } from '../students/scheduleFormatter';
 
 export function useStudentRenewalForm(initialStudent: Student | null | undefined, token?: string | null) {
   const [student, setStudent] = useState<Student | null>(initialStudent || null);
@@ -42,8 +42,7 @@ export function useStudentRenewalForm(initialStudent: Student | null | undefined
       fetchPackages(student.student_id, token).catch(() => []),
       fetchClasses(student.student_id, token).catch(() => []),
       fetchPayments(student.student_id, undefined, token).catch(() => []),
-      fetchSchedules(student.student_id, token).catch(() => []),
-    ]).then(([pkgs, cls, pays, scheds]) => {
+    ]).then(([pkgs, cls, pays]) => {
       if (!active) return;
       const exPkg = pkgs.length > 0 ? pkgs[0] : null;
       let consumed = 0;
@@ -56,6 +55,9 @@ export function useStudentRenewalForm(initialStudent: Student | null | undefined
       const cur = exPkg?.currency || 'INR';
       const dur = String(exPkg?.class_duration || '60');
       const rate = exPkg?.per_class ? String(exPkg.per_class) : '';
+      const scheds = exPkg?.class_schedule
+        ? parseCanonicalScheduleString(exPkg.class_schedule, Number(dur) || 60)
+        : [];
 
       setSummary({
         student, package: exPkg, cumulativePurchased: purchased,

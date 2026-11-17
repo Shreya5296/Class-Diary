@@ -1,18 +1,34 @@
 import React from 'react';
-import { FinancialSummary } from './financeTypes';
+import { FinancialSummary, FinancesSummaryData } from './financeTypes';
 import { formatCurrency } from '../../lib/currencyFormat';
 
 export interface FinanceSummaryCardsProps {
-  summary: FinancialSummary | null;
+  summary?: FinancialSummary | null;
+  currencyTotals?: FinancesSummaryData;
 }
 
-export const FinanceSummaryCards: React.FC<FinanceSummaryCardsProps> = ({ summary }) => {
-  const invoiced = summary?.totalInvoiced || 0;
-  const collected = summary?.totalCollected || 0;
-  const outstanding = summary?.totalOutstanding || 0;
+export const FinanceSummaryCards: React.FC<FinanceSummaryCardsProps> = ({ summary, currencyTotals }) => {
+  const pkgCurrencies = Object.keys(currencyTotals?.packagesByCurrency || {});
+  const payCurrencies = Object.keys(currencyTotals?.paymentsByCurrency || {});
+
+  const renderCurrencyEntries = (totals?: Record<string, number>) => {
+    if (!totals || Object.keys(totals).length === 0) {
+      return <div style={amountStyle}>{formatCurrency(0, true, 'INR')}</div>;
+    }
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {Object.entries(totals).map(([cur, amt]) => (
+          <div key={cur} style={amountStyle}>
+            {formatCurrency(amt, true, cur)}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div
+      data-testid="finance-summary-cards"
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -21,23 +37,33 @@ export const FinanceSummaryCards: React.FC<FinanceSummaryCardsProps> = ({ summar
       }}
     >
       <div style={cardStyle}>
-        <span style={labelStyle}>Total Invoice</span>
-        <div style={amountStyle}>{formatCurrency(invoiced)}</div>
-        <p style={descStyle}>Total agreed package value</p>
+        <span style={labelStyle}>Lifetime Package Value</span>
+        {pkgCurrencies.length > 0 ? (
+          renderCurrencyEntries(currencyTotals?.packagesByCurrency)
+        ) : (
+          <div style={amountStyle}>{formatCurrency(summary?.totalInvoiced || 0, true, summary?.currency || 'INR')}</div>
+        )}
+        <p style={descStyle}>Total agreed value by package currency</p>
       </div>
 
       <div style={cardStyle}>
-        <span style={labelStyle}>Collected Earnings</span>
-        <div style={{ ...amountStyle, color: '#059669' }}>{formatCurrency(collected)}</div>
-        <p style={descStyle}>Received Payments</p>
+        <span style={labelStyle}>Lifetime Payments Received</span>
+        {payCurrencies.length > 0 ? (
+          renderCurrencyEntries(currencyTotals?.paymentsByCurrency)
+        ) : (
+          <div style={{ ...amountStyle, color: '#059669' }}>
+            {formatCurrency(summary?.totalCollected || 0, true, summary?.currency || 'INR')}
+          </div>
+        )}
+        <p style={descStyle}>Total collected by payment currency</p>
       </div>
 
       <div style={cardStyle}>
-        <span style={labelStyle}>Total Outstanding</span>
-        <div style={{ ...amountStyle, color: outstanding > 0 ? '#dc2626' : 'var(--color-text-muted)' }}>
-          {outstanding > 0 ? formatCurrency(outstanding) : 'NIL'}
+        <span style={labelStyle}>Recorded INR Value</span>
+        <div style={{ ...amountStyle, color: 'var(--color-primary)' }}>
+          {formatCurrency(currencyTotals?.totalRecordedInr || summary?.totalCollected || 0, true, 'INR')}
         </div>
-        <p style={descStyle}>Uncollected Balance</p>
+        <p style={descStyle}>Total Recorded INR Equivalent across all transactions</p>
       </div>
     </div>
   );
@@ -58,9 +84,9 @@ const labelStyle: React.CSSProperties = {
 };
 
 const amountStyle: React.CSSProperties = {
-  fontSize: '1.75rem',
+  fontSize: '1.5rem',
   fontWeight: 700,
-  margin: '6px 0 4px',
+  margin: '4px 0 2px',
   color: 'var(--color-text-main)',
   fontVariantNumeric: 'tabular-nums',
 };

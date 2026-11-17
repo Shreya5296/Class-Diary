@@ -16,8 +16,7 @@ import PaymentService from '../../02-backend/apps-script/payments/PaymentService
 // @ts-ignore
 import PaymentRepository from '../../02-backend/apps-script/payments/PaymentRepository.gs';
 
-import { calculateStudentCredits } from '../../src/domains/fees/creditCalculator';
-import { FeeObligation } from '../../src/domains/fees/feeTypes';
+import { calculateStudentCredits, FeeObligation } from '../fixtures/legacyFeeCreditHelper';
 import { Payment } from '../../src/domains/payments/paymentTypes';
 
 describe('Phase B & C — Payment Safety, Overpayment Boundaries & Backend Invoice Protection', () => {

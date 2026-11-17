@@ -20,19 +20,23 @@ test.describe('E2E — Classes and Attendance Workflow', () => {
     // Open schedule form
     await page.locator('button:has-text("+ Schedule Class")').click();
     await page.waitForFunction(() => {
-      const select = document.querySelector('select');
+      const select = document.querySelector('form select') as HTMLSelectElement | null;
       return select && select.options.length > 0 && select.value !== '';
     }, { timeout: 25000 });
-    await page.getByLabel('Topic / Session Name').fill(topic);
-    await page.getByLabel('Duration (Minutes)').fill('45');
+    const randomDay = 10 + Math.floor(Math.random() * 18);
+    const randomHour = 10 + Math.floor(Math.random() * 8);
+    const scheduleDate = `2028-08-${randomDay < 10 ? '0' + randomDay : randomDay}`;
+    const scheduleTime = `${randomHour < 10 ? '0' + randomHour : randomHour}:00`;
+    await page.getByLabel('Class Date').fill(scheduleDate);
+    await page.getByLabel('Class Start Time').fill(scheduleTime);
+    await page.getByLabel('Session Notes').fill(topic);
 
     // Submit form
     await page.locator('button:has-text("Schedule Class")').click();
 
     // Verify session row appears in schedule table
-    const classRow = page.locator('tr:has-text("Duration: 45 min")').first();
+    const classRow = page.locator('tbody tr').filter({ has: page.locator(`[title*="${testId}"]`) });
     await expect(classRow).toBeVisible({ timeout: 25000 });
-    await expect(classRow.locator('text=45 min')).toBeVisible();
 
     // Mark attendance as ATTENDED if available
     const attendedBtn = classRow.locator('button:has-text("Attended")');

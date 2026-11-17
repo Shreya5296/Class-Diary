@@ -70,12 +70,34 @@ export async function batchScheduleClasses(
 export async function recordAttendance(
   sessionId: string,
   outcome: AttendanceStatus,
-  token?: string | null
+  token?: string | null,
+  cancellationReason?: string
 ): Promise<ClassSession> {
   const normOutcome = (outcome === 'ATTENDED' || outcome === 'PRESENT') ? 'PRESENT' : outcome;
+  const payload: Record<string, unknown> = {
+    session_id: sessionId,
+    outcome: normOutcome,
+    attendance_status: normOutcome,
+  };
+  if (cancellationReason) {
+    payload.cancellation_reason = cancellationReason;
+  }
   const response = await sendApiRequest<ClassSession>(
     'classes.recordAttendance',
-    { session_id: sessionId, outcome: normOutcome, attendance_status: normOutcome },
+    payload,
+    { token }
+  );
+  return response.data!;
+}
+
+export async function cancelClass(
+  sessionId: string,
+  cancellationReason: string,
+  token?: string | null
+): Promise<ClassSession> {
+  const response = await sendApiRequest<ClassSession>(
+    'classes.cancel',
+    { session_id: sessionId, cancellation_reason: cancellationReason },
     { token }
   );
   return response.data!;
