@@ -1,7 +1,6 @@
 import React from 'react';
 import { DashboardOverviewData } from './dashboardTypes';
-import { formatCurrency } from '../../lib/currencyFormat';
-import { StudentsIcon, ClassesIcon, FeesIcon } from '../../components/icons/NavIcons';
+import { StudentsIcon, ClassesIcon } from '../../components/icons/NavIcons';
 
 export interface DashboardSummaryProps {
   overview: DashboardOverviewData;
@@ -24,14 +23,6 @@ export const DashboardSummary: React.FC<DashboardSummaryProps> = ({ overview }) 
       Icon: ClassesIcon,
       accentColor: '#059669',
       accentBg: '#ecfdf5',
-    },
-    {
-      title: 'Outstanding Fees',
-      value: formatCurrency(overview.outstandingFeesTotal),
-      description: 'Unpaid fee balance awaiting collection',
-      Icon: FeesIcon,
-      accentColor: '#d97706',
-      accentBg: '#fffbeb',
     },
   ];
 

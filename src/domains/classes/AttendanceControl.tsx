@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { AttendanceStatus } from './classTypes';
 import { Button } from '../../components/buttons/Button';
 import { ConfirmDialog } from '../../components/overlays/ConfirmDialog';
+import { CancelClassModal } from './CancelClassModal';
 import { getSessionStatusStyle } from './sessionStatusStyles';
 
 export interface AttendanceControlProps {
   status: string;
   creditEffect: string;
-  onUpdateStatus: (outcome: AttendanceStatus) => Promise<void>;
+  onUpdateStatus: (outcome: AttendanceStatus, cancellationReason?: string) => Promise<void>;
   onRestoreCredit: () => Promise<void>;
 }
 
@@ -19,11 +20,22 @@ export const AttendanceControl: React.FC<AttendanceControlProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const handleAction = async (outcome: AttendanceStatus) => {
     setLoading(true);
     try {
       await onUpdateStatus(outcome);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmCancel = async (reason: string) => {
+    setLoading(true);
+    try {
+      await onUpdateStatus('CANCELLED', reason);
+      setShowCancelModal(false);
     } finally {
       setLoading(false);
     }
@@ -48,9 +60,16 @@ export const AttendanceControl: React.FC<AttendanceControlProps> = ({
         <Button variant="outline" size="sm" onClick={() => handleAction('NO_SHOW')} disabled={loading}>
           No-Show
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => handleAction('CANCELLED')} disabled={loading}>
+        <Button variant="ghost" size="sm" onClick={() => setShowCancelModal(true)} disabled={loading} data-testid="cancel-class-button">
           Cancel
         </Button>
+
+        <CancelClassModal
+          isOpen={showCancelModal}
+          isLoading={loading}
+          onConfirm={handleConfirmCancel}
+          onCancel={() => setShowCancelModal(false)}
+        />
       </div>
     );
   }

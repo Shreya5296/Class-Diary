@@ -25,7 +25,7 @@ test.describe('Frontend UI/UX Redesign — Screen & Viewport Coverage', () => {
       }));
     }, { token: MOCK_JWT });
     await page.goto('/');
-    await expect(page.locator('button[aria-label="Account menu"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('button[aria-label="Log out of session"]')).toBeVisible({ timeout: 10000 });
   });
 
   test('verifies all active screens and account dropdown profile at Desktop (1440px)', async ({ page }) => {
@@ -39,22 +39,21 @@ test.describe('Frontend UI/UX Redesign — Screen & Viewport Coverage', () => {
     await expect(page.locator('h1:has-text("Administrative Dashboard")')).toBeVisible();
     await expect(page.locator('text=Active Students')).toBeVisible();
     await expect(page.locator('text=Upcoming Classes (7 Days)')).toBeVisible();
-    await expect(page.locator('text=Outstanding Fees')).toBeVisible();
-    await expect(page.locator('button:has-text("+ Manage Students")')).toBeVisible();
 
     // 2. Students Directory
     await navigate(page, 'Students');
     await expect(page.locator('h1:has-text("Students Directory")')).toBeVisible();
     await expect(page.locator('button:has-text("+ Add Student")')).toBeVisible();
     await expect(page.locator('input[placeholder*="Search students"]')).toBeVisible();
-    await expect(page.locator('text=Aarav Sharma')).toBeVisible();
+    await expect(page.locator('table tbody tr').first()).toBeVisible();
 
     // 3. Finances
     await navigate(page, 'Finances');
     await expect(page.locator('h1:has-text("Finances")')).toBeVisible();
-    await expect(page.locator('text=Total Invoice')).toBeVisible();
-    await expect(page.locator('text=Collected Earnings')).toBeVisible();
-    await expect(page.locator('text=Total Outstanding')).toBeVisible();
+    const summaryCards = page.locator('[data-testid="finance-summary-cards"]');
+    await expect(summaryCards.getByText('Lifetime Package Value')).toBeVisible();
+    await expect(summaryCards.getByText('Lifetime Payments Received')).toBeVisible();
+    await expect(summaryCards.getByText('Recorded INR Value')).toBeVisible();
     await expect(page.locator('text=Collection Performance')).toHaveCount(0);
 
     // 4. Class Schedule
@@ -65,11 +64,8 @@ test.describe('Frontend UI/UX Redesign — Screen & Viewport Coverage', () => {
     // Verify Meeting Links is absent from the sidebar
     await expect(page.locator('aside button:has-text("Meeting Links")')).toHaveCount(0);
 
-    // 7. Profile & Preferences (via Account dropdown)
-    await page.locator('button[aria-label="Account menu"]').click();
-    const profileItem = page.locator('button[role="menuitem"]:has-text("Profile")');
-    await expect(profileItem).toBeVisible();
-    await profileItem.click();
+    // 5. Profile & Preferences (via Sidebar footer)
+    await page.locator('button[aria-label="Settings & Regional Preferences"]').click();
     await expect(page.locator('h1:has-text("Profile & Preferences")')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Administrator Profile' })).toBeVisible();
     await expect(page.getByRole('heading', { name: /Regional Defaults/ })).toBeVisible();

@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ClassSession } from './classTypes';
 import { fetchClasses } from './classApi';
-import { fetchSchedules, WeeklyScheduleEntry } from './scheduleApi';
+import { WeeklyScheduleEntry } from './scheduleApi';
 import { fetchPackages } from '../packages/packageApi';
 import { fetchStudents } from '../students/studentApi';
 import { Student } from '../students/studentTypes';
 import { Package } from '../packages/packageTypes';
+import { parseCanonicalScheduleString } from '../students/scheduleFormatter';
 
 export function useClassScheduleData(studentId?: string, token?: string | null) {
   const [sessions, setSessions] = useState<ClassSession[]>([]);
-  const [schedules, setSchedules] = useState<WeeklyScheduleEntry[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,14 +17,12 @@ export function useClassScheduleData(studentId?: string, token?: string | null) 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cls, scheds, pkgs, stuList] = await Promise.all([
+      const [cls, pkgs, stuList] = await Promise.all([
         fetchClasses(studentId, token).catch(() => []),
-        fetchSchedules(undefined, token).catch(() => []),
-        fetchPackages(undefined, token).catch(() => []),
-        fetchStudents({}, token).catch(() => []),
+        fetchPackages(studentId, token).catch(() => []),
+        studentId ? fetchStudents({ query: studentId }, token).catch(() => []) : fetchStudents({}, token).catch(() => []),
       ]);
       setSessions(cls);
-      setSchedules(scheds);
       setPackages(pkgs);
       setStudents(stuList);
     } finally {
@@ -48,7 +46,18 @@ export function useClassScheduleData(studentId?: string, token?: string | null) 
   };
 
   const getStudentSchedule = (sid: string): WeeklyScheduleEntry[] => {
-    return schedules.filter((s) => s.student_id === sid && s.is_active !== false);
+    const stuPkgs = packages.filter((p) => p.student_id === sid);
+    const activePkg =
+      stuPkgs.find((p) => p.status === 'ACTIVE' && Boolean(p.class_schedule)) ||
+      stuPkgs.find((p) => Boolean(p.class_schedule)) ||
+      stuPkgs[0];
+    if (activePkg && activePkg.class_schedule) {
+      return parseCanonicalScheduleString(
+        activePkg.class_schedule,
+        Number(activePkg.class_duration) || 60
+      );
+    }
+    return [];
   };
 
   const getStudentMeetingLink = (sid: string): any => {

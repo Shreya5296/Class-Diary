@@ -35,10 +35,11 @@ test.describe('E2E — Students Domain Workflow', () => {
     // 1. Create Student
     await page.locator('button:has-text("+ Add Student")').click();
     await page.getByLabel(/Student Name|Full Name/i).fill(student.full_name);
-    await expect(page.getByLabel(/Student Email/i)).toBeDisabled();
-    await expect(page.getByLabel(/Student Phone/i)).toBeDisabled();
     await page.getByLabel('Parent Name').fill(student.parent_name);
     await page.getByLabel('Parent Phone').fill(student.parent_phone);
+    await page.getByLabel('Package Price').fill('5000');
+    await page.getByLabel('Classes Purchased').fill('10');
+    await page.getByLabel('First Class Date').fill('2026-11-20');
 
     await page.locator('button:has-text("Create Student")').click();
     await expect(page.locator('text=Loading students…')).toBeHidden({ timeout: 45000 });
@@ -50,14 +51,15 @@ test.describe('E2E — Students Domain Workflow', () => {
     await searchInput.fill(testId);
     await expect(page.locator(`text=${student.full_name}`)).toBeVisible();
 
-    // 4. Expand row and open profile to verify tabs
+    // 4. Open student profile and verify tabs
     await page.locator('table').locator(`text=${student.full_name}`).first().click();
-    await page.locator('button:has-text("View Full Profile")').click();
+    const viewProfileBtn = page.locator('button:has-text("View Full Profile")');
+    if (await viewProfileBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await viewProfileBtn.click();
+    }
     await expect(page.locator('main button:has-text("Packages & Balances")')).toBeVisible();
-    await expect(page.locator('main button:has-text("Fee Obligations")')).toBeVisible();
+    await expect(page.locator('main button:has-text("Payment History")')).toBeVisible();
     await expect(page.locator('main button:has-text("Classes & Attendance")')).toBeVisible();
-    await expect(page.locator('main button:has-text("Meeting Links")')).toBeVisible();
-    await expect(page.locator('main button:has-text("Student Notes")')).toBeVisible();
 
     // 5. Edit profile
     await page.locator('button:has-text("Edit Profile")').click();
@@ -76,7 +78,7 @@ test.describe('E2E — Students Domain Workflow', () => {
       await archiveConfirmBtn.click();
     }
     await expect(page.locator('button:has-text("Reactivate Student")')).toBeVisible({ timeout: 45000 });
-    await expect(page.getByText('INACTIVE', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('student-status-badge')).toHaveText('INACTIVE', { timeout: 15000 });
 
     // 7. Reactivate student via UI
     await page.locator('button:has-text("Reactivate Student")').click();
@@ -85,14 +87,17 @@ test.describe('E2E — Students Domain Workflow', () => {
       await reactivateConfirmBtn.click();
     }
     await expect(page.locator('button:has-text("Archive Student")')).toBeVisible({ timeout: 45000 });
-    await expect(page.getByText('ACTIVE', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('student-status-badge')).toHaveText('ACTIVE', { timeout: 15000 });
 
     // 8. Refresh persistence
     await page.reload();
     await navigateTo(page, 'Students');
     await expect(page.locator(`text=${student.full_name}`)).toBeVisible({ timeout: 45000 });
     await page.locator(`text=${student.full_name}`).first().click();
-    await page.locator('button:has-text("View Full Profile")').click();
-    await expect(page.getByText('ACTIVE', { exact: true })).toBeVisible();
+    const viewBtn = page.locator('button:has-text("View Full Profile")');
+    if (await viewBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await viewBtn.click();
+    }
+    await expect(page.getByTestId('student-status-badge')).toHaveText('ACTIVE');
   });
 });

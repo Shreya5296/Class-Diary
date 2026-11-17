@@ -11,7 +11,7 @@ export interface Column<T> {
 export interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
-  keyExtractor: (row: T) => string;
+  keyExtractor: (row: T, index?: number) => string;
   fixedLayout?: boolean;
   minWidth?: string | number;
   rowStyle?: (row: T) => React.CSSProperties | undefined;
@@ -40,9 +40,9 @@ export function DataTable<T>({ columns, data, keyExtractor, fixedLayout, minWidt
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
+          {data.map((row, idx) => (
             <tr
-              key={keyExtractor(row)}
+              key={keyExtractor(row, idx)}
               style={rowStyle ? rowStyle(row) : undefined}
               className={rowClassName ? rowClassName(row) : undefined}
             >

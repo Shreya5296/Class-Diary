@@ -22,6 +22,7 @@ var _pkgReg = {
 };
 var _pkgMap = typeof createHeaderMap === 'function' ? { createHeaderMap: createHeaderMap, rowToRecord: rowToRecord, recordToRow: recordToRow } : (typeof require !== 'undefined' ? require('../sheets/HeaderMapper.gs') : null);
 var _pkgSvcRowReader = typeof readAllRecords === 'function' ? { readAllRecords: readAllRecords, findRecordById: findRecordById } : (typeof require !== 'undefined' ? require('../sheets/RowReader.gs') : null);
+var _pkgLock = typeof withLock === 'function' ? { withLock: withLock } : (typeof require !== 'undefined' ? require('../sheets/LockManager.gs') : null);
 
 var _DAY_ABBRS = { MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed', THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat', SUNDAY: 'Sun' };
 var _ABBR_TO_DAY = { MON: 'MONDAY', TUE: 'TUESDAY', WED: 'WEDNESDAY', THU: 'THURSDAY', FRI: 'FRIDAY', SAT: 'SATURDAY', SUN: 'SUNDAY' };
@@ -171,109 +172,117 @@ function Packages_create(spreadsheet, data, actor) {
     return { success: false, code: 'RECORD_NOT_FOUND', message: 'Student not found: ' + data.student_id };
   }
 
-  var now = new Date().toISOString();
-  var id = _pkgIdGen.generatePackageId();
-  var rawQty = data.classes_purchased !== undefined ? data.classes_purchased : (data.purchased_classes !== undefined ? data.purchased_classes : data.total_classes);
-  var rawPrice = (data.package_price !== undefined && data.package_price !== null && data.package_price !== '')
-    ? Number(data.package_price)
-    : ((data.price !== undefined && data.price !== null && data.price !== '') ? Number(data.price) : '');
-  var rawPerClass = (data.per_class !== undefined && data.per_class !== null && data.per_class !== '') ? Number(data.per_class) : '';
+  var lockFn = (_pkgLock && typeof _pkgLock.withLock === 'function') ? _pkgLock.withLock : function(t, fn) { return { success: true, result: fn() }; };
+  var lockRes = lockFn(10000, function() {
+    var now = new Date().toISOString();
+    var id = _pkgIdGen.generatePackageId();
+    var rawQty = data.classes_purchased !== undefined ? data.classes_purchased : (data.purchased_classes !== undefined ? data.purchased_classes : data.total_classes);
+    var rawPrice = (data.package_price !== undefined && data.package_price !== null && data.package_price !== '')
+      ? Number(data.package_price)
+      : ((data.price !== undefined && data.price !== null && data.price !== '') ? Number(data.price) : '');
+    var rawPerClass = (data.per_class !== undefined && data.per_class !== null && data.per_class !== '') ? Number(data.per_class) : '';
 
-  var planName = String(data.plan_name || data.package_name || '').trim();
-  var studentName = data.student_name || student.student_name || student.full_name || (student.first_name ? (student.first_name + ' ' + (student.last_name || '')).trim() : '');
+    var planName = String(data.plan_name || data.package_name || '').trim();
+    var studentName = data.student_name || student.student_name || student.full_name || (student.first_name ? (student.first_name + ' ' + (student.last_name || '')).trim() : '');
 
-  var rawDuration = data.class_duration !== undefined ? data.class_duration : data.duration_minutes;
+    var rawDuration = data.class_duration !== undefined ? data.class_duration : data.duration_minutes;
 
-  var schedStr = data.class_schedule || '';
-  if (!schedStr && data.schedules && Array.isArray(data.schedules) && data.schedules.length > 0) {
-    schedStr = _formatScheduleString(data.schedules);
-  }
-
-  var record = {
-    student_id: String(data.student_id).trim(),
-    student_name: studentName,
-    plan_type: data.plan_type || 'PACKAGE',
-    currency: data.currency ? String(data.currency).trim().toUpperCase() : 'INR',
-    package_price: rawPrice,
-    per_class: rawPerClass,
-    classes_purchased: rawQty !== undefined && rawQty !== '' ? Number(rawQty) : 0,
-    start_date: data.start_date || '',
-    end_date: data.end_date || data.expiry_date || '',
-    next_due_date: data.next_due_date || '',
-    class_duration: rawDuration !== undefined && rawDuration !== '' ? Number(rawDuration) : 60,
-    class_schedule: schedStr
-  };
-
-  var isYearly = String(record.plan_type || '').toUpperCase().indexOf('YEARLY') !== -1;
-  if (isYearly && record.start_date) {
-    if (!record.end_date) {
-      var sp = record.start_date.split('-').map(Number);
-      var endDefault = new Date(Date.UTC(sp[0] + 1, sp[1] - 1, sp[2] - 1, 12, 0, 0));
-      var ey = endDefault.getUTCFullYear();
-      var em = String(endDefault.getUTCMonth() + 1); if (em.length < 2) em = '0' + em;
-      var ed = String(endDefault.getUTCDate()); if (ed.length < 2) ed = '0' + ed;
-      record.end_date = ey + '-' + em + '-' + ed;
+    var schedStr = data.class_schedule || '';
+    if (!schedStr && data.schedules && Array.isArray(data.schedules) && data.schedules.length > 0) {
+      schedStr = _formatScheduleString(data.schedules);
     }
-    var schedList = (data.schedules && data.schedules.length > 0) ? data.schedules : _parseScheduleString(record.class_schedule, record.class_duration);
-    if (schedList && schedList.length > 0) {
-      var yearlyCount = _calcYearlyOccurrences(record.start_date, record.end_date, schedList);
-      if (yearlyCount > 0 && (!rawQty || rawQty === 0 || rawQty === '0')) {
-        record.classes_purchased = yearlyCount;
+
+    var record = {
+      student_id: String(data.student_id).trim(),
+      student_name: studentName,
+      plan_type: data.plan_type || 'PACKAGE',
+      currency: data.currency ? String(data.currency).trim().toUpperCase() : 'INR',
+      package_price: rawPrice,
+      per_class: rawPerClass,
+      classes_purchased: rawQty !== undefined && rawQty !== '' ? Number(rawQty) : 0,
+      start_date: data.start_date || '',
+      end_date: data.end_date || data.expiry_date || '',
+      next_due_date: data.next_due_date || '',
+      class_duration: rawDuration !== undefined && rawDuration !== '' ? Number(rawDuration) : 60,
+      class_schedule: schedStr
+    };
+
+    var isYearly = String(record.plan_type || '').toUpperCase().indexOf('YEARLY') !== -1;
+    if (isYearly && record.start_date) {
+      if (!record.end_date) {
+        var sp = record.start_date.split('-').map(Number);
+        var endDefault = new Date(Date.UTC(sp[0] + 1, sp[1] - 1, sp[2] - 1, 12, 0, 0));
+        var ey = endDefault.getUTCFullYear();
+        var em = String(endDefault.getUTCMonth() + 1); if (em.length < 2) em = '0' + em;
+        var ed = String(endDefault.getUTCDate()); if (ed.length < 2) ed = '0' + ed;
+        record.end_date = ey + '-' + em + '-' + ed;
       }
-    }
-  }
-
-  if ((!record.end_date || !record.next_due_date) && record.start_date && record.classes_purchased > 0) {
-    var schedDays = data.recurring_days || (data.schedules ? data.schedules.map(function(s) { return s.day_of_week; }) : null);
-    if (!schedDays && typeof Schedules_list === 'function') {
-      try {
-        var existingScheds = Schedules_list(spreadsheet, data.student_id) || [];
-        schedDays = existingScheds.map(function(s) { return s.day_of_week; });
-      } catch (e) {}
-    }
-    if (schedDays && schedDays.length > 0) {
-      var calculated = _calcPkgDates(record.start_date, schedDays, record.classes_purchased);
-      if (calculated) {
-        if (!record.end_date) {
-          record.end_date = calculated.endDate;
-        }
-        if (!record.next_due_date) {
-          record.next_due_date = calculated.nextDueDate;
+      var schedList = (data.schedules && data.schedules.length > 0) ? data.schedules : _parseScheduleString(record.class_schedule, record.class_duration);
+      if (schedList && schedList.length > 0) {
+        var yearlyCount = _calcYearlyOccurrences(record.start_date, record.end_date, schedList);
+        if (yearlyCount > 0 && (!rawQty || rawQty === 0 || rawQty === '0')) {
+          record.classes_purchased = yearlyCount;
         }
       }
     }
-  }
 
-  // Idempotently reuse existing package during registration retry if matching package already exists
-  var existingPkgs = _pkgRepo.Packages_getByStudentId(spreadsheet, data.student_id) || [];
-  var matchingPkg = null;
-  for (var ep = 0; ep < existingPkgs.length; ep++) {
-    var ex = existingPkgs[ep];
-    if (data.package_id && ex.package_id && ex.package_id === data.package_id) {
-      matchingPkg = ex;
-      break;
+    if ((!record.end_date || !record.next_due_date) && record.start_date && record.classes_purchased > 0) {
+      var schedDays = data.recurring_days || (data.schedules ? data.schedules.map(function(s) { return s.day_of_week; }) : null);
+      if (!schedDays && typeof Schedules_list === 'function') {
+        try {
+          var existingScheds = Schedules_list(spreadsheet, data.student_id) || [];
+          schedDays = existingScheds.map(function(s) { return s.day_of_week; });
+        } catch (e) {}
+      }
+      if (schedDays && schedDays.length > 0) {
+        var calculated = _calcPkgDates(record.start_date, schedDays, record.classes_purchased);
+        if (calculated) {
+          if (!record.end_date) {
+            record.end_date = calculated.endDate;
+          }
+          if (!record.next_due_date) {
+            record.next_due_date = calculated.nextDueDate;
+          }
+        }
+      }
     }
-    if (Number(ex.classes_purchased) === Number(record.classes_purchased) &&
-        (ex.start_date === record.start_date || (!ex.start_date && !record.start_date))) {
-      matchingPkg = ex;
-      break;
+
+    // Idempotently reuse existing package during registration retry if matching package already exists
+    var existingPkgs = _pkgRepo.Packages_getByStudentId(spreadsheet, data.student_id) || [];
+    var matchingPkg = null;
+    for (var ep = 0; ep < existingPkgs.length; ep++) {
+      var ex = existingPkgs[ep];
+      if (data.package_id && ex.package_id && ex.package_id === data.package_id) {
+        matchingPkg = ex;
+        break;
+      }
+      if (Number(ex.classes_purchased) === Number(record.classes_purchased) &&
+          (ex.start_date === record.start_date || (!ex.start_date && !record.start_date))) {
+        matchingPkg = ex;
+        break;
+      }
     }
+
+    var mem = (typeof globalThis !== 'undefined') ? (globalThis.__pkgMemoryMap = globalThis.__pkgMemoryMap || {}) : {};
+
+    if (matchingPkg) {
+      _pkgRepo.Packages_update(spreadsheet, data.student_id, record);
+      var updatedRecord = Object.assign({}, matchingPkg, record, { package_id: id });
+      mem[id] = updatedRecord;
+      return { success: true, data: Packages_enrichWithBalance(spreadsheet, updatedRecord) };
+    }
+
+    _pkgRepo.Packages_insert(spreadsheet, record);
+    var createdRecord = Object.assign({}, record, { package_id: id });
+    mem[id] = createdRecord;
+
+    return { success: true, data: Packages_enrichWithBalance(spreadsheet, createdRecord) };
+  });
+
+  if (!lockRes.success) {
+    return { success: false, code: lockRes.code || 'CONFLICT', message: lockRes.message || 'Package lock acquisition failed' };
   }
-
-  var mem = (typeof globalThis !== 'undefined') ? (globalThis.__pkgMemoryMap = globalThis.__pkgMemoryMap || {}) : {};
-
-  if (matchingPkg) {
-    _pkgRepo.Packages_update(spreadsheet, data.student_id, record);
-    var updatedRecord = Object.assign({}, matchingPkg, record, { package_id: id });
-    mem[id] = updatedRecord;
-    return { success: true, data: Packages_enrichWithBalance(spreadsheet, updatedRecord) };
-  }
-
-  _pkgRepo.Packages_insert(spreadsheet, record);
-  var createdRecord = Object.assign({}, record, { package_id: id });
-  mem[id] = createdRecord;
-
-  return { success: true, data: Packages_enrichWithBalance(spreadsheet, createdRecord) };
+  return lockRes.result;
 }
 
 function Packages_enrichWithBalance(spreadsheet, pkgRecord) {
@@ -383,57 +392,65 @@ function Packages_enrichWithBalance(spreadsheet, pkgRecord) {
 
 function Packages_update(spreadsheet, targetId, data, actor) {
   var sid = targetId || (data && (data.student_id || data.packageId || data.package_id));
-  var existing = _pkgRepo.Packages_getById(spreadsheet, sid);
-  if (!existing && _pkgRepo.Packages_getByStudentId) {
-    var pkgs = _pkgRepo.Packages_getByStudentId(spreadsheet, sid);
-    if (pkgs && pkgs.length > 0) existing = pkgs[0];
-  }
-  if (!existing) {
-    return { success: false, code: 'RECORD_NOT_FOUND', message: 'Package not found for student: ' + sid };
-  }
-  var updates = {};
-  if (data.plan_type !== undefined) updates.plan_type = String(data.plan_type).trim();
-  if (data.plan_name !== undefined) updates.plan_name = String(data.plan_name).trim();
-  if (data.package_name !== undefined) updates.plan_name = String(data.package_name).trim();
-  if (data.currency !== undefined) updates.currency = String(data.currency).trim().toUpperCase();
-  if (data.package_price !== undefined && data.package_price !== '') updates.package_price = Number(data.package_price);
-  else if (data.price !== undefined && data.price !== '') updates.package_price = Number(data.price);
-  if (data.per_class !== undefined && data.per_class !== '') updates.per_class = Number(data.per_class);
-  var rawQty = data.classes_purchased !== undefined ? data.classes_purchased : (data.purchased_classes !== undefined ? data.purchased_classes : data.total_classes);
-  if (rawQty !== undefined && rawQty !== '') updates.classes_purchased = Number(rawQty);
-  var rawDuration = data.class_duration !== undefined ? data.class_duration : data.duration_minutes;
-  if (rawDuration !== undefined && rawDuration !== '') updates.class_duration = Number(rawDuration);
-  if (data.start_date !== undefined) updates.start_date = data.start_date;
-  if (data.end_date !== undefined) updates.end_date = data.end_date;
-  if (data.expiry_date !== undefined) updates.expiry_date = data.expiry_date;
-  if (data.next_due_date !== undefined) updates.next_due_date = data.next_due_date;
-  if (data.notes !== undefined) updates.notes = String(data.notes).trim();
-  if (data.package_status !== undefined) updates.package_status = data.package_status;
-  else if (data.status !== undefined) updates.package_status = data.status;
-  if (data.class_schedule !== undefined) {
-    updates.class_schedule = String(data.class_schedule).trim();
-  } else if (data.schedules && Array.isArray(data.schedules)) {
-    updates.class_schedule = _formatScheduleString(data.schedules);
-  }
-
-  var isYearlyPlan = updates.plan_type ? updates.plan_type.toUpperCase().indexOf('YEARLY') !== -1 : (existing.plan_type && existing.plan_type.toUpperCase().indexOf('YEARLY') !== -1);
-  if (isYearlyPlan) {
-    var sDate = updates.start_date || existing.start_date;
-    var eDate = updates.end_date || existing.end_date;
-    var sStr = updates.class_schedule !== undefined ? updates.class_schedule : (existing.class_schedule || '');
-    var dur = updates.class_duration || existing.class_duration || 60;
-    var parsedSched = _parseScheduleString(sStr, dur);
-    if (sDate && eDate && parsedSched.length > 0 && updates.classes_purchased === undefined) {
-      var yCount = _calcYearlyOccurrences(sDate, eDate, parsedSched);
-      if (yCount > 0) updates.classes_purchased = yCount;
+  var lockFn = (_pkgLock && typeof _pkgLock.withLock === 'function') ? _pkgLock.withLock : function(t, fn) { return { success: true, result: fn() }; };
+  var lockRes = lockFn(10000, function() {
+    var existing = _pkgRepo.Packages_getById(spreadsheet, sid);
+    if (!existing && _pkgRepo.Packages_getByStudentId) {
+      var pkgs = _pkgRepo.Packages_getByStudentId(spreadsheet, sid);
+      if (pkgs && pkgs.length > 0) existing = pkgs[0];
     }
+    if (!existing) {
+      return { success: false, code: 'RECORD_NOT_FOUND', message: 'Package not found for student: ' + sid };
+    }
+    var updates = {};
+    if (data.plan_type !== undefined) updates.plan_type = String(data.plan_type).trim();
+    if (data.plan_name !== undefined) updates.plan_name = String(data.plan_name).trim();
+    if (data.package_name !== undefined) updates.plan_name = String(data.package_name).trim();
+    if (data.currency !== undefined) updates.currency = String(data.currency).trim().toUpperCase();
+    if (data.package_price !== undefined && data.package_price !== '') updates.package_price = Number(data.package_price);
+    else if (data.price !== undefined && data.price !== '') updates.package_price = Number(data.price);
+    if (data.per_class !== undefined && data.per_class !== '') updates.per_class = Number(data.per_class);
+    var rawQty = data.classes_purchased !== undefined ? data.classes_purchased : (data.purchased_classes !== undefined ? data.purchased_classes : data.total_classes);
+    if (rawQty !== undefined && rawQty !== '') updates.classes_purchased = Number(rawQty);
+    var rawDuration = data.class_duration !== undefined ? data.class_duration : data.duration_minutes;
+    if (rawDuration !== undefined && rawDuration !== '') updates.class_duration = Number(rawDuration);
+    if (data.start_date !== undefined) updates.start_date = data.start_date;
+    if (data.end_date !== undefined) updates.end_date = data.end_date;
+    if (data.expiry_date !== undefined) updates.expiry_date = data.expiry_date;
+    if (data.next_due_date !== undefined) updates.next_due_date = data.next_due_date;
+    if (data.notes !== undefined) updates.notes = String(data.notes).trim();
+    if (data.package_status !== undefined) updates.package_status = data.package_status;
+    else if (data.status !== undefined) updates.package_status = data.status;
+    if (data.class_schedule !== undefined) {
+      updates.class_schedule = String(data.class_schedule).trim();
+    } else if (data.schedules && Array.isArray(data.schedules)) {
+      updates.class_schedule = _formatScheduleString(data.schedules);
+    }
+
+    var isYearlyPlan = updates.plan_type ? updates.plan_type.toUpperCase().indexOf('YEARLY') !== -1 : (existing.plan_type && existing.plan_type.toUpperCase().indexOf('YEARLY') !== -1);
+    if (isYearlyPlan) {
+      var sDate = updates.start_date || existing.start_date;
+      var eDate = updates.end_date || existing.end_date;
+      var sStr = updates.class_schedule !== undefined ? updates.class_schedule : (existing.class_schedule || '');
+      var dur = updates.class_duration || existing.class_duration || 60;
+      var parsedSched = _parseScheduleString(sStr, dur);
+      if (sDate && eDate && parsedSched.length > 0 && updates.classes_purchased === undefined) {
+        var yCount = _calcYearlyOccurrences(sDate, eDate, parsedSched);
+        if (yCount > 0) updates.classes_purchased = yCount;
+      }
+    }
+
+    updates.updated_at = new Date().toISOString();
+
+    var updated = _pkgRepo.Packages_update(spreadsheet, existing.student_id, updates);
+
+    return { success: true, data: Packages_enrichWithBalance(spreadsheet, Object.assign({}, existing, updates)) };
+  });
+
+  if (!lockRes.success) {
+    return { success: false, code: lockRes.code || 'CONFLICT', message: lockRes.message || 'Package lock acquisition failed' };
   }
-
-  updates.updated_at = new Date().toISOString();
-
-  var updated = _pkgRepo.Packages_update(spreadsheet, existing.student_id, updates);
-
-  return { success: true, data: Packages_enrichWithBalance(spreadsheet, Object.assign({}, existing, updates)) };
+  return lockRes.result;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -444,6 +461,7 @@ if (typeof module !== 'undefined' && module.exports) {
     _calcPkgDates: _calcPkgDates,
     _calcYearlyOccurrences: _calcYearlyOccurrences,
     _formatScheduleString: _formatScheduleString,
-    _parseScheduleString: _parseScheduleString
+    _parseScheduleString: _parseScheduleString,
+    _setLockManager: function(lm) { _pkgLock = lm; }
   };
 }

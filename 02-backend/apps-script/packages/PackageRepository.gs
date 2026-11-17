@@ -56,22 +56,37 @@ function Packages_getById(spreadsheet, identifier) {
   // 2. Memory map lookup (for ephemeral package_ids returned to caller)
   var mem = (typeof globalThis !== 'undefined' && globalThis.__pkgMemoryMap) ? globalThis.__pkgMemoryMap[idStr] : null;
   if (mem) {
+    var memDateStr = mem.start_date ? String(mem.start_date).slice(0, 10) : '';
+    var candidateMatches = [];
     for (var m = 0; m < all.length; m++) {
       if (all[m].student_id === mem.student_id) {
-        if (mem._rowIndex && all[m]._rowIndex === mem._rowIndex) {
-          var copy1 = Object.assign({}, all[m]);
-          copy1.package_id = idStr;
-          return copy1;
-        }
-        if (mem.classes_purchased !== undefined && Number(all[m].classes_purchased) === Number(mem.classes_purchased) &&
-            (!mem.start_date || all[m].start_date === mem.start_date)) {
-          var copy2 = Object.assign({}, all[m]);
-          copy2.package_id = idStr;
-          return copy2;
+        var sameClass = mem.classes_purchased !== undefined ? (Number(all[m].classes_purchased) === Number(mem.classes_purchased)) : true;
+        var rowDateStr = all[m].start_date ? String(all[m].start_date).slice(0, 10) : '';
+        var sameDate = (!memDateStr && !rowDateStr) || (memDateStr === rowDateStr);
+        if (sameClass && sameDate) {
+          candidateMatches.push(all[m]);
         }
       }
     }
-    return mem;
+
+    // If multiple candidates have identical attributes, identity is ambiguous -> return null
+    if (candidateMatches.length > 1) {
+      return null;
+    }
+
+    if (candidateMatches.length === 1) {
+      var cand = candidateMatches[0];
+      // If mem recorded a row index, require the candidate row index to match exactly (protects against row moves/shifts)
+      if (mem._rowIndex && cand._rowIndex !== mem._rowIndex) {
+        return null;
+      }
+      var copy = Object.assign({}, cand);
+      copy.package_id = idStr;
+      return copy;
+    }
+
+    // Return null if no physical sheet row matches the memory mapping (stale identifier protection)
+    return null;
   }
 
   // 3. Look up by student_id

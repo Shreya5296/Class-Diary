@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { AttendanceStatus, ClassSession } from './classTypes';
-import { recordAttendance, restoreCredit } from './classApi';
+import { recordAttendance, restoreCredit, cancelClass } from './classApi';
 import { DataTable } from '../../components/tables/DataTable';
 import { LoadingState } from '../../components/feedback/LoadingState';
 import { EmptyState } from '../../components/feedback/EmptyState';
@@ -28,8 +28,12 @@ export const ClassSchedule: React.FC<{ studentId?: string; onRefreshTrigger?: nu
     return progressMap.get(s.session_id) || progressMap.get(`${s.student_id}__${s.schedule_date}__${s.schedule_time}`);
   };
 
-  const handleUpdateStatus = async (sessionId: string, outcome: string) => {
-    await recordAttendance(sessionId, outcome as AttendanceStatus, token);
+  const handleUpdateStatus = async (sessionId: string, outcome: string, cancellationReason?: string) => {
+    if (outcome === 'CANCELLED' && cancellationReason) {
+      await cancelClass(sessionId, cancellationReason, token);
+    } else {
+      await recordAttendance(sessionId, outcome as AttendanceStatus, token, cancellationReason);
+    }
     await refetch();
   };
 

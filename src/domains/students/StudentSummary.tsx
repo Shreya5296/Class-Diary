@@ -2,16 +2,13 @@ import React from 'react';
 import { Student } from './studentTypes';
 import { formatStatusBadge } from '../../lib/textFormat';
 import { formatDate } from '../../lib/dateFormat';
-import { CurrencyCreditSummary } from '../fees/creditCalculator';
-import { AvailableCreditBadge } from '../fees/AvailableCreditBadge';
 import { MeetingLinkButton } from '../meeting-links/MeetingLinkButton';
 
 export interface StudentSummaryProps {
   student: Student;
-  credits?: CurrencyCreditSummary[];
 }
 
-export const StudentSummary: React.FC<StudentSummaryProps> = ({ student, credits }) => {
+export const StudentSummary: React.FC<StudentSummaryProps> = ({ student }) => {
   const badge = formatStatusBadge(student.status);
   const name = student.student_name || student.full_name || 'Unnamed Student';
   const initial = name.charAt(0).toUpperCase();
@@ -57,8 +54,8 @@ export const StudentSummary: React.FC<StudentSummaryProps> = ({ student, credits
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          {credits && <AvailableCreditBadge summaries={credits} />}
           <span
+            data-testid="student-status-badge"
             style={{
               padding: '4px 10px',
               borderRadius: 'var(--radius-full)',

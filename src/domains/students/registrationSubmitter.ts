@@ -33,6 +33,7 @@ export async function submitRegistration(
         student_phone: formData.student.student_phone.trim(), student_email: formData.student.student_email.trim(),
         parent_name: formData.parent.parent_name, parent_phone: formData.parent.parent_phone.trim(),
         parent_email: formData.parent.parent_email.trim(), status: 'ACTIVE',
+        primary_meeting_link: formData.student.primary_meeting_link?.trim() || undefined,
       }, token).catch(() => {});
     } else {
       activeStudent = await createStudent({
@@ -40,6 +41,7 @@ export async function submitRegistration(
         student_phone: formData.student.student_phone.trim(), student_email: formData.student.student_email.trim(),
         parent_name: formData.parent.parent_name, parent_phone: formData.parent.parent_phone.trim(),
         parent_email: formData.parent.parent_email.trim(), status: 'ACTIVE',
+        primary_meeting_link: formData.student.primary_meeting_link?.trim() || undefined,
       }, token);
     }
     if (onStudentResolved) onStudentResolved(activeStudent);

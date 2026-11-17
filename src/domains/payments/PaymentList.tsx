@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { Payment } from './paymentTypes';
-import { fetchPayments, voidPayment } from './paymentApi';
+import { fetchPayments } from './paymentApi';
 import { DataTable, Column } from '../../components/tables/DataTable';
 import { formatCurrency } from '../../lib/currencyFormat';
 import { formatDate } from '../../lib/dateFormat';
-import { formatStatusBadge } from '../../lib/textFormat';
-import { Button } from '../../components/buttons/Button';
-import { ConfirmDialog } from '../../components/overlays/ConfirmDialog';
 import { LoadingState } from '../../components/feedback/LoadingState';
 import { EmptyState } from '../../components/feedback/EmptyState';
 
@@ -15,8 +12,6 @@ export const PaymentList: React.FC<{ studentId?: string }> = ({ studentId }) => 
   const { token } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [voidingId, setVoidingId] = useState<string | null>(null);
-  const [isVoiding, setIsVoiding] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -32,53 +27,40 @@ export const PaymentList: React.FC<{ studentId?: string }> = ({ studentId }) => 
     loadData();
   }, [studentId, token]);
 
-  const handleConfirmVoid = async () => {
-    if (!voidingId) return;
-    setIsVoiding(true);
-    try {
-      await voidPayment(voidingId, token);
-      setVoidingId(null);
-      await loadData();
-    } finally {
-      setIsVoiding(false);
-    }
-  };
-
   const columns: Column<Payment>[] = [
-    { key: 'payment_date', header: 'Date', render: (p) => formatDate(p.payment_date) },
-    { key: 'amount', header: 'Amount', render: (p) => <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatCurrency(p.amount)}</span> },
-    { key: 'payment_method', header: 'Method', render: (p) => <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 500, padding: '2px 8px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-bg-subtle)' }}>{p.payment_method}</span> },
-    { key: 'reference_number', header: 'Reference #', render: (p) => <code>{p.reference_number || '—'}</code> },
+    { key: 'payment_date', header: 'Date', width: '22%', render: (p) => formatDate(p.payment_date) },
     {
-      key: 'status',
-      header: 'Status',
-      render: (p) => {
-        const badge = formatStatusBadge(p.status);
-        const isSuccess = badge.tone === 'success';
-        return (
-          <span style={{
-            padding: '2px 8px',
-            borderRadius: 'var(--radius-full)',
-            fontSize: 'var(--font-size-xs)',
-            fontWeight: 600,
-            backgroundColor: isSuccess ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
-            color: isSuccess ? 'var(--color-success-text)' : 'var(--color-danger-text)',
-            border: `1px solid ${isSuccess ? 'var(--color-success-border)' : 'var(--color-danger-border)'}`,
-          }}>
-            {badge.label}
-          </span>
-        );
-      },
+      key: 'amount',
+      header: 'Amount',
+      width: '28%',
+      render: (p) => (
+        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: 'var(--color-success)' }}>
+          {formatCurrency(p.amount, true, p.currency || 'INR')}
+        </span>
+      ),
     },
     {
-      key: 'actions',
-      header: 'Actions',
-      render: (p) =>
-        p.status !== 'VOID' ? (
-          <Button variant="outline" size="sm" onClick={() => setVoidingId(p.payment_id)}>
-            Void
-          </Button>
-        ) : null,
+      key: 'currency',
+      header: 'Currency',
+      width: '22%',
+      render: (p) => (
+        <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+          {String(p.currency || 'INR').toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      key: 'in_inr',
+      header: 'Recorded INR Equivalent',
+      width: '28%',
+      render: (p) => {
+        const hasInr = p.in_inr !== undefined && p.in_inr !== null && Number(p.in_inr) > 0;
+        return hasInr ? (
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{Number(p.in_inr).toLocaleString('en-IN')}</span>
+        ) : (
+          <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+        );
+      },
     },
   ];
 
@@ -86,18 +68,10 @@ export const PaymentList: React.FC<{ studentId?: string }> = ({ studentId }) => 
   if (payments.length === 0) return <EmptyState title="No payments recorded" description="No transactions in the ledger." />;
 
   return (
-    <>
-      <DataTable columns={columns} data={payments} keyExtractor={(p) => p.payment_id} />
-      <ConfirmDialog
-        isOpen={Boolean(voidingId)}
-        title="Void Payment Record?"
-        message="Are you sure you want to void this payment record? This will restore any associated fee balances and cannot be undone."
-        confirmLabel="Void Payment"
-        isDestructive
-        isLoading={isVoiding}
-        onConfirm={handleConfirmVoid}
-        onCancel={() => setVoidingId(null)}
-      />
-    </>
+    <DataTable
+      columns={columns}
+      data={payments}
+      keyExtractor={(p: Payment, idx?: number) => `${p.student_id || 'stu'}_${p.payment_date || 'date'}_${p.amount || 0}_${idx ?? 0}`}
+    />
   );
 };

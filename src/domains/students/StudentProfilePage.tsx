@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { Student } from './studentTypes';
 import { archiveStudent, reactivateStudent } from './studentApi';
 import { StudentSummary } from './StudentSummary';
+import { StudentFinancialSummaryCard } from './StudentFinancialSummaryCard';
 import { Button } from '../../components/buttons/Button';
 import { ConfirmDialog } from '../../components/overlays/ConfirmDialog';
 import { ArrowLeftIcon } from '../../components/icons/ActionIcons';
 import { PackageList } from '../packages/PackageList';
-import { FeeObligationList } from '../fees/FeeObligationList';
+import { PaymentList } from '../payments/PaymentList';
 import { ClassSchedule } from '../classes/ClassSchedule';
-import { fetchFeeObligations } from '../fees/feeApi';
-import { fetchPayments } from '../payments/paymentApi';
-import { calculateStudentCredits, CurrencyCreditSummary } from '../fees/creditCalculator';
 
 export interface StudentProfilePageProps {
   student: Student;
@@ -21,7 +19,7 @@ export interface StudentProfilePageProps {
   onUpdate?: (updated: Student) => void;
 }
 
-type TabType = 'packages' | 'fees' | 'classes';
+type TabType = 'packages' | 'payments' | 'classes';
 
 export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
   student, onBack, onEdit, onRenew, onUpdate,
@@ -31,18 +29,10 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
   const [isArchiving, setIsArchiving] = useState(false);
   const [showConfirmArchive, setShowConfirmArchive] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
-  const [credits, setCredits] = useState<CurrencyCreditSummary[]>([]);
-
-  useEffect(() => {
-    Promise.all([
-      fetchFeeObligations(student.student_id, token).catch(() => []),
-      fetchPayments(student.student_id, undefined, token).catch(() => []),
-    ]).then(([f, p]) => setCredits(calculateStudentCredits(f, p, student.student_id)));
-  }, [student.student_id, token]);
 
   const tabs: { id: TabType; label: string }[] = [
     { id: 'packages', label: 'Packages & Balances' },
-    { id: 'fees', label: 'Fee Obligations' },
+    { id: 'payments', label: 'Payment History' },
     { id: 'classes', label: 'Classes & Attendance' },
   ];
 
@@ -88,7 +78,8 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
         </div>
       </div>
 
-      <StudentSummary student={student} credits={credits} />
+      <StudentSummary student={student} />
+      <StudentFinancialSummaryCard studentId={student.student_id} token={token} />
 
       <div style={{ display: 'flex', gap: 'var(--space-1)', borderBottom: '1px solid var(--color-border-subtle)', marginBottom: 'var(--space-5)', overflowX: 'auto' }}>
         {tabs.map((tab) => {
@@ -119,7 +110,7 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
 
       <div>
         {activeTab === 'packages' && <PackageList studentId={student.student_id} onRenew={onRenew} />}
-        {activeTab === 'fees' && <FeeObligationList studentId={student.student_id} />}
+        {activeTab === 'payments' && <PaymentList studentId={student.student_id} />}
         {activeTab === 'classes' && <ClassSchedule studentId={student.student_id} />}
       </div>
 

@@ -1,10 +1,23 @@
 import { Payment } from '../payments/paymentTypes';
 
+export interface CurrencyTotals {
+  [currency: string]: number;
+}
+
+export interface FinancesSummaryData {
+  packagesByCurrency: CurrencyTotals;
+  paymentsByCurrency: CurrencyTotals;
+  totalRecordedInr: number;
+}
+
 export interface FinancialSummary {
   totalInvoiced: number;
   totalCollected: number;
-  totalOutstanding: number;
+  totalOutstanding?: number;
   currency: string;
+  packagesByCurrency?: CurrencyTotals;
+  paymentsByCurrency?: CurrencyTotals;
+  totalRecordedInr?: number;
 }
 
 export interface FinanceFilter {
@@ -13,17 +26,17 @@ export interface FinanceFilter {
   endDate?: string;
 }
 
-export interface StudentBalanceRecord {
+export interface StudentFinancialRecord {
   student_id: string;
   student_name: string;
-  totalInvoiced: number;
-  totalPaid: number;
-  outstandingBalance: number;
+  packageTotalsByCurrency: CurrencyTotals;
+  paymentTotalsByCurrency: CurrencyTotals;
   paymentCount: number;
   lastPaymentDate?: string;
-  currency?: string;
-  inInr?: number;
+  recordedInrEquivalent?: number;
 }
+
+export type StudentBalanceRecord = StudentFinancialRecord;
 
 export type FinanceTab = 'history' | 'balances';
 

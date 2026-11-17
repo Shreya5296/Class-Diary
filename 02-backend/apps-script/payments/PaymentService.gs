@@ -76,7 +76,7 @@ function _getMatchingPaymentRows(spreadsheet, studentId, paymentDate, amount) {
         payment_date: rDate,
         amount: rAmt,
         currency: String(row[4] || 'INR').trim().toUpperCase(),
-        in_inr: Number(row[5] !== undefined ? row[5] : rAmt),
+        in_inr: (row[5] !== undefined && row[5] !== null && String(row[5]).trim() !== '') ? Number(row[5]) : (String(row[4] || 'INR').trim().toUpperCase() === 'INR' ? rAmt : ''),
         status: 'RECORDED',
         payment_status: 'RECORDED'
       });
@@ -323,9 +323,19 @@ function _executePaymentRecordCore(spreadsheet, data, actor) {
   }
 
   var currency = data.currency ? String(data.currency).trim().toUpperCase() : 'INR';
-  var inInr = (data.in_inr !== undefined && data.in_inr !== null && data.in_inr !== '')
-    ? Number(data.in_inr)
-    : (currency === 'INR' ? payAmount : 0);
+  var inInr = '';
+  if (currency === 'INR') {
+    inInr = payAmount;
+  } else if (data.in_inr !== undefined && data.in_inr !== null && data.in_inr !== '') {
+    var parsedInInr = Number(data.in_inr);
+    inInr = (!isNaN(parsedInInr) && parsedInInr > 0) ? parsedInInr : '';
+  } else if (data.conversion_rate !== undefined && data.conversion_rate !== null && data.conversion_rate !== '') {
+    var cRate = Number(data.conversion_rate);
+    inInr = (!isNaN(cRate) && cRate > 0) ? Math.round(payAmount * cRate * 100) / 100 : '';
+  } else if (data.exchange_rate !== undefined && data.exchange_rate !== null && data.exchange_rate !== '') {
+    var xRate = Number(data.exchange_rate);
+    inInr = (!isNaN(xRate) && xRate > 0) ? Math.round(payAmount * xRate * 100) / 100 : '';
+  }
 
   // Count existing identical rows for exact sequence recovery disambiguation
   var preInsertCount = _getMatchingPaymentRows(spreadsheet, stuId, paymentDate, payAmount).length;

@@ -100,8 +100,16 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
     };
 
     // 1. Write durable renewal intent
-    const intentRes = RenewalIdempotency._recordRenewalInitiated(spreadsheet, idempKey, sid, 10, 20, reqPayload, adminActor, []);
+    const renSnapshot = {
+      student_id: sid, student_name: 'Cold Recovery Student', plan_type: 'Per Class',
+      currency: 'INR', package_price: 10000, per_class: 0, classes_purchased: 10,
+      start_date: '2026-12-01', end_date: '', next_due_date: '', class_duration: 60,
+      class_schedule: ''
+    };
+    const intentRes = RenewalIdempotency._recordRenewalInitiated(spreadsheet, idempKey, sid, 10, 20, reqPayload, adminActor, [], '', 1, 1, renSnapshot);
     expect(intentRes.success).toBe(true);
+    const renPkg = PackageRepository.Packages_insert(spreadsheet, renSnapshot);
+    RenewalIdempotency._recordRenewalPackageRow(spreadsheet, idempKey, renPkg._rowIndex);
 
     // 2. Clear all in-memory idempotency state and ScriptCache
     // @ts-ignore
@@ -129,7 +137,12 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
     // 5. Retry renewal and verify no duplicate package, payment, or session writes
     const retryRes = RenewalService.Packages_renew(spreadsheet, reqPayload, adminActor);
     expect(retryRes.success).toBe(true);
-    expect(PackageRepository.Packages_getById(spreadsheet, sid).classes_purchased).toBe(20);
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(10);
+    expect(pkgs[1].classes_purchased).toBe(10);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(20);
     expect(PaymentRepository.Payments_getAll(spreadsheet).filter((p: any) => p.student_id === sid).length).toBe(1);
     expect(spreadsheet.getSheetByName('AuditLog')).toBeNull();
   });
@@ -306,7 +319,12 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
     expect(rDiffTime.message).toContain('different schedule time');
 
     // Verify ZERO mutations occurred from conflicted requests
-    expect(PackageRepository.Packages_getById(spreadsheet, sid).classes_purchased).toBe(20);
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(10);
+    expect(pkgs[1].classes_purchased).toBe(10);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(20);
   });
 
   // Issue 5: Prove session ownership and partial-generation recovery
@@ -343,11 +361,19 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
     expect(plannedSlots[0].schedule_date).toBe('2026-11-23');
 
     // Intent write persists target slots to durable store
+    const renSnapshot = {
+      student_id: sid, student_name: 'Ownership Student', plan_type: 'Per Class',
+      currency: 'INR', package_price: 0, per_class: 0, classes_purchased: 10,
+      start_date: '2026-11-02', end_date: '', next_due_date: '', class_duration: 0,
+      class_schedule: 'Mon - 17:00'
+    };
     RenewalIdempotency._recordRenewalInitiated(
       spreadsheet, idempKey, sid, 10, 20,
       { new_classes_purchased: 10, currency: 'INR', start_date: '2026-11-02', schedules: schedules },
-      adminActor, plannedSlots
+      adminActor, plannedSlots, '', 1, 1, renSnapshot
     );
+    const renPkg = PackageRepository.Packages_insert(spreadsheet, renSnapshot);
+    RenewalIdempotency._recordRenewalPackageRow(spreadsheet, idempKey, renPkg._rowIndex);
 
     // 3. First attempt writes 4 sessions to ClassSessions before interruption
     for (let i = 0; i < 4; i++) {
@@ -442,7 +468,12 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
       const retry = RenewalService.Packages_renew(spreadsheet, payload, adminActor);
       if (!retry.success) console.log('Case 2 retry failed with:', retry);
       expect(retry.success).toBe(true);
-      expect(PackageRepository.Packages_getById(spreadsheet, sid).classes_purchased).toBe(20);
+      const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+      expect(pkgs.length).toBe(2);
+      expect(pkgs[0].classes_purchased).toBe(10);
+      expect(pkgs[1].classes_purchased).toBe(10);
+      const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+      expect(totalPurchased).toBe(20);
       const pays = PaymentRepository.Payments_getAll(spreadsheet).filter((p: any) => p.student_id === sid);
       expect(pays.length).toBe(1);
     });
@@ -463,9 +494,16 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
       };
 
       // Intent recorded
-      RenewalIdempotency._recordRenewalInitiated(spreadsheet, idempKey, sid, 10, 20, payload, adminActor);
-      // Package updated to 20
-      PackageRepository.Packages_update(spreadsheet, sid, { classes_purchased: 20 });
+      const renSnapshot = {
+        student_id: sid, student_name: 'Fail Case 3', plan_type: 'Per Class',
+        currency: 'INR', package_price: 0, per_class: 0, classes_purchased: 10,
+        start_date: '2026-11-02', end_date: '', next_due_date: '', class_duration: 0,
+        class_schedule: 'Mon - 17:00'
+      };
+      RenewalIdempotency._recordRenewalInitiated(spreadsheet, idempKey, sid, 10, 20, payload, adminActor, [], '', 1, 1, renSnapshot);
+      // New package row inserted and confirmed in durable store
+      const renPkg = PackageRepository.Packages_insert(spreadsheet, renSnapshot);
+      RenewalIdempotency._recordRenewalPackageRow(spreadsheet, idempKey, renPkg._rowIndex);
       // Payment pre-recorded via PaymentService with renewal payment idempotency key
       const PaymentService = require('../../02-backend/apps-script/payments/PaymentService.gs');
       PaymentService.Payments_record(spreadsheet, {
@@ -482,7 +520,12 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
       // Retry completes session generation, preserves package at 20, keeps payment count at 1
       const retry = RenewalService.Packages_renew(spreadsheet, payload, adminActor);
       expect(retry.success).toBe(true);
-      expect(PackageRepository.Packages_getById(spreadsheet, sid).classes_purchased).toBe(20);
+      const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+      expect(pkgs.length).toBe(2);
+      expect(pkgs[0].classes_purchased).toBe(10);
+      expect(pkgs[1].classes_purchased).toBe(10);
+      const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+      expect(totalPurchased).toBe(20);
       expect(PaymentRepository.Payments_getAll(spreadsheet).filter((p: any) => p.student_id === sid).length).toBe(1);
       const postSessions = ClassRepository.Classes_getAll(spreadsheet).filter((sess: any) => sess.student_id === sid && sess.session_status === 'SCHEDULED');
       expect(postSessions.length).toBe(10);
@@ -535,8 +578,6 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
 
       try {
         pkgRepo.Packages_update = (ss: any, id: string, rec: any) => {
-          updateCalls++;
-          if (updateCalls === 1) return origUpdate(ss, id, rec); // First update (to 20) succeeds
           throw new Error('Lock timeout during rollback update'); // Rollback fails
         };
 
@@ -562,11 +603,12 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
         student_name: 'Fail Case 6', parent_name: 'P6', parent_phone: '+91 9100000016', status: 'ACTIVE', subject: 'Math'
       }, adminActor);
       const sid = s.data.student_id;
-      PackageService.Packages_create(spreadsheet, { student_id: sid, plan_type: 'Per Class', classes_purchased: 10, currency: 'INR' }, adminActor);
+      PackageService.Packages_create(spreadsheet, { student_id: sid, plan_type: 'Per Class', classes_purchased: 10, currency: 'INR', start_date: '2026-10-01' }, adminActor);
 
       const idempKey = 'idemp_fail_c6';
       const payload = {
         student_id: sid, new_classes_purchased: 10, currency: 'INR', idempotency_key: idempKey,
+        start_date: '2026-11-01',
         payment: { amount: 5000, currency: 'INR', payment_date: '2026-11-01' }
       };
 
@@ -576,7 +618,7 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
       let setCount = 0;
       ds.setProperty = (k: string, v: string) => {
         setCount++;
-        if (setCount === 1) return origSet.call(ds, k, v); // Intent succeeds
+        if (setCount <= 2) return origSet.call(ds, k, v); // Intent and row pointer succeed
         throw new Error('Durable store quota exceeded on completion'); // Completion save fails
       };
 
@@ -595,7 +637,12 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
       // Retry completes and successfully writes durable completion
       const retryRes = RenewalService.Packages_renew(spreadsheet, payload, adminActor);
       expect(retryRes.success).toBe(true);
-      expect(PackageRepository.Packages_getById(spreadsheet, sid).classes_purchased).toBe(20);
+      const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+      expect(pkgs.length).toBe(2);
+      expect(pkgs[0].classes_purchased).toBe(10);
+      expect(pkgs[1].classes_purchased).toBe(10);
+      const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+      expect(totalPurchased).toBe(20);
     });
   });
 
@@ -644,9 +691,13 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
     expect(renewalResult.data.cumulative_consumed).toBe(9);
     expect(renewalResult.data.new_available_balance).toBe(15);
 
-    // Verify package record in sheet reflects cumulative 24 classes
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.classes_purchased).toBe(24);
+    // Verify package record in sheet reflects cumulative 24 classes across 2 rows (12 initial + 12 renewed)
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(12);
+    expect(pkgs[1].classes_purchased).toBe(12);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(24);
   });
 
   // Section 6: Critical exact-slot collision test
@@ -857,15 +908,24 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
     const targetSlots = RenewalSessionTransition._planRenewalSlots([], sid, schedules, '2026-11-02', 10);
     expect(targetSlots.length).toBe(10);
 
-    // 2. Write ONLY RENEW_INITIATED intent in durable store (no completion exists yet!)
+    // 2. Write RENEW_INITIATED intent in durable store and record package row
     const ds = RenewalIdempotency._getDurableStore();
+    const renSnapshot = {
+      student_id: sid, student_name: 'Intent Recovery Student', plan_type: 'Per Class',
+      currency: 'INR', package_price: 0, per_class: 0, classes_purchased: 10,
+      start_date: '2026-11-02', end_date: '', next_due_date: '', class_duration: 0,
+      class_schedule: 'Mon - 17:00'
+    };
     const intentSummary = {
       student_id: sid, new_classes: 10, initial_purchased: 10, target_cumulative: 20,
       currency: 'INR', start_date: '2026-11-02', package_price: null, payment_amount: 0,
       class_duration: null, schedule_key: 'MONDAY@17:00', target_slots: targetSlots, created_session_ids: [],
+      expected_package: renSnapshot,
       inProgress: true, outcome: 'STARTED'
     };
     ds.setProperty('renewal_idemp_' + idempKey, JSON.stringify(intentSummary));
+    const renPkg = PackageRepository.Packages_insert(spreadsheet, renSnapshot);
+    RenewalIdempotency._recordRenewalPackageRow(spreadsheet, idempKey, renPkg._rowIndex);
 
     // 3. Persist 4 sessions to ClassSessions before interruption
     for (let i = 0; i < 4; i++) {
@@ -1073,11 +1133,12 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
     it('Test C: Retry after completion save failure completes without duplicating payments or credits', () => {
       const s = StudentService.Students_create(spreadsheet, { student_name: 'Test C Stu', parent_name: 'P C', parent_phone: '+91 9100000042', status: 'ACTIVE', subject: 'Math' }, adminActor);
       const sid = s.data.student_id;
-      PackageService.Packages_create(spreadsheet, { student_id: sid, plan_type: 'Per Class', classes_purchased: 10, currency: 'INR', package_price: 10000 }, adminActor);
+      PackageService.Packages_create(spreadsheet, { student_id: sid, plan_type: 'Per Class', classes_purchased: 10, currency: 'INR', package_price: 10000, start_date: '2026-10-01' }, adminActor);
 
       const key = 'test_c_key_recover';
       const payload = {
         student_id: sid, new_classes_purchased: 10, currency: 'INR', package_price: 10000,
+        start_date: '2026-11-01',
         payment: { record_payment: true, amount: 10000, currency: 'INR', payment_date: '2026-11-01', reference_number: 'REF-C-001' },
         idempotency_key: key
       };
@@ -1088,7 +1149,7 @@ describe('Final Targeted Verification: Student Package Renewal Safety Gates', ()
       let setCount = 0;
       ds.setProperty = function(k: string, v: string) {
         setCount++;
-        if (setCount === 1) return origSet.call(ds, k, v);
+        if (setCount <= 2) return origSet.call(ds, k, v);
         throw new Error('Durable store completion write failed');
       };
 

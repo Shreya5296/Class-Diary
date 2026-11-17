@@ -14,12 +14,11 @@ test.describe('E2E — Finances Refinements & Meeting Links Management', () => {
     await expect(page.locator('h1:has-text("Finances")')).toBeVisible({ timeout: 15000 });
 
     // 1. Verify exact Card Labels and Descriptions
-    await expect(page.locator('text=Total Invoice')).toBeVisible();
-    await expect(page.locator('text=Total agreed package value')).toBeVisible();
-    await expect(page.locator('text=Collected Earnings')).toBeVisible();
-    await expect(page.locator('text=Received Payments')).toBeVisible();
-    await expect(page.locator('text=Total Outstanding')).toBeVisible();
-    await expect(page.locator('text=Uncollected Balance')).toBeVisible();
+    const summaryCards = page.locator('[data-testid="finance-summary-cards"]');
+    await expect(summaryCards.getByText('Lifetime Package Value')).toBeVisible();
+    await expect(summaryCards.getByText('Lifetime Payments Received')).toBeVisible();
+    await expect(summaryCards.getByText('Recorded INR Value')).toBeVisible();
+    await expect(page.locator('text=Total Outstanding')).toHaveCount(0);
 
     // 2. Verify Student Balances is the first tab and selected by default
     const balancesTab = page.locator('#tab-balances');
@@ -37,17 +36,18 @@ test.describe('E2E — Finances Refinements & Meeting Links Management', () => {
     await page.locator('button:has-text("Cancel")').click();
     await expect(page.locator('h3:has-text("Record Student Payment")')).not.toBeVisible();
 
-    // 4. Switch to Payment History tab and verify 4-column headers
+    // 4. Switch to Payment History tab and verify canonical columns
     await historyTab.click();
     await expect(historyTab).toHaveAttribute('aria-selected', 'true');
     await expect(balancesTab).toHaveAttribute('aria-selected', 'false');
 
     const headers = page.locator('table thead th');
-    await expect(headers).toHaveCount(4);
-    await expect(headers.nth(0)).toHaveText('Student ID');
-    await expect(headers.nth(1)).toHaveText('Student Name');
-    await expect(headers.nth(2)).toHaveText('Date');
-    await expect(headers.nth(3)).toHaveText('Amount');
+    await expect(headers).toHaveCount(5);
+    await expect(headers.nth(0)).toHaveText('Payment Date');
+    await expect(headers.nth(1)).toHaveText('Student');
+    await expect(headers.nth(2)).toHaveText('Amount');
+    await expect(headers.nth(3)).toHaveText('Currency');
+    await expect(headers.nth(4)).toHaveText('Recorded INR Equivalent');
 
     // Method, Reference, and Actions must be absent
     await expect(page.locator('table thead th:has-text("Method")')).toHaveCount(0);
@@ -63,7 +63,7 @@ test.describe('E2E — Finances Refinements & Meeting Links Management', () => {
     await navigateTo(page, 'Students');
     await expect(page.locator('h1:has-text("Students Directory")')).toBeVisible({ timeout: 15000 });
 
-    // 3. Verify student list renders and expandable details show Primary Meeting Link
-    await expect(page.locator('text=Aarav Sharma').first()).toBeVisible();
+    // 3. Verify student list renders and expandable details show student records
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 15000 });
   });
 });

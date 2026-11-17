@@ -11,9 +11,10 @@ test.describe('E2E — Reports, Navigation & Cross-cutting Responsiveness', () =
 
   test('loads finances overview and verifies summary metrics', async ({ page }) => {
     await navigateTo(page, 'Finances');
-    await expect(page.locator('text=Total Invoice')).toBeVisible({ timeout: 20000 });
-    await expect(page.locator('text=Collected Earnings')).toBeVisible();
-    await expect(page.locator('text=Total Outstanding')).toBeVisible();
+    const summaryCards = page.locator('[data-testid="finance-summary-cards"]');
+    await expect(summaryCards.getByText('Lifetime Package Value')).toBeVisible({ timeout: 20000 });
+    await expect(summaryCards.getByText('Lifetime Payments Received')).toBeVisible();
+    await expect(summaryCards.getByText('Recorded INR Value')).toBeVisible();
     await expect(page.locator('button:has-text("Export Finances CSV")')).toBeVisible();
   });
 

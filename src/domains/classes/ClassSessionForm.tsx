@@ -103,7 +103,14 @@ export const ClassSessionForm: React.FC<ClassSessionFormProps> = ({
         </FormField>
 
         <FormField label="Class Start Time" required>
-          <input className={formStyles.input} type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <input
+            id="class-start-time"
+            aria-label="Class Start Time"
+            className={formStyles.input}
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+          />
           <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
             {timeSource === 'recurring' ? 'Derived from recurring schedule' : 'Set manually (no recurring schedule match)'}
           </span>

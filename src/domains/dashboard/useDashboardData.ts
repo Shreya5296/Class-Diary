@@ -4,11 +4,9 @@ import { fetchClasses } from '../classes/classApi';
 import { fetchSchedules, WeeklyScheduleEntry } from '../classes/scheduleApi';
 import { parseCanonicalScheduleString } from '../students/scheduleFormatter';
 import { fetchStudents } from '../students/studentApi';
-import { fetchFeeObligations } from '../fees/feeApi';
 import { fetchPackages } from '../packages/packageApi';
 import { ClassSession } from '../classes/classTypes';
 import { Student } from '../students/studentTypes';
-import { FeeObligation } from '../fees/feeTypes';
 import { Package } from '../packages/packageTypes';
 import { DashboardOverviewData } from './dashboardTypes';
 
@@ -17,7 +15,6 @@ export function useDashboardData(token?: string | null) {
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [schedules, setSchedules] = useState<WeeklyScheduleEntry[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [fees, setFees] = useState<FeeObligation[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [meetingLinks, setMeetingLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +24,11 @@ export function useDashboardData(token?: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const [ov, cls, schedList, stuList, feeList, pkgList] = await Promise.all([
+      const [ov, cls, schedList, stuList, pkgList] = await Promise.all([
         fetchDashboardOverview(token),
         fetchClasses(undefined, token).catch(() => []),
         fetchSchedules(undefined, token).catch(() => []),
         fetchStudents({}, token).catch(() => []),
-        fetchFeeObligations(undefined, token).catch(() => []),
         fetchPackages(undefined, token).catch(() => []),
       ]);
       let finalScheds = schedList;
@@ -54,7 +50,6 @@ export function useDashboardData(token?: string | null) {
       setClasses(cls);
       setSchedules(finalScheds);
       setStudents(stuList);
-      setFees(feeList);
       setPackages(pkgList);
       const derived = stuList.map((s) => ({
         student_id: s.student_id,
@@ -79,7 +74,6 @@ export function useDashboardData(token?: string | null) {
     classes,
     schedules,
     students,
-    fees,
     packages,
     meetingLinks,
     loading,

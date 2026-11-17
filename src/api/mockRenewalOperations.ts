@@ -36,8 +36,15 @@ function createMockRenewalSessions(sid: string, sName: string, subj: string, sch
   return created;
 }
 
+const MOCK_RENEWAL_IDEMP: Record<string, any> = {};
+
 export function handleMockRenewal<T>(payload: Record<string, unknown>, reqId: string): ApiResponse<T> {
   const meta = { requestId: reqId, timestamp: new Date().toISOString() };
+  const idempKey = String(payload.idempotency_key || payload.idempotencyKey || '').trim();
+  if (idempKey && MOCK_RENEWAL_IDEMP[idempKey]) {
+    return { ok: true, data: MOCK_RENEWAL_IDEMP[idempKey] as T, meta: { ...meta, idempotentRetry: true } as any };
+  }
+
   const sid = String(payload.student_id || payload.studentId || '');
   const stu = MOCK_STUDENTS.find((s) => s.student_id === sid);
   if (!stu) return { ok: false, error: { code: 'RECORD_NOT_FOUND', message: `Student not found: ${sid}` }, meta };
@@ -65,21 +72,27 @@ export function handleMockRenewal<T>(payload: Record<string, unknown>, reqId: st
   const sDate = String(payload.start_date || exPkg?.start_date || '');
   const eDate = String(payload.end_date || exPkg?.end_date || '');
 
-  const pkgData: Record<string, unknown> = {
-    package_id: exPkg ? exPkg.package_id : `pkg_${Date.now()}`, student_id: sid, student_name: stu.student_name,
+  const scheds = (payload.schedules || []) as Array<{ day_of_week: string; start_time: string; end_time?: string }>;
+  const schedStr = scheds.length > 0 ? scheds.map((s) => `${s.day_of_week} ${s.start_time}-${s.end_time || ''}`).join('; ') : (exPkg?.class_schedule || '');
+
+  const newPkgId = `pkg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const newPkg: Record<string, unknown> = {
+    package_id: newPkgId, student_id: sid, student_name: stu.student_name,
     plan_type: String(payload.plan_type || exPkg?.plan_type || 'Per Class'), currency: cur,
-    package_price: price, price, per_class: perClass, classes_purchased: cumulativePurchased,
-    total_classes: cumulativePurchased, consumed_classes: consumed, remaining_classes: newAvailable,
-    class_duration: dur, start_date: sDate, end_date: eDate, status: 'ACTIVE',
+    package_price: price, price, per_class: perClass, classes_purchased: newPurchased,
+    total_classes: newPurchased, consumed_classes: 0, remaining_classes: newPurchased,
+    class_duration: dur, class_schedule: schedStr, start_date: sDate, end_date: eDate, status: 'ACTIVE',
   };
-  if (exPkg) Object.assign(exPkg, pkgData); else MOCK_PACKAGES.unshift(pkgData);
+  MOCK_PACKAGES.unshift(newPkg);
 
   let recordedPayment: Record<string, unknown> | null = null;
   const pay = payload.payment as Record<string, unknown> | undefined;
   if (pay && Number(pay.amount) > 0) {
     const payCur = String(pay.currency || cur).toUpperCase();
     const payAmt = Number(pay.amount);
-    const inInr = pay.in_inr !== undefined && pay.in_inr !== null ? Number(pay.in_inr) : (payCur === 'INR' ? payAmt : 0);
+    const inInr = pay.in_inr !== undefined && pay.in_inr !== null && pay.in_inr !== ''
+      ? Number(pay.in_inr)
+      : (payCur === 'INR' ? payAmt : undefined);
     recordedPayment = {
       payment_id: `pay_${Date.now()}`, student_id: sid, student_name: stu.student_name, amount: payAmt,
       currency: payCur, in_inr: inInr, payment_date: String(pay.payment_date || sDate || new Date().toISOString().slice(0, 10)),
@@ -89,7 +102,6 @@ export function handleMockRenewal<T>(payload: Record<string, unknown>, reqId: st
   }
 
   let sessionsCreated = 0;
-  const scheds = (payload.schedules || []) as Array<{ day_of_week: string; start_time: string; end_time?: string }>;
   if (Array.isArray(scheds) && scheds.length > 0) {
     MOCK_SCHEDULES[sid] = scheds;
     for (const c of classesList) {
@@ -104,15 +116,14 @@ export function handleMockRenewal<T>(payload: Record<string, unknown>, reqId: st
     sessionsCreated = createMockRenewalSessions(sid, stu.student_name, stu.subject, scheds, sDate, eDate, newPurchased, dur);
   }
 
-  return {
-    ok: true,
-    data: {
-      student_id: sid, student_name: stu.student_name, status: 'ACTIVE',
-      previous_available_balance: prevAvailable, new_classes_purchased: newPurchased,
-      new_available_balance: newAvailable, cumulative_purchased: cumulativePurchased,
-      cumulative_consumed: consumed, package: exPkg || pkgData, payment: recordedPayment,
-      sessions_created: sessionsCreated,
-    } as T,
-    meta,
+  const resultData = {
+    student_id: sid, student_name: stu.student_name, status: 'ACTIVE',
+    previous_available_balance: prevAvailable, new_classes_purchased: newPurchased,
+    new_available_balance: newAvailable, cumulative_purchased: cumulativePurchased,
+    cumulative_consumed: consumed, package: newPkg, payment: recordedPayment,
+    sessions_created: sessionsCreated,
   };
+  if (idempKey) MOCK_RENEWAL_IDEMP[idempKey] = resultData;
+
+  return { ok: true, data: resultData as T, meta };
 }

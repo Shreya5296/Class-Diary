@@ -142,11 +142,14 @@ describe('Credit Rollover, Identity Preservation, and Invariant Rules', () => {
     expect(ren.data.cumulative_purchased).toBe(22);
     expect(ren.data.cumulative_consumed).toBe(5);
 
-    // Verify package configuration updated without corrupting credit counts
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.currency).toBe('INR');
-    expect(pkg.class_duration).toBe(60);
-    expect(pkg.classes_purchased).toBe(22);
+    // Verify separate packages exist without mutating historical package
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    const historical = pkgs.find((p: any) => p.currency === 'AUD');
+    const renewed = pkgs.find((p: any) => p.currency === 'INR');
+    expect(historical.classes_purchased).toBe(12);
+    expect(renewed.classes_purchased).toBe(10);
+    expect(renewed.class_duration).toBe(60);
   });
 
   it('attendance rules: PRESENT consumes credit, timely and waived cancellations preserve credit, late cancellation consumes credit', () => {

@@ -7,6 +7,7 @@ import { generateCalendarEvents, makeIsoInTz, parseTimeToMin, WEEKDAYS } from '.
 import { formatIsoTo12Hour } from '../../lib/time12Format';
 import { toInputDateFormat } from '../../lib/dateFormat';
 import { classifyCalendarEvent, isEventPast } from './calendarClassification';
+import { isValidHttpOrHttpsUrl } from '../../lib/urlSafety';
 import { isSessionOnDate, getSessionStartTime, getSessionDuration } from '../classes/sessionTimeNormalizer';
 
 export function buildDayColumns(params: {
@@ -30,7 +31,8 @@ export function buildDayColumns(params: {
     const dayDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
     const dayName = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' }).format(dayDate);
     const dayNumber = String(d);
-    const isToday = dayKey === todayKey;
+    const utcTodayKey = new Date().toISOString().slice(0, 10);
+    const isToday = dayKey === todayKey || dayKey === utcTodayKey;
     const dayOfWeek = WEEKDAYS[dayDate.getUTCDay()];
 
     const dayRawEvents = allEvents.filter((c) => isSessionOnDate(c, dayKey));
@@ -66,7 +68,9 @@ export function buildDayColumns(params: {
       const isCancelled = c.status === 'CANCELLED' || sessStatus === 'CANCELLED';
       const isPast = isEventPast(dayKey, rawEnd || rawStart, activeTz);
       const isCompleted = c.status === 'COMPLETED' || sessStatus === 'COMPLETED' || (c as unknown as { attendance_status?: string }).attendance_status === 'PRESENT';
-      const canJoin = isToday && !isCancelled && !isCompleted && Boolean(c.meeting_url);
+      const joinUrl = (c.meeting_url || stu?.primary_meeting_link || '').trim();
+      const isValidUrl = isValidHttpOrHttpsUrl(joinUrl);
+      const canJoin = isToday && !isCancelled && !isCompleted && Boolean(joinUrl) && isValidUrl;
       const category = classifyCalendarEvent({
         status: c.status, sessionStatus: sessStatus,
         attendanceStatus: (c as unknown as { attendance_status?: string }).attendance_status,
@@ -95,7 +99,7 @@ export function buildDayColumns(params: {
         isPast,
         isCancelled,
         canJoin,
-        meetingUrl: c.meeting_url,
+        meetingUrl: joinUrl,
       };
     });
 

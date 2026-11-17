@@ -10,7 +10,7 @@ export function useStudentRegistrationForm(
   onSuccess: (student: Student, message: string) => Promise<void>
 ) {
   const [formData, setFormData] = useState<RegistrationFormData>({
-    student: { student_name: '', subject: '', student_phone: '', student_email: '' },
+    student: { student_name: '', subject: '', student_phone: '', student_email: '', primary_meeting_link: '' },
     parent: { parent_name: '', parent_phone: '', parent_email: '' },
     pkg: { plan_type: 'Package', currency: 'INR', package_price: '', per_class: '', classes_purchased: '', class_duration: '60' },
     schedules: [],

@@ -115,9 +115,13 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
     const payments = PaymentRepository.Payments_getByStudentId(spreadsheet, sid);
     expect(payments.length).toBe(1);
 
-    // Ensure package purchased classes is 24, not 36
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.classes_purchased).toBe(24);
+    // Ensure package purchased classes is 24, not 36 across multi-row packages
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(12);
+    expect(pkgs[1].classes_purchased).toBe(12);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(24);
   });
 
   it('3. Completion is durably persisted before success is cached', () => {
@@ -127,12 +131,12 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
     const sid = stu.data.student_id;
 
     PackageService.Packages_create(spreadsheet, {
-      student_id: sid, plan_type: 'Per Class', classes_purchased: 8, currency: 'INR', package_price: 8000
+      student_id: sid, plan_type: 'Per Class', classes_purchased: 8, currency: 'INR', package_price: 8000, start_date: '2026-11-01'
     }, adminActor);
 
     const key = 'idemp_order_test_001';
     const payload = {
-      student_id: sid, new_classes_purchased: 8, currency: 'INR', package_price: 8000, idempotency_key: key
+      student_id: sid, new_classes_purchased: 8, currency: 'INR', package_price: 8000, start_date: '2026-11-15', idempotency_key: key
     };
 
     const ds = RenewalIdempotency._getDurableStore();
@@ -140,7 +144,7 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
     let callCount = 0;
     ds.setProperty = (k: string, v: string) => {
       callCount++;
-      if (callCount === 1) return origSet.call(ds, k, v); // Intent save succeeds
+      if (callCount <= 2) return origSet.call(ds, k, v); // Intent save & row index save succeed
       throw new Error('Durable store write failed during completion'); // Completion save fails
     };
 
@@ -190,7 +194,18 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
 
     // Pre-seed an interrupted intent in durable store with targetSlots
     const ds = RenewalIdempotency._getDurableStore();
-    RenewalIdempotency._recordRenewalInitiated(spreadsheet, key, sid, 10, 20, payload, adminActor, targetSlots);
+    const renSnapshot = {
+      student_id: sid, student_name: 'Recoverable Student', plan_type: 'Per Class',
+      currency: 'INR', package_price: 10000, per_class: 0, classes_purchased: 10,
+      start_date: '2026-11-16',
+      end_date: '2027-01-18',
+      next_due_date: '2027-01-25',
+      class_duration: 0,
+      class_schedule: 'Mon - 18:00'
+    };
+    RenewalIdempotency._recordRenewalInitiated(spreadsheet, key, sid, 10, 20, payload, adminActor, targetSlots, '', 1, 1, renSnapshot);
+    const renPkg = PackageRepository.Packages_insert(spreadsheet, renSnapshot);
+    RenewalIdempotency._recordRenewalPackageRow(spreadsheet, key, renPkg._rowIndex);
 
     // Simulate 3 pre-created sessions by first attempt matching the target slots
     for (let i = 0; i < 3; i++) {
@@ -246,9 +261,13 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
     expect(allPays.length).toBe(1);
     expect(allPays[0].amount).toBe(10000);
 
-    // Verify packages has exactly 20 classes purchased
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.classes_purchased).toBe(20);
+    // Verify packages has exactly 20 classes purchased across 2 package rows (10 initial + 10 renewed)
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(10);
+    expect(pkgs[1].classes_purchased).toBe(10);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(20);
   });
 
   it('6. Payment recording and voiding works seamlessly without AuditLog', () => {
@@ -1072,9 +1091,13 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
     expect(retryRes.success).toBe(true);
     expect(retryRes.meta?.idempotentRetry).toBe(true);
 
-    // Package purchased classes remains 20 (no mutation)
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.classes_purchased).toBe(20);
+    // Package purchased classes remains 20 across 2 package rows (no mutation)
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(10);
+    expect(pkgs[1].classes_purchased).toBe(10);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(20);
 
     // 5. Modified payload with same key (e.g. 20 classes instead of 10) MUST BE REJECTED
     const conflictRes = RenewalService.Packages_renew(spreadsheet, Object.assign({}, payload, { new_classes_purchased: 20 }), adminActor);
@@ -1608,8 +1631,12 @@ describe('AuditLog Removal Safety & Architecture Verification', () => {
     expect(renRes2.meta?.idempotentRetry).toBe(true);
 
     // Verify package credits were NOT duplicated (10 initial + 10 renewed = 20, NOT 30)
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.classes_purchased).toBe(20);
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs[0].classes_purchased).toBe(10);
+    expect(pkgs[1].classes_purchased).toBe(10);
+    const totalPurchased = pkgs.reduce((sum: number, p: any) => sum + Number(p.classes_purchased || 0), 0);
+    expect(totalPurchased).toBe(20);
   });
 
   it('26. Mutation failure before completion persistence and lock release subsequently throws', () => {

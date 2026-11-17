@@ -308,9 +308,10 @@ describe('Second-Round Engineering Challenge: Verification & Deep Invariants', (
     const payments = PaymentRepository.Payments_getAll(spreadsheet).filter((p: any) => p.student_id === sid);
     expect(payments.length).toBe(1);
 
-    // Verify packages sheet: cumulative credits remained 20
-    const pkg = PackageRepository.Packages_getById(spreadsheet, sid);
-    expect(pkg.classes_purchased).toBe(20);
+    // Verify packages sheet: separate package created, historical package unchanged (each 10)
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs.every((p: any) => p.classes_purchased === 10)).toBe(true);
 
     // Verify class sessions: exactly 10 new sessions were created, not 20
     const sessions = ClassRepository.Classes_getAll(spreadsheet).filter((sess: any) => sess.student_id === sid && sess.session_status === 'SCHEDULED');

@@ -76,7 +76,9 @@ describe('Mandatory Regression Suite: Package Renewal API Routing & Bootstrap', 
     expect(res.success).toBe(true);
     expect(res.data.cumulative_purchased).toBe(20);
     expect(res.data.new_available_balance).toBe(20);
-    expect(PackageRepository.Packages_getById(spreadsheet, sid).classes_purchased).toBe(20);
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs.every(p => p.classes_purchased === 10)).toBe(true); // Both rows have 10, not 20
   });
 
   // Test C — Alias routing
@@ -104,7 +106,10 @@ describe('Mandatory Regression Suite: Package Renewal API Routing & Bootstrap', 
     const res = OperationRouter.routeOperation(context);
     expect(res.success).toBe(true);
     expect(res.data.cumulative_purchased).toBe(14);
-    expect(PackageRepository.Packages_getById(spreadsheet, sid).classes_purchased).toBe(14);
+    const pkgs = PackageRepository.Packages_getByStudentId(spreadsheet, sid);
+    expect(pkgs.length).toBe(2);
+    expect(pkgs.some(p => p.classes_purchased === 8)).toBe(true); // Historical unchanged
+    expect(pkgs.some(p => p.classes_purchased === 6)).toBe(true); // New package row
   });
 
   // Test D — Missing handler behavior

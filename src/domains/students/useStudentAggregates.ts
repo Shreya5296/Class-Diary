@@ -5,16 +5,19 @@ import { Payment } from '../payments/paymentTypes';
 import { fetchPayments } from '../payments/paymentApi';
 import { fetchClasses } from '../classes/classApi';
 import { ClassSession } from '../classes/classTypes';
-import { fetchSchedules, WeeklyScheduleEntry } from '../classes/scheduleApi';
+import { WeeklyScheduleEntry } from '../classes/scheduleApi';
 import { parseCanonicalScheduleString } from './scheduleFormatter';
 import { getLatestCompletedClassDate } from './studentStatusClassifier';
+import { calculateStudentFinancialBalances, CurrencyFinancialBalance } from '../finances/studentFinancialAccounting';
 
 export interface StudentFinancialInfo {
   totalInvoiced: number;
   totalPaid: number;
   outstanding: number;
+  availableCredit?: number;
   currency: string;
   inInr?: number;
+  currencyBalances?: CurrencyFinancialBalance[];
 }
 
 export function useStudentAggregates(studentIds: string[], token?: string | null) {
@@ -38,24 +41,24 @@ export function useStudentAggregates(studentIds: string[], token?: string | null
       setPayments(pays);
       setClasses(cls);
 
-      const schedPromises = studentIds.map(async (sid) => {
-        const sched = await fetchSchedules(sid, token).catch(() => []);
-        return { sid, sched };
-      });
-      const schedResults = await Promise.all(schedPromises);
       const newMap: Record<string, WeeklyScheduleEntry[]> = {};
-      schedResults.forEach(({ sid, sched }) => {
-        if (sched.length > 0) {
-          newMap[sid] = sched;
+      for (const sid of studentIds) {
+        const studentPkgs = pkgs
+          .filter((p) => p.student_id === sid)
+          .sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')));
+        const activePkg =
+          studentPkgs.find((p) => p.status === 'ACTIVE' && Boolean(p.class_schedule)) ||
+          studentPkgs.find((p) => Boolean(p.class_schedule)) ||
+          studentPkgs[0];
+        if (activePkg && activePkg.class_schedule) {
+          newMap[sid] = parseCanonicalScheduleString(
+            activePkg.class_schedule,
+            Number(activePkg.class_duration) || 60
+          );
         } else {
-          const pkg = pkgs.find((p) => p.student_id === sid);
-          if (pkg && pkg.class_schedule) {
-            newMap[sid] = parseCanonicalScheduleString(pkg.class_schedule, Number(pkg.class_duration) || 60);
-          } else {
-            newMap[sid] = [];
-          }
+          newMap[sid] = [];
         }
-      });
+      }
       setSchedulesMap(newMap);
     } finally {
       setLoading(false);
@@ -87,30 +90,29 @@ export function useStudentAggregates(studentIds: string[], token?: string | null
   const getStudentMeetingLink = (_sid: string): any => undefined;
 
   const getStudentFinancials = (sid: string): StudentFinancialInfo => {
-    const studentPkgs = packages.filter((p) => p.student_id === sid && p.status !== 'CANCELLED' && p.status !== 'VOID');
-    const studentPays = payments.filter((p) => p.student_id === sid && p.status !== 'VOIDED' && p.payment_status !== 'VOIDED');
+    const currencyBalances = calculateStudentFinancialBalances(packages, payments, sid);
+    const primary = currencyBalances[0] || {
+      currency: 'INR',
+      totalPayable: 0,
+      totalPaid: 0,
+      outstanding: 0,
+      availableCredit: 0,
+    };
 
-    let totalInvoiced = 0;
-    let currency = 'INR';
-    for (const pkg of studentPkgs) {
-      totalInvoiced += Number(pkg.package_price || pkg.price || 0);
-      if (pkg.currency) currency = pkg.currency;
-    }
-
-    let totalPaid = 0;
     let totalInInr = 0;
+    const studentPays = payments.filter((p) => p.student_id === sid && p.status !== 'VOIDED' && p.payment_status !== 'VOIDED');
     for (const pay of studentPays) {
-      totalPaid += Number(pay.amount || 0);
       if (pay.in_inr) totalInInr += Number(pay.in_inr);
     }
 
-    const outstanding = Math.max(0, totalInvoiced - totalPaid);
     return {
-      totalInvoiced,
-      totalPaid,
-      outstanding,
-      currency,
+      totalInvoiced: primary.totalPayable,
+      totalPaid: primary.totalPaid,
+      outstanding: primary.outstanding,
+      availableCredit: primary.availableCredit,
+      currency: primary.currency,
       inInr: totalInInr > 0 ? totalInInr : undefined,
+      currencyBalances,
     };
   };
 
