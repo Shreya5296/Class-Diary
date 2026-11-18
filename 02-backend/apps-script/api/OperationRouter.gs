@@ -35,9 +35,9 @@ function _bootstrapAppsScriptHandlers(regObj, errors) {
     { n: 'registerStudentOperations', f: typeof registerStudentOperations === 'function' ? registerStudentOperations : null },
     { n: 'registerPaymentOperations', f: typeof registerPaymentOperations === 'function' ? registerPaymentOperations : null },
     { n: 'registerClassOperations', f: typeof registerClassOperations === 'function' ? registerClassOperations : null },
-    { n: 'registerFeeOperations', f: typeof registerFeeOperations === 'function' ? registerFeeOperations : null },
     { n: 'registerReportOperations', f: typeof registerReportOperations === 'function' ? registerReportOperations : null },
-    { n: 'registerClassScheduleOperations', f: typeof registerClassScheduleOperations === 'function' ? registerClassScheduleOperations : null }
+    { n: 'registerClassScheduleOperations', f: typeof registerClassScheduleOperations === 'function' ? registerClassScheduleOperations : null },
+    { n: 'registerSystemOperations', f: typeof registerSystemOperations === 'function' ? registerSystemOperations : null }
   ];
   for (var i = 0; i < fns.length; i++) {
     if (typeof fns[i].f === 'function') {
@@ -58,9 +58,9 @@ function _bootstrapNodeHandlers(regObj, errors) {
     ['registerStudentOperations', '../students/StudentHandlers.gs'],
     ['registerPaymentOperations', '../payments/PaymentHandlers.gs'],
     ['registerClassOperations', '../classes/ClassHandlers.gs'],
-    ['registerFeeOperations', '../fees/FeeHandlers.gs'],
     ['registerReportOperations', '../reports/ReportHandlers.gs'],
-    ['registerClassScheduleOperations', '../classes/ClassScheduleHandlers.gs']
+    ['registerClassScheduleOperations', '../classes/ClassScheduleHandlers.gs'],
+    ['registerSystemOperations', '../setup/SystemHandlers.gs']
   ];
   for (var i = 0; i < mods.length; i++) {
     try {

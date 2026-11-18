@@ -3,20 +3,18 @@ import { MockSpreadsheet } from '../mocks/MockSpreadsheet';
 
 // @ts-ignore
 const { Schedules_list, Schedules_save, validateScheduleEntry } = require('../../02-backend/apps-script/classes/ClassScheduleService.gs');
-// @ts-ignore
-const { runRecurringSchedulesMigration } = require('../../02-backend/apps-script/setup/SchemaMigration.gs');
 
-describe('ClassScheduleService and Migration Backend Operations', () => {
+describe('ClassScheduleService Backend Operations', () => {
   let spreadsheet: MockSpreadsheet;
 
   beforeEach(() => {
     spreadsheet = new MockSpreadsheet();
-    // Add canonical Packages sheet with 11 initial columns
+    // Add canonical Packages sheet with 12 columns
     const pkgSheet = spreadsheet.insertSheet('Packages');
     pkgSheet.appendRow([
-      'package_id', 'student_id', 'student_name', 'plan_type', 'currency',
+      'student_id', 'student_name', 'plan_type', 'currency',
       'package_price', 'per_class', 'classes_purchased',
-      'start_date', 'end_date', 'next_due_date'
+      'start_date', 'end_date', 'next_due_date', 'class_duration', 'class_schedule'
     ]);
   });
 
@@ -27,27 +25,25 @@ describe('ClassScheduleService and Migration Backend Operations', () => {
     expect(validateScheduleEntry({ day_of_week: 'MONDAY', start_time: '17:00', end_time: '16:00' }).valid).toBe(false); // end <= start
   });
 
-  it('runs runRecurringSchedulesMigration safely and adds ClassSchedules tab and class_duration column', () => {
-    const res = runRecurringSchedulesMigration(spreadsheet);
-    expect(res.success).toBe(true);
-    expect(res.created).toBe(true);
-    expect(res.classDurationColumnAdded).toBe(true);
-
-    const schedSheet = spreadsheet.getSheetByName('ClassSchedules');
-    expect(schedSheet).toBeDefined();
-    expect(schedSheet!.rows[0]).toEqual([
-      'schedule_id', 'student_id', 'day_of_week', 'start_time', 'end_time', 'is_active', 'created_at', 'updated_at'
+  it('formats and parses recurring schedule entries losslessly', () => {
+    const pkgSheet = spreadsheet.getSheetByName('Packages')!;
+    pkgSheet.appendRow([
+      'STU_001', 'Test Student', 'Package', 'INR',
+      12000, 1000, 12, '2026-02-01', '2026-04-01', '2026-03-01', 40, ''
     ]);
 
-    const pkgSheet = spreadsheet.getSheetByName('Packages');
-    expect(pkgSheet!.rows[0]).toContain('class_duration');
-    expect(pkgSheet!.rows[0].length).toBe(12);
+    const entries = [
+      { day_of_week: 'MONDAY', start_time: '16:00', end_time: '16:40' },
+      { day_of_week: 'WEDNESDAY', start_time: '17:00', end_time: '17:40' }
+    ];
+    const saveRes = Schedules_save(spreadsheet, 'STU_001', entries);
+    expect(saveRes.success).toBe(true);
 
-    // Migration safe to rerun (idempotent)
-    const rerun = runRecurringSchedulesMigration(spreadsheet);
-    expect(rerun.success).toBe(true);
-    expect(rerun.created).toBe(false);
-    expect(rerun.classDurationColumnAdded).toBe(false);
+    const listRes = Schedules_list(spreadsheet, 'STU_001');
+    expect(listRes.success).toBe(true);
+    expect(listRes.data.length).toBe(2);
+    expect(listRes.data[0].day_of_week).toBe('MONDAY');
+    expect(listRes.data[1].day_of_week).toBe('WEDNESDAY');
   });
 
   it('persists recurring class schedules to ClassSchedules sheet and avoids duplicates on resave', () => {

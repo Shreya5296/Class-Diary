@@ -9,7 +9,7 @@ import SpreadsheetBootstrap from '../../02-backend/apps-script/sheets/Spreadshee
 // Load Apps Script modules via CommonJS require
 const { registerStudentOperations } = require('../../02-backend/apps-script/students/StudentHandlers.gs');
 const { registerPackageOperations } = require('../../02-backend/apps-script/packages/PackageHandlers.gs');
-const { registerFeeOperations } = require('../../02-backend/apps-script/fees/FeeHandlers.gs');
+const { registerSystemOperations } = require('../../02-backend/apps-script/setup/SystemHandlers.gs');
 const { registerPaymentOperations } = require('../../02-backend/apps-script/payments/PaymentHandlers.gs');
 const { registerClassOperations } = require('../../02-backend/apps-script/classes/ClassHandlers.gs');
 const { registerReportOperations } = require('../../02-backend/apps-script/reports/ReportHandlers.gs');
@@ -29,7 +29,7 @@ describe('Backend Operation Adapters and Compatibility', () => {
     SpreadsheetBootstrap.bootstrapSpreadsheet(spreadsheet, SheetRegistry, '1.0.0');
     registerStudentOperations(mockRouter);
     registerPackageOperations(mockRouter);
-    registerFeeOperations(mockRouter);
+    registerSystemOperations(mockRouter);
     registerPaymentOperations(mockRouter);
     registerClassOperations(mockRouter);
     registerReportOperations(mockRouter);
@@ -88,33 +88,22 @@ describe('Backend Operation Adapters and Compatibility', () => {
     expect(balRes.data.remainingClasses).toBe(10);
   });
 
-  it('adapts fees.create with description and enriches fee output', () => {
-    const studentRes = registry['students.create']({
+  it('adapts system.inspectTabs and returns accurate sheet metadata', () => {
+    const inspectRes = registry['system.inspectTabs']({
       spreadsheet,
-      payload: { full_name: 'Fee Student', phone: '9888888888', parent_name: 'Parent' },
+      payload: {},
       actorId: 'usr_test',
       verifiedEmail: 'ashreya0502@gmail.com',
-      requestId: 'req_f_stu',
-    });
-    const studentId = studentRes.data.student_id;
-
-    const feeRes = registry['fees.create']({
-      spreadsheet,
-      payload: { student_id: studentId, description: 'Monthly Tuition', amount_due: 3000, due_date: '2026-11-01' },
-      actorId: 'usr_test',
-      verifiedEmail: 'ashreya0502@gmail.com',
-      requestId: 'req_f',
+      requestId: 'req_sys_inspect',
     });
 
-    expect(feeRes.success).toBe(true);
-    expect(feeRes.data.obligation_description).toBe('Monthly Tuition');
-
-    const listRes = registry['fees.list']({ spreadsheet, payload: { studentId } });
-    expect(listRes.success).toBe(true);
-    expect(listRes.data[0].fee_id).toBe(feeRes.data.fee_obligation_id);
-    expect(listRes.data[0].description).toBe('Monthly Tuition');
-    expect(listRes.data[0].outstanding_balance).toBe(3000);
-    expect(listRes.data[0].amount_paid).toBe(0);
+    expect(inspectRes.success).toBe(true);
+    expect(inspectRes.data.totalTabs).toBeGreaterThanOrEqual(4);
+    const tabNames = inspectRes.data.tabs.map((t: any) => t.name);
+    expect(tabNames).toContain('Students');
+    expect(tabNames).toContain('Packages');
+    expect(tabNames).toContain('Payments');
+    expect(tabNames).toContain('ClassSessions');
   });
 
   it('records payments with fee_id and reference_number aliases', () => {
@@ -126,15 +115,7 @@ describe('Backend Operation Adapters and Compatibility', () => {
       requestId: 'req_p_stu',
     });
     const studentId = studentRes.data.student_id;
-
-    const feeRes = registry['fees.create']({
-      spreadsheet,
-      payload: { student_id: studentId, description: 'Tuition', amount_due: 2000, due_date: '2026-11-01' },
-      actorId: 'usr_test',
-      verifiedEmail: 'ashreya0502@gmail.com',
-      requestId: 'req_p_fee',
-    });
-    const feeId = feeRes.data.fee_obligation_id;
+    const feeId = 'fee_test_001';
 
     const payRes = registry['payments.record']({
       spreadsheet,

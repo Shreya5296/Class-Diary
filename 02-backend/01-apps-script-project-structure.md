@@ -82,14 +82,8 @@
 │   ├── IdGenerator.gs          # Sequential STU_001 and entity ID generators
 │   ├── DateTime.gs             # Timezone-safe date arithmetic
 │   └── Money.gs                # Currency & rounding helpers
-├── setup/                      # Migrations & maintenance operations
-│   ├── FourTableMigration.gs   # Four-table datastore migration, backup & verification engine
-│   ├── FinalCanonicalSchemaMigration.gs # Historical canonical migration
-│   ├── StudentIdMigration.gs   # Migrated 23 legacy IDs to STU_001..STU_026
-│   ├── StudentIdVerification.gs# Referential integrity verifier & rollback engine
-│   ├── StudentIdPreflight.gs   # Read-only preflight analysis engine
-│   ├── SystemHandlers.gs       # system.inspectTabs, migrateCanonicalSchemas, backdateStudentSessions
-│   ├── SchemaMigration.gs      # Schema migration runner
+├── setup/                      # Operational utilities
+│   ├── SystemHandlers.gs       # Administrative maintenance: inspectTabs, createPreLaunchBackup, standardizeDateFormats
 │   └── RunBootstrap.gs         # Manual bootstrap runner
-└── fees/                       # Deprecated legacy fallback fee service (preserved for backward compatibility)
+└── fees/                       # Backward-compatibility fallback (FeeRepository.gs, FeeService.gs, FeeValidation.gs for legacy compatibility)
 ```

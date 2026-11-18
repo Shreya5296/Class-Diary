@@ -19,8 +19,6 @@ import PaymentService from '../../02-backend/apps-script/payments/PaymentService
 import ClassService from '../../02-backend/apps-script/classes/ClassService.gs';
 // @ts-ignore
 import ReportService from '../../02-backend/apps-script/reports/ReportService.gs';
-// @ts-ignore
-import SchemaMigration from '../../02-backend/apps-script/setup/SchemaMigration.gs';
 
 describe('Absent Operational Tabs Regression (AppConfig, ImportBatches, ImportRowResults removed)', () => {
   let spreadsheet: MockSpreadsheet;
@@ -152,10 +150,9 @@ describe('Absent Operational Tabs Regression (AppConfig, ImportBatches, ImportRo
     expect(spreadsheet.getSheetByName('StudentNotes')).toBeNull();
   });
 
-  it('executes schema migration cleanly without requiring AppConfig, ImportBatches, or ImportRowResults', () => {
-    const res = SchemaMigration.runApprovedSchemaMigration(spreadsheet);
+  it('initializes canonical datastore cleanly without requiring AppConfig, ImportBatches, or ImportRowResults', () => {
+    const res = SpreadsheetBootstrap.bootstrapSpreadsheet(spreadsheet, SheetRegistry);
     expect(res.success).toBe(true);
-    expect(res.verificationErrors.length).toBe(0);
 
     // AuditLog is absent
     expect(spreadsheet.getSheetByName('AuditLog')).toBeNull();

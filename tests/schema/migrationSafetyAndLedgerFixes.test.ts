@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { MockSpreadsheet } from '../mocks/MockSpreadsheet';
 
 // @ts-ignore
-const { runApprovedSchemaMigration, TARGET_SCHEMAS, FORBIDDEN_OBSOLETE_COLUMNS } = require('../../02-backend/apps-script/setup/SchemaMigration.gs');
+const SheetRegistry = require('../../02-backend/apps-script/sheets/SheetRegistry.gs');
 // @ts-ignore
 const PaymentService = require('../../02-backend/apps-script/payments/PaymentService.gs');
 // @ts-ignore
@@ -45,81 +45,32 @@ describe('Audit Findings Fixes: Migration Safety, Payment Ops, Notes & Class Ded
     spreadsheet = setupFullSpreadsheet();
   });
 
-  describe('1. Migration Safety & Archival', () => {
-    it('archives legacy non-empty Payments before modifying active Payments tab and remaps rows', () => {
-      const ss = new MockSpreadsheet();
+  describe('1. Canonical Four-Table Schema & Data Safety', () => {
+    it('verifies that canonical table schemas exactly match expected headers without obsolete columns', () => {
+      const canonicalNames = SheetRegistry.getCanonicalSheetNames();
+      expect(canonicalNames).toEqual(['Students', 'Packages', 'Payments', 'ClassSessions']);
 
-      // Setup legacy Payments with 15 columns and 2 data rows
-      const legacyPay = ss.insertSheet('Payments');
-      legacyPay.rows = [
-        ['payment_id', 'student_id', 'fee_obligation_id', 'payment_date', 'amount', 'currency', 'payment_method', 'transaction_reference', 'idempotency_key', 'payment_status', 'notes', 'created_at', 'updated_at', 'voided_at', 'void_reason'],
-        ['pay_001', 'stu_100', 'fee_1', '2026-03-01', 5000, 'INR', 'UPI', 'UPI_REF_1', 'idem_1', 'RECORDED', 'First payment', '2026-03-01T00:00:00Z', '2026-03-01T00:00:00Z', '', ''],
-        ['pay_002', 'stu_200', 'fee_2', '2026-03-02', 3000, 'USD', 'CARD', 'CARD_REF_2', 'idem_2', 'RECORDED', 'Second payment', '2026-03-02T00:00:00Z', '2026-03-02T00:00:00Z', '', '']
-      ];
+      const payHeaders = SheetRegistry.getExpectedHeaders('Payments');
+      expect(payHeaders).toEqual(['student_id', 'student_name', 'payment_date', 'amount', 'currency', 'in_inr']);
 
-      const res = runApprovedSchemaMigration(ss);
-      expect(res.success).toBe(true);
-      expect(res.paymentsArchiveTab).toContain('Payments_Archive');
+      const pkgHeaders = SheetRegistry.getExpectedHeaders('Packages');
+      expect(pkgHeaders).toContain('class_schedule');
+      expect(pkgHeaders.length).toBe(12);
 
-      // Verify archive tab preserves legacy 15 columns losslessly
-      const archiveSheet = ss.getSheetByName('Payments_Archive')!;
-      expect(archiveSheet).toBeDefined();
-      expect(archiveSheet.rows.length).toBe(3);
-      expect(archiveSheet.rows[1][0]).toBe('pay_001');
-      expect(archiveSheet.rows[1][6]).toBe('UPI');
+      const clsHeaders = SheetRegistry.getExpectedHeaders('ClassSessions');
+      expect(clsHeaders).toContain('session_notes');
+      expect(clsHeaders.length).toBe(9);
 
-      // Verify active Payments tab was cleanly remapped to 6 target columns
-      const activePay = ss.getSheetByName('Payments')!;
-      expect(activePay.getMaxColumns()).toBe(6);
-      expect(activePay.rows[0]).toEqual(TARGET_SCHEMAS['Payments']);
-      expect(activePay.rows[1][0]).toBe('stu_100'); // student_id correctly remapped
-      expect(activePay.rows[1][3]).toBe(5000);     // amount correctly remapped
-      expect(activePay.rows[2][0]).toBe('stu_200');
-      expect(activePay.rows[2][3]).toBe(3000);
+      const stuHeaders = SheetRegistry.getExpectedHeaders('Students');
+      expect(stuHeaders).toContain('primary_meeting_link');
+      expect(stuHeaders.length).toBe(10);
     });
 
-    it('never overwrites an existing archive, creating a timestamped archive instead', () => {
-      const ss = new MockSpreadsheet();
-
-      // Pre-existing archive sheet
-      const existingArch = ss.insertSheet('FeeObligations_Archive');
-      existingArch.rows = [['old_col_1'], ['old_data_1']];
-
-      // Legacy fee obligations with data
-      const feeSheet = ss.insertSheet('FeeObligations');
-      feeSheet.rows = [['fee_id', 'student_id'], ['fee_999', 'stu_999']];
-
-      const res = runApprovedSchemaMigration(ss);
-      expect(res.success).toBe(true);
-      expect(res.feeObligationsTab).toMatch(/^ARCHIVED_TO_FeeObligations_Archive_\d+/);
-
-      // Verify original archive was not overwritten
-      expect(existingArch.rows[1][0]).toBe('old_data_1');
-    });
-
-    it('executes safely without requiring AuditLog or any operational tabs', () => {
-      const ss = new MockSpreadsheet();
-      const legacyPay = ss.insertSheet('Payments');
-      legacyPay.rows = [['payment_id', 'student_id', 'amount'], ['pay_1', 'stu_1', 1000]];
-
-      const res = runApprovedSchemaMigration(ss);
-      expect(res.success).toBe(true);
-      expect(ss.getSheetByName('AuditLog')).toBeNull();
-    });
-
-    it('is completely idempotent when rerun on an already-migrated sheet', () => {
-      const run1 = runApprovedSchemaMigration(spreadsheet);
-      expect(run1.success).toBe(true);
-
-      const run2 = runApprovedSchemaMigration(spreadsheet);
-      expect(run2.success).toBe(true);
-      expect(run2.verificationErrors.length).toBe(0);
-
-      // Check all 6 schemas match target
-      for (const tab in TARGET_SCHEMAS) {
-        const sh = spreadsheet.getSheetByName(tab)!;
-        expect(sh.rows[0]).toEqual(TARGET_SCHEMAS[tab]);
-      }
+    it('confirms that obsolete tabs remain excluded from canonical schema', () => {
+      expect(spreadsheet.getSheetByName('AuditLog')).toBeNull();
+      expect(spreadsheet.getSheetByName('AppConfig')).toBeNull();
+      expect(spreadsheet.getSheetByName('ImportBatches')).toBeNull();
+      expect(spreadsheet.getSheetByName('ImportRowResults')).toBeNull();
     });
   });
 
@@ -140,7 +91,7 @@ describe('Audit Findings Fixes: Migration Safety, Payment Ops, Notes & Class Ded
 
       expect(res.success).toBe(true);
       // Header MUST still be present in row 0
-      expect(paySheet.rows[0]).toEqual(TARGET_SCHEMAS['Payments']);
+      expect(paySheet.rows[0]).toEqual(SheetRegistry.SHEET_SCHEMAS[SheetRegistry.SHEET_NAMES.PAYMENTS]);
       expect(paySheet.rows.length).toBe(1); // 1 header row left, data row deleted
     });
 

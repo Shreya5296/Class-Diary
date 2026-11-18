@@ -30,38 +30,6 @@ function registerSystemOperations(router) {
     };
   });
 
-  reg('system.hideOperationalTabs', function(ctx) {
-    var ss = ctx.spreadsheet;
-    if (!ss) return { success: false, code: 'UNAVAILABLE', message: 'Spreadsheet unavailable' };
-
-    var targets = [];
-    var outcome = {};
-
-    for (var i = 0; i < targets.length; i++) {
-      var name = targets[i];
-      var sheet = ss.getSheetByName(name);
-      if (sheet) {
-        if (typeof sheet.hideSheet === 'function') {
-          sheet.hideSheet();
-          var isHidden = typeof sheet.isSheetHidden === 'function' ? sheet.isSheetHidden() : true;
-          outcome[name] = { hidden: isHidden, status: isHidden ? 'HIDDEN' : 'HIDE_ATTEMPTED' };
-        } else {
-          outcome[name] = { status: 'NO_HIDE_METHOD' };
-        }
-      } else {
-        outcome[name] = { status: 'NOT_FOUND' };
-      }
-    }
-
-    return {
-      success: true,
-      data: {
-        spreadsheetId: ss.getId(),
-        results: outcome
-      }
-    };
-  });
-
   reg('system.createPreLaunchBackup', function(ctx) {
     var ss = ctx.spreadsheet;
     if (!ss) return { success: false, code: 'UNAVAILABLE', message: 'Spreadsheet unavailable' };
@@ -127,35 +95,6 @@ function registerSystemOperations(router) {
         tabDetails: comparisons
       }
     };
-  });
-
-  reg('system.migrateSchema', function(ctx) {
-    var ss = ctx.spreadsheet;
-    if (!ss) return { success: false, code: 'UNAVAILABLE', message: 'Spreadsheet unavailable' };
-    var fn = typeof runApprovedSchemaMigration === 'function' ? runApprovedSchemaMigration : (typeof require !== 'undefined' ? require('./SchemaMigration.gs').runApprovedSchemaMigration : null);
-    if (!fn) return { success: false, code: 'NOT_FOUND', message: 'Migration function not found' };
-    return fn(ss);
-  });
-
-  reg('system.migrateRecurringSchedules', function(ctx) {
-    var ss = ctx.spreadsheet;
-    var fn = typeof runRecurringSchedulesMigration === 'function' ? runRecurringSchedulesMigration : (typeof require !== 'undefined' ? require('./SchemaMigration.gs').runRecurringSchedulesMigration : null);
-    if (!fn) return { success: false, code: 'NOT_FOUND', message: 'Migration function not found' };
-    return fn(ss);
-  });
-
-  reg('system.migrateCanonicalSchemas', function(ctx) {
-    var ss = ctx.spreadsheet;
-    var fn = typeof runFinalCanonicalSchemaMigration === 'function' ? runFinalCanonicalSchemaMigration : (typeof require !== 'undefined' ? require('./FinalCanonicalSchemaMigration.gs').runFinalCanonicalSchemaMigration : null);
-    if (!fn) return { success: false, code: 'NOT_FOUND', message: 'runFinalCanonicalSchemaMigration function not found' };
-    return fn(ss);
-  });
-
-  reg('system.backdateStudentSessions', function(ctx) {
-    var ss = ctx.spreadsheet;
-    var fn = typeof runBackdateStudentSessions === 'function' ? runBackdateStudentSessions : (typeof require !== 'undefined' ? require('./FinalCanonicalSchemaMigration.gs').runBackdateStudentSessions : null);
-    if (!fn) return { success: false, code: 'NOT_FOUND', message: 'runBackdateStudentSessions function not found' };
-    return fn(ss, ctx.payload);
   });
 
   reg('system.standardizeDateFormats', function(ctx) {
