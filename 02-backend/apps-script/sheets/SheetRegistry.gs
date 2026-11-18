@@ -11,9 +11,7 @@ var SHEET_NAMES = {
   PAYMENTS: 'Payments',
   CLASS_SESSIONS: 'ClassSessions',
   // Preserved for legacy reference only
-  ENROLLMENTS: 'Enrollments',
-  FEE_OBLIGATIONS: 'FeeObligations',
-  CLASS_SCHEDULES: 'ClassSchedules'
+  FEE_OBLIGATIONS: 'FeeObligations'
 };
 
 var SHEET_SCHEMAS = {};
@@ -22,13 +20,6 @@ var SHEET_SCHEMAS = {};
 SHEET_SCHEMAS[SHEET_NAMES.STUDENTS] = [
   'student_id', 'student_name', 'parent_name', 'parent_phone', 'parent_email',
   'student_phone', 'student_email', 'subject', 'status', 'primary_meeting_link'
-];
-
-// Preserved for legacy transition fallback; superseded by Packages
-SHEET_SCHEMAS[SHEET_NAMES.ENROLLMENTS] = [
-  'enrollment_id', 'student_id', 'enrollment_name', 'start_date', 'end_date',
-  'enrollment_status', 'fee_plan_name', 'agreed_total_amount', 'currency',
-  'billing_notes', 'created_at', 'updated_at', 'closed_at'
 ];
 
 // Table 2: Packages (12 columns)
@@ -55,12 +46,6 @@ SHEET_SCHEMAS[SHEET_NAMES.PAYMENTS] = [
 SHEET_SCHEMAS[SHEET_NAMES.CLASS_SESSIONS] = [
   'student_id', 'student_name', 'schedule_date', 'schedule_time',
   'attendance_status', 'session_status', 'deduct_class', 'cancellation_reason', 'session_notes'
-];
-
-// Preserved for legacy transition fallback
-SHEET_SCHEMAS[SHEET_NAMES.CLASS_SCHEDULES] = [
-  'schedule_id', 'student_id', 'day_of_week', 'start_time', 'end_time',
-  'is_active', 'created_at', 'updated_at'
 ];
 
 function getCanonicalSheetNames() {

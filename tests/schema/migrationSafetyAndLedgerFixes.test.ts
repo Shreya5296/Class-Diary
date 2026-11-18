@@ -8,8 +8,6 @@ const PaymentService = require('../../02-backend/apps-script/payments/PaymentSer
 // @ts-ignore
 const PaymentRepository = require('../../02-backend/apps-script/payments/PaymentRepository.gs');
 // @ts-ignore
-const NoteRepository = require('../../02-backend/apps-script/notes/NoteRepository.gs');
-// @ts-ignore
 const ClassService = require('../../02-backend/apps-script/classes/ClassService.gs');
 // @ts-ignore
 const ClassRepository = require('../../02-backend/apps-script/classes/ClassRepository.gs');

@@ -8,8 +8,6 @@ import SpreadsheetBootstrap from '../../02-backend/apps-script/sheets/Spreadshee
 // @ts-ignore
 import StudentService from '../../02-backend/apps-script/students/StudentService.gs';
 // @ts-ignore
-import EnrollmentService from '../../02-backend/apps-script/enrollments/EnrollmentService.gs';
-// @ts-ignore
 import PackageService from '../../02-backend/apps-script/packages/PackageService.gs';
 // @ts-ignore
 import PackageRepository from '../../02-backend/apps-script/packages/PackageRepository.gs';
@@ -44,14 +42,11 @@ describe('Phase 9: Comprehensive End-to-End System Integration', () => {
     expect(stuRes.success).toBe(true);
     const stuId = stuRes.data.student_id;
 
-    // 2. Create Enrollment
-    const enrRes = EnrollmentService.Enrollments_create(spreadsheet, {
-      student_id: stuId,
-      enrollment_name: 'Advanced Chemistry - Year 11',
-      start_date: '2026-04-01',
-      agreed_total_amount: 12000
-    }, admin);
-    expect(enrRes.success).toBe(true);
+    // 2. Verify registered student record
+    const stuRecord = StudentService.Students_getById(spreadsheet, stuId);
+    expect(stuRecord).toBeDefined();
+    expect(stuRecord.student_id).toBe(stuId);
+    expect(stuRecord.status).toBe('ACTIVE');
 
     // 3. Purchase 4-class package
     const pkgRes = PackageService.Packages_create(spreadsheet, {

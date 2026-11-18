@@ -36,7 +36,7 @@ function runBootstrap() {
   };
 
   // Call the core bootstrap (creates canonical tabs and headers)
-  var result = bootstrapSpreadsheet(spreadsheet, registry, SCHEMA_VERSION);
+  var result = bootstrapSpreadsheet(spreadsheet, registry);
 
   // Remove the default blank "Sheet1" tab if canonical tabs exist
   var defaultSheet = spreadsheet.getSheetByName('Sheet1');

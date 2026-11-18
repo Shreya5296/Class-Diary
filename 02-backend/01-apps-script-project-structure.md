@@ -77,24 +77,19 @@
 │   ├── SpreadsheetBootstrap.gs # Creates canonical sheets if missing
 │   └── SchemaValidator.gs      # Verifies headers against canonical schemas
 ├── config/                     # Configuration service
-│   ├── ConfigService.gs        # Reads runtime parameters from ScriptProperties (replaces AppConfig)
-│   └── SchemaVersion.gs        # Schema version definition (2.0.0)
+│   └── ConfigService.gs        # Reads runtime parameters from ScriptProperties (replaces AppConfig)
 ├── shared/                     # Shared helpers
-│   ├── IdGenerator.gs          # Sequential STU_001 generator
-│   ├── ErrorCodes.gs           # Standard machine-readable error codes
+│   ├── IdGenerator.gs          # Sequential STU_001 and entity ID generators
 │   ├── DateTime.gs             # Timezone-safe date arithmetic
-│   ├── Money.gs                # Currency & rounding helpers
-│   └── InputRules.gs           # General string sanitation
+│   └── Money.gs                # Currency & rounding helpers
 ├── setup/                      # Migrations & maintenance operations
 │   ├── FourTableMigration.gs   # Four-table datastore migration, backup & verification engine
 │   ├── FinalCanonicalSchemaMigration.gs # Historical canonical migration
 │   ├── StudentIdMigration.gs   # Migrated 23 legacy IDs to STU_001..STU_026
 │   ├── StudentIdVerification.gs# Referential integrity verifier & rollback engine
 │   ├── StudentIdPreflight.gs   # Read-only preflight analysis engine
-│   ├── StudentIdHandlers.gs    # API endpoints for student ID migration tools
 │   ├── SystemHandlers.gs       # system.inspectTabs, migrateCanonicalSchemas, backdateStudentSessions
-│   ├── CleanupHandlers.gs      # Pre-launch cleanup tools
 │   ├── SchemaMigration.gs      # Schema migration runner
 │   └── RunBootstrap.gs         # Manual bootstrap runner
-└── enrollments/ & fees/        # Deprecated legacy fallback services (preserved for backward compatibility)
+└── fees/                       # Deprecated legacy fallback fee service (preserved for backward compatibility)
 ```

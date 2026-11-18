@@ -14,8 +14,6 @@ import PackageService from '../../02-backend/apps-script/packages/PackageService
 // @ts-ignore
 import PaymentService from '../../02-backend/apps-script/payments/PaymentService.gs';
 // @ts-ignore
-import MeetingLinkService from '../../02-backend/apps-script/meeting-links/MeetingLinkService.gs';
-// @ts-ignore
 import ClassService from '../../02-backend/apps-script/classes/ClassService.gs';
 
 describe('Permanent, Consistent Student IDs and Lifecycle Integrity', () => {

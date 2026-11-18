@@ -16,9 +16,7 @@ import RowReader from '../../02-backend/apps-script/sheets/RowReader.gs';
 // @ts-ignore
 import HeaderMapper from '../../02-backend/apps-script/sheets/HeaderMapper.gs';
 // @ts-ignore
-import EnrollmentService from '../../02-backend/apps-script/enrollments/EnrollmentService.gs';
-// @ts-ignore
-import EnrollmentRepository from '../../02-backend/apps-script/enrollments/EnrollmentRepository.gs';
+import PackageService from '../../02-backend/apps-script/packages/PackageService.gs';
 
 import { adaptStudentInput } from '../../src/domains/students/studentApi';
 import { mapApiErrorsToFields } from '../../src/domains/students/studentValidation';
@@ -140,7 +138,7 @@ describe('Phase 5 — Students and Enrollments Domain Services', () => {
     expect(uiErrors.parent_phone).toBe('Parent phone is required');
   });
 
-  it('creates and manages enrollments linked to a student', () => {
+  it('creates and manages packages linked to a student under the four-table datastore', () => {
     const stuRes = StudentService.Students_create(spreadsheet, {
       student_name: 'Rohan',
       parent_name: 'Meera',
@@ -148,32 +146,36 @@ describe('Phase 5 — Students and Enrollments Domain Services', () => {
     }, actor);
     const stuId = stuRes.data.student_id;
 
-    // Reject enrollment for nonexistent student
-    const invalidRes = EnrollmentService.Enrollments_create(spreadsheet, {
-      student_id: 'stu_nonexistent'
+    // Reject package for nonexistent student
+    const invalidRes = PackageService.Packages_create(spreadsheet, {
+      student_id: 'stu_nonexistent',
+      plan_type: 'Package',
+      classes_purchased: 10,
+      package_price: 15000,
+      start_date: '2026-02-01'
     }, actor);
     expect(invalidRes.success).toBe(false);
     expect(invalidRes.code).toBe('RECORD_NOT_FOUND');
 
-    // Valid enrollment
-    const enrRes = EnrollmentService.Enrollments_create(spreadsheet, {
+    // Valid package creation
+    const pkgRes = PackageService.Packages_create(spreadsheet, {
       student_id: stuId,
-      enrollment_name: 'Term 1 Coding',
+      classes_purchased: 12,
+      package_price: 15000,
       start_date: '2026-02-01',
-      end_date: '2026-06-30',
-      agreed_total_amount: 15000
+      plan_type: 'Package',
+      currency: 'INR'
     }, actor);
 
-    expect(enrRes.success).toBe(true);
-    expect(enrRes.data.enrollment_status).toBe('ACTIVE');
+    expect(pkgRes.success).toBe(true);
+    expect(pkgRes.data.classes_purchased).toBe(12);
 
-    // Update status to COMPLETED
-    const updateEnr = EnrollmentService.Enrollments_update(spreadsheet, enrRes.data.enrollment_id, {
-      enrollment_status: 'COMPLETED'
+    // Update package
+    const updatePkg = PackageService.Packages_update(spreadsheet, stuId, {
+      package_price: 18000
     }, actor);
-    expect(updateEnr.success).toBe(true);
-    expect(updateEnr.data.enrollment_status).toBe('COMPLETED');
-    expect(Boolean(updateEnr.data.closed_at)).toBe(true);
+    expect(updatePkg.success).toBe(true);
+    expect(updatePkg.data.package_price).toBe(18000);
   });
 
   it('safely handles duplicate header rows and reads real records correctly', () => {

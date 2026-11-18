@@ -131,16 +131,6 @@ function Classes_getById(spreadsheet, id) {
   return null;
 }
 
-function Classes_findByRestorationId(spreadsheet, originalSessionId) {
-  var all = Classes_getAll(spreadsheet);
-  for (var i = 0; i < all.length; i++) {
-    if (all[i].credit_restoration_for_session_id === originalSessionId) {
-      return all[i];
-    }
-  }
-  return null;
-}
-
 function Classes_insert(spreadsheet, record) {
   var sheet = spreadsheet.getSheetByName(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
   var headers = _clsRegistry.getExpectedHeaders(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
@@ -256,7 +246,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     Classes_getAll: Classes_getAll,
     Classes_getById: Classes_getById,
-    Classes_findByRestorationId: Classes_findByRestorationId,
     Classes_insert: Classes_insert,
     Classes_update: Classes_repoUpdate,
     Classes_repoUpdate: Classes_repoUpdate

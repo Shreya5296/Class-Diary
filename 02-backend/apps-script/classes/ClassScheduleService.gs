@@ -112,12 +112,6 @@ function _parseScheduleString(str, durationMinutes) {
   return results;
 }
 
-function _ensureClassSchedulesSheet(spreadsheet) {
-  // Application-managed ClassSchedules table permanently removed.
-  // Canonical recurring schedule data is persisted exclusively in Packages.class_schedule.
-  return null;
-}
-
 function Schedules_list(spreadsheet, studentId) {
   var sid = studentId ? String(studentId).trim() : null;
 
