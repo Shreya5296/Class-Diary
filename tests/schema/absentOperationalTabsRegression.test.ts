@@ -18,10 +18,6 @@ import PaymentService from '../../02-backend/apps-script/payments/PaymentService
 // @ts-ignore
 import ClassService from '../../02-backend/apps-script/classes/ClassService.gs';
 // @ts-ignore
-import MeetingLinkService from '../../02-backend/apps-script/meeting-links/MeetingLinkService.gs';
-// @ts-ignore
-import NoteService from '../../02-backend/apps-script/notes/NoteService.gs';
-// @ts-ignore
 import ReportService from '../../02-backend/apps-script/reports/ReportService.gs';
 // @ts-ignore
 import SchemaMigration from '../../02-backend/apps-script/setup/SchemaMigration.gs';

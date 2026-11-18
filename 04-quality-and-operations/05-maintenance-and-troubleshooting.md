@@ -164,32 +164,32 @@ Do not rewrite headers or bulk-edit statuses until the cause is known.
 
 Possible causes:
 - The request failed before persistence.
-- Persistence succeeded but the response was lost.
+- Persistence succeeded but the response was lost in transit.
 - A user retried the operation.
-- A payment is voided or allocated to another valid obligation.
-- A filter hides the transaction.
+- A payment was voided (physically deleted with a tombstone in ScriptProperties).
+- A filter in the Payment History tab hides the transaction.
 
 Actions:
 - Do not immediately submit the payment again.
-- Search the payment ledger by student, amount, date, and transaction reference.
-- Check the request/idempotency identifier and audit history when available.
-- Verify payment status and its fee-obligation relationship.
-- Reconcile the calculated balance against valid payment records.
-- Use the supported correction or void workflow if a duplicate exists.
+- Search the Payments table by student, amount, and date.
+- Check the request and idempotency identifier in `ScriptProperties`.
+- Reconcile the calculated balance against valid payment records in `Payments`.
+- Use the supported void workflow if an accidental duplicate exists.
 
-Never fix a balance by directly overwriting a calculated paid or outstanding total.
+Never fix a balance by directly typing an arbitrary total into a spreadsheet.
 
-### 6.6 Fee balance is incorrect
+### 6.6 Financial balance is incorrect
 
 Check, in order:
-- The fee obligation amount and status.
-- All valid payments allocated to that obligation.
-- Whether any payment is voided.
-- Whether a payment references the correct student and obligation.
+- All package rows for that student in `Packages` (package price and currency).
+- All payment rows for that student in `Payments` (amount and currency).
+- Whether any foreign currency payment has missing or incorrect manual `in_inr`.
+- Whether any payment was voided (check `ScriptProperties` tombstones).
+- Whether missing or non-numeric values caused `isReliable: false`.
+- Group calculations by currency: outstanding is $\max(0, \text{Payable} - \text{Paid})$.
 - Whether the UI is showing stale cached data.
-- Whether rounding or currency handling differs between layers.
 
-The backend calculation is authoritative. If stored records are inconsistent, stop further financial corrections until the discrepancy is understood and audited.
+The backend calculation is authoritative. If stored records are inconsistent, audit the sheet rows before performing corrections.
 
 ### 6.7 Remaining class count is incorrect
 

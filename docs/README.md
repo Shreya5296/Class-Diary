@@ -1,16 +1,22 @@
 # Project Documentation Reference — Personal Dashboard
 
+- **Last Verified Date:** 2026-11-17
+- **Status:** Authoritative Documentation Index
+- **Superseded Architectures:** Legacy six-table and eight-table architectures permanently superseded by canonical four-table datastore.
+
+---
+
 ## 1. Primary Documentation System
 
 The authoritative, canonical documentation system for the Personal Dashboard is organized into the numbered root directories:
 
-- **[`00-documentation/`](../00-documentation/)**: Core system architecture, product requirements, canonical 6-table Google Sheets data model, business rules, API reference, security, testing, deployment, and AI coding agent instructions.
+- **[`00-documentation/`](../00-documentation/)**: Core system architecture, product requirements, canonical 4-table Google Sheets data model, business rules, API reference, security, testing, deployment, and AI coding agent instructions.
   - [`00-document-index.md`](../00-documentation/00-document-index.md): Complete document register and classification.
-  - [`01-product-requirements.md`](../00-documentation/01-product-requirements.md): Scope across all 6 active modules.
+  - [`01-product-requirements.md`](../00-documentation/01-product-requirements.md): Scope across active functional modules.
   - [`02-system-architecture.md`](../00-documentation/02-system-architecture.md): High-level architecture and Mermaid workflows.
   - [`03-security-and-authentication.md`](../00-documentation/03-security-and-authentication.md): HMAC-SHA256 session token security.
-  - [`04-google-sheets-data-model.md`](../00-documentation/04-google-sheets-data-model.md): The strictly six canonical Google Sheets tables.
-  - [`05-business-rules-and-workflows.md`](../00-documentation/05-business-rules-and-workflows.md): Attendance, deductions, calendar, package expiry.
+  - [`04-google-sheets-data-model.md`](../00-documentation/04-google-sheets-data-model.md): The strictly four canonical Google Sheets tables.
+  - [`05-business-rules-and-workflows.md`](../00-documentation/05-business-rules-and-workflows.md): Attendance, deductions, renewal, calendar, package expiry.
   - [`06-apps-script-api-specification.md`](../00-documentation/06-apps-script-api-specification.md): Complete backend API reference.
   - [`07-frontend-product-and-ui-specification.md`](../00-documentation/07-frontend-product-and-ui-specification.md): UI screen layouts and interactions.
   - [`08-frontend-file-and-code-architecture.md`](../00-documentation/08-frontend-file-and-code-architecture.md): Frontend directory tree and micro-files.
@@ -24,9 +30,12 @@ The authoritative, canonical documentation system for the Personal Dashboard is 
 - **[`03-data/`](../03-data/)**: Master spreadsheet schema, entity relationships, data dictionary, financial math, and migration history.
 - **[`04-quality-and-operations/`](../04-quality-and-operations/)**: Test strategy, security checklist, deployment runbook, backup, and troubleshooting.
 - **[`05-agent-handoff/`](../05-agent-handoff/)**: Durable project state, implementation sequence, coding agent rules, and definition of done.
+- **[`running.txt`](../running.txt)**: Current project control document.
+
+---
 
 ## 2. Historical Archives in this Directory
 
 The subdirectories below contain historical records from earlier implementation phases:
-- `docs/audits/`: Historical post-deployment audits.
+- `docs/audits/`: Historical post-deployment audits and the full historical milestone archive (`running-historical-archive.md`).
 - `docs/prelaunch/`: Historical pre-launch schema proposals, field migration maps, and owner decision logs.

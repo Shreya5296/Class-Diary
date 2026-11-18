@@ -1,10 +1,11 @@
 # 02 — Security and Privacy Checklist
 
-**Project:** Student Management Dashboard  
-**Document status:** Implementation and release checklist  
-**Version:** 1.0.0  
-**Applies to:** React + TypeScript + Vite frontend, Google Apps Script backend, Google Sheets datastore, GitHub source control, and Vercel hosting  
-**Data classification:** Private student, parent/guardian, class, meeting-link, and financial information
+- **Project:** Student Management Dashboard
+- **Document status:** Implementation and release checklist
+- **Version:** 5.0.0
+- **Last Updated:** 2026-11-17
+- **Applies to:** React + TypeScript + Vite frontend, Google Apps Script backend, Google Sheets datastore, GitHub source control, and Vercel hosting
+- **Data classification:** Private student, parent/guardian, class, meeting-link, and financial information
 
 ## 1. Purpose and Use
 
@@ -131,8 +132,8 @@ Record evidence for critical controls in the release checklist, test report, or 
 ## 8. Input Validation and Output Handling
 
 - [ ] The backend validates request shape, field types, required fields, lengths, and allowed enum values.
-- [ ] Student, enrollment, package, fee, payment, class, and meeting-link IDs are validated and checked for existence.
-- [ ] Relationships are checked: related records must belong to the same student and, where applicable, the same enrollment.
+- [ ] Student IDs are validated and checked for existence across all dependent records (Packages, Payments, ClassSessions).
+- [ ] Relationships are checked: related records must belong to a valid registered student.
 - [ ] Dates and timestamps are parsed strictly and invalid calendar dates are rejected.
 - [ ] Monetary values are finite numbers with the documented precision and currency.
 - [ ] Normal payments must be greater than zero; refunds, credits, and reversals follow explicit models rather than undocumented negative values.
@@ -157,13 +158,13 @@ Record evidence for critical controls in the release checklist, test report, or 
 
 ## 10. Financial Data Integrity
 
-- [ ] Fee obligations and payments are separate records.
+- [ ] Package fees and payments are separate records across `Packages` and `Payments`.
 - [ ] Payment history is not overwritten to represent a new payment.
-- [ ] Payment-to-obligation relationships are validated.
-- [ ] A payment cannot be allocated to another student's obligation.
-- [ ] Paid and outstanding amounts are calculated from valid persisted transactions.
-- [ ] Voided payments do not contribute to balances, and their original records remain available for audit.
-- [ ] Voiding or correcting a payment requires a reason and creates an audit record.
+- [ ] Record relationships are validated: payments belong to valid students.
+- [ ] A payment cannot be allocated to another student.
+- [ ] Paid and outstanding amounts are calculated dynamically from valid persisted records.
+- [ ] Voided payments are physically removed from the Payments sheet with a durable ScriptProperties tombstone (`payment_void_<id>`), ensuring they do not contribute to balances.
+- [ ] Voiding a payment requires identifying the student, date, and amount, and rejecting ambiguous duplicates.
 - [ ] Duplicate submission protection is implemented for payment writes.
 - [ ] Overpayment and advance-credit behavior is explicitly defined and tested.
 - [ ] Currency and monetary precision are consistent across obligations, payments, and calculations.
@@ -183,7 +184,7 @@ Record evidence for critical controls in the release checklist, test report, or 
 
 ## 12. Audit Logging and Error Handling
 
-- [ ] Important student, enrollment, package, fee, payment, class, attendance, meeting-link, import, and configuration changes are auditable.
+- [ ] Important student, package, payment, class, and attendance changes are auditable.
 - [ ] Audit records identify the verified actor, action, entity, timestamp, outcome, and request correlation ID where available.
 - [ ] Audit summaries avoid copying unnecessary sensitive information.
 - [ ] Normal application operations cannot edit or delete audit records.
@@ -280,7 +281,7 @@ The following tests must fail safely:
 - [ ] Forged `isAdmin` or actor-email field.
 - [ ] Unknown API operation.
 - [ ] Request for a nonexistent student or related record.
-- [ ] Payment allocated to another student's fee obligation.
+- [ ] Payment allocated to another student.
 - [ ] Invalid or negative normal payment amount.
 - [ ] Duplicate payment submission.
 - [ ] Unsafe meeting URL scheme.

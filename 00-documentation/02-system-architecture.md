@@ -5,15 +5,18 @@
 - **Product:** Personal Dashboard (Student Management Dashboard)
 - **Document ID:** 02
 - **Status:** Authoritative Architecture Specification
-- **Version:** 4.0.0
+- **Version:** 5.0.0 (Canonical Four-Table Architecture)
+- **Last Verified Date:** 2026-11-17
 - **Audience:** Developers, architects, AI coding agents
+
+---
 
 ## 2. Architectural Principles & Stack
 
 1. **Frontend-Backend Separation:**
    - **Frontend:** React 18, TypeScript, and Vite. Static single-page application hosted on Vercel.
    - **Backend:** Google Apps Script (GAS) Web App deployed as an executable API endpoint.
-   - **Datastore:** Exactly six Google Sheets tables in a single private Google Spreadsheet.
+   - **Datastore:** Exactly FOUR physical Google Sheets tables in a single private Google Spreadsheet.
 2. **Strict Datastore Boundary:**
    - The browser never communicates directly with the Google Sheets API.
    - All spreadsheet reads and mutations pass through the authenticated Apps Script Web App.
@@ -25,6 +28,8 @@
    - Using `text/plain` prevents CORS preflight (`OPTIONS`) requests, which Google Apps Script Web Apps cannot answer.
 5. **Micro-File Architecture:**
    - Every source file in `src/` and `public/` is strictly $\le 149$ lines, organized by single-responsibility domains.
+
+---
 
 ## 3. High-Level Architecture Diagram
 
@@ -44,8 +49,8 @@ flowchart TD
         DoPost["doPost(e) Entry Point (ApiEntry.gs)"]
         AuthGuards["HMAC-SHA256 Auth & Allowlist (IdentityVerifier.gs)"]
         Router["OperationRouter.gs"]
-        Services["Domain Business Services (Student, Package, Class, Payment, Report)"]
-        LockMgr["LockManager.gs (ScriptLock)"]
+        Services["Domain Business Services (Student, Package, Class, Payment, Report, Renewal)"]
+        LockMgr["LockManager.gs (Reentrant ScriptLock)"]
         Repositories["Domain Repositories (CRUD & Memory Maps)"]
         SheetsAccess["HeaderMapper.gs & DateFormatService.gs"]
     end
@@ -72,6 +77,8 @@ flowchart TD
     SheetsAccess --> T3
     SheetsAccess --> T4
 ```
+
+---
 
 ## 4. Request & Response Lifecycle Flow
 
@@ -100,6 +107,8 @@ sequenceDiagram
     UI-->>Admin: UI updates & toast notification
 ```
 
+---
+
 ## 5. Domain Relationship Diagram
 
 The canonical datastore contains **strictly four tables** with all secondary records linking directly to `Students.student_id`.
@@ -119,7 +128,7 @@ erDiagram
         string student_phone "Student phone"
         string student_email "Student email"
         string subject "Enrolled subject(s)"
-        string status "ACTIVE | INACTIVE"
+        string status "ACTIVE | INACTIVE | ARCHIVED"
         string primary_meeting_link "One primary meeting link"
     }
 
@@ -130,7 +139,7 @@ erDiagram
         string currency "INR | USD | EUR | GBP"
         number package_price "Agreed total price"
         number per_class "Per-class rate"
-        number classes_purchased "Total classes purchased"
+        number classes_purchased "Purchased classes for this package row"
         string start_date "Start date (YYYY-MM-DD)"
         string end_date "End date (YYYY-MM-DD)"
         string next_due_date "Next fee due date (YYYY-MM-DD)"
@@ -152,13 +161,15 @@ erDiagram
         string student_name "Student name snapshot"
         string schedule_date "Date (YYYY-MM-DD)"
         string schedule_time "Time (HH:mm, 24-hour)"
-        string attendance_status "NOT_MARKED | PRESENT | ABSENT | CANCELLED"
+        string attendance_status "NOT_MARKED | PRESENT | ATTENDED | ABSENT | CANCELLED | CANCELLED_LATE"
         string session_status "SCHEDULED | COMPLETED | CANCELLED"
         boolean deduct_class "True consumes package balance"
         string cancellation_reason "Reason if cancelled"
         string session_notes "Lesson coverage, remarks, contextual notes"
     }
 ```
+
+---
 
 ## 6. Attendance & Class Deduction Workflow
 
@@ -167,7 +178,7 @@ flowchart TD
     Start["Class Session Marked"] --> StatusCheck{"What action was chosen?"}
     
     StatusCheck -- "Present / Attended" --> SetPresent["Set session_status = 'COMPLETED'<br/>Set attendance_status = 'PRESENT'<br/>Set deduct_class = true"]
-    SetPresent --> BurnCredit["Consumes 1 Class Credit<br/>(Deducted FIFO by package start_date)"]
+    SetPresent --> BurnCredit["Consumes 1 Class Credit<br/>(Derived dynamically across packages)"]
     
     StatusCheck -- "Absent / No-Show" --> PromptOwner{"Did owner choose to deduct?"}
     PromptOwner -- "Yes (Unexcused / Late)" --> SetAbsentDeduct["Set attendance_status = 'ABSENT'<br/>Set deduct_class = true"]
@@ -186,24 +197,34 @@ flowchart TD
     AutoReschedule --> NoDeduct
 ```
 
-## 7. Calendar Hybrid Event Synthesis
+---
 
-```mermaid
-flowchart TD
-    WeekSelect["User selects calendar week in UI"] --> FetchData["Fetch dated sessions & active student packages"]
-    
-    FetchData --> ProcessDated["1. Map dated ClassSessions for visible week"]
-    ProcessDated --> ClassifyDated["Classify each dated session:<br/>- Completed/Present -> PAST_COMPLETED (Soft Green)<br/>- Cancelled or uncompleted past -> CANCELLED (Soft Red)<br/>- Scheduled future -> UPCOMING (Amber)"]
-    
-    FetchData --> ProcessRecurring["2. Parse recurring schedules from Packages.class_schedule"]
-    ProcessRecurring --> FilterActive["Filter active students & date boundaries<br/>(date >= package.start_date and <= package.end_date)"]
-    
-    ClassifyDated --> DuplicateCheck{"Does a dated session already exist<br/>at this student's weekday + time slot?"}
-    FilterActive --> DuplicateCheck
-    
-    DuplicateCheck -- "Yes" --> SkipRecurring["Suppress recurring placeholder<br/>(Dated session takes precedence)"]
-    DuplicateCheck -- "No" --> SynthesizeRecurring["Synthesize recurring event placeholder<br/>status = 'UPCOMING' (Amber)"]
-    
-    SkipRecurring --> Render["Render unified 7-day time grid (06:00 to 23:00) in Asia/Kolkata"]
-    SynthesizeRecurring --> Render
-```
+## 7. Package Renewal & Class Balance Derivation Architecture
+
+### 7.1 Historical Package Preservation
+When a package is renewed (`packages.renew` / `students.renew`):
+1. **No Overwrite:** The historical package row is preserved untouched in `Packages`.
+2. **New Row Appended:** A new package row is appended with the new package purchase details (`classes_purchased = newClasses`, `package_price = newPrice`, `start_date`, `end_date`, `class_schedule`).
+3. **Aggregate Balance Derivation:** Student available class balance is dynamically derived across all packages:
+   $$\text{Total Purchased} = \sum_{p \in \text{Packages}, p.\text{student\_id} = \text{sid}} p.\text{classes\_purchased}$$
+   $$\text{Total Consumed} = \sum_{s \in \text{ClassSessions}, s.\text{student\_id} = \text{sid}, s.\text{deduct\_class} = \text{true}} 1$$
+   $$\text{Remaining Available Balance} = \text{Total Purchased} - \text{Total Consumed}$$
+
+---
+
+## 8. Schedule Persistence & Concurrency Safeguards
+
+1. **Storage Location:** Recurring schedules are persisted directly in `Packages.class_schedule`.
+2. **Shared ScriptLock:** All conflicting writers to `Packages.class_schedule` (including `Schedules_save` and `RenewalService`) acquire the shared script lock via `LockManager.withLock(fn, timeoutMs)`.
+3. **Reentrant Lock Support:** `LockManager.withLock` tracks execution-local lock depth. Nested calls within the same execution context (e.g. `RenewalService` calling `Schedules_save`) execute without self-deadlock, while ensuring the underlying Google Apps Script `ScriptLock` is acquired and released at depth 1.
+4. **Lock Acquisition Failure:** If lock cannot be acquired within the timeout window, the write operation is safely aborted with `LOCK_TIMEOUT` and zero mutations occur.
+
+---
+
+## 9. Payment Safety & Void Mechanics
+
+1. **6-Column Schema:** `student_id, student_name, payment_date, amount, currency, in_inr`.
+2. **Idempotency:** Payment recording utilizes client-supplied `idempotency_key` cached in memory and durable store. Duplicate retries return the original record.
+3. **Physical Row Deletion on Void:** Payments does not have a physical status column. Voiding locates the specific payment row and physically removes it via `sheet.deleteRow()`.
+4. **Durable Tombstone:** A tombstone is recorded in `ScriptProperties` (`payment_void_<id>`). If a void request is retried, the tombstone prevents re-processing and safely returns idempotent success.
+5. **Ambiguity Prevention:** If multiple identical rows exist that match the student, amount, and date without unique discrimination, `Payments_void` rejects with `AMBIGUOUS_RECORD` to avoid deleting the wrong row.

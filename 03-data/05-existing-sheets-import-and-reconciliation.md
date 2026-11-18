@@ -2,7 +2,7 @@
 
 > [!NOTE]
 > **HISTORICAL ARCHIVE:** This document records the pre-launch analysis and mapping of existing multi-sheet legacy records into the initial database schema.
-> Bulk import and reconciliation features were permanently retired in Phase 15. The active datastore follows the 6-table canonical schema documented in `03-data/01-master-spreadsheet-schema.md`.
+> Bulk import and reconciliation features were permanently retired in Phase 15. The active datastore follows the 4-table canonical schema documented in `03-data/01-master-spreadsheet-schema.md`.
 
 ---
 

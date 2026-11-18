@@ -1,6 +1,17 @@
 # 04 — Frontend State and Data Flow
 
-## 1. Purpose
+## 1. Document Control
+
+- **Product:** Personal Dashboard (Student Management Dashboard)
+- **Document ID:** Frontend-04
+- **Status:** Authoritative State & Data Flow Specification
+- **Version:** 5.0.0 (Canonical Four-Table Datastore & Unified Workflows)
+- **Last Verified Date:** 2026-11-17
+- **Audience:** Frontend developers, UI engineers, AI coding agents
+
+---
+
+## 2. Purpose
 
 Define how the React frontend stores temporary UI state, requests server data, submits changes, handles failures, and keeps displayed records consistent with the Google Sheets-backed system.
 
@@ -48,19 +59,16 @@ Do not put personal details, payment amounts, meeting URLs, tokens, or other sen
 
 ### 3.3 Server State
 
-Server state includes records fetched from the API:
+Server state includes records fetched from the backend API:
 
 - Dashboard metrics
-- Student directory results
-- Student profile and related records
-- Enrollments and packages
-- Fee obligations and payment history
-- Class sessions and attendance
-- Meeting links
-- Import status and row-level results
-- Reports and configuration
+- Student directory records (`Students`, 10 columns including `primary_meeting_link`)
+- Packages and renewal history (`Packages`, 12 columns including `class_schedule`)
+- Payment records (`Payments`, 6 columns)
+- Class sessions, attendance outcomes, cancellation reasons, and session notes (`ClassSessions`, 9 columns)
+- Regional preferences and health status
 
-Server state may be held in memory for rendering and navigation, but it must be refreshed or invalidated after relevant mutations. Do not persist it to browser storage.
+Server state may be held in memory for rendering and navigation, but it must be refreshed or invalidated after relevant mutations. Authoritative calculations must come from the server or verified domain modules; do not persist full server datasets to browser storage.
 
 ### 3.4 Authentication State
 

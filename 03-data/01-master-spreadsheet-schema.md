@@ -5,7 +5,8 @@
 - **Product:** Personal Dashboard (Student Management Dashboard)
 - **Document ID:** Data-01
 - **Status:** Authoritative Master Spreadsheet Specification
-- **Version:** 4.0.0 (Strict Six-Table Canonical Architecture)
+- **Version:** 5.0.0 (Strict Four-Table Canonical Architecture)
+- **Last Verified Date:** 2026-11-17
 - **Canonical Spreadsheet:** `Private Class Dashboard` (`1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`)
 - **Default Timezone:** `Asia/Kolkata`
 - **Default Currency:** `INR`
@@ -95,8 +96,9 @@ Archived & Retired Sheets:
 `student_id, student_name, payment_date, amount, currency, in_inr`
 
 *Important Schema Rules:*
-- Original payment currency is preserved in `currency`.
-- INR conversion is never done via third-party rate lookups. Unconverted foreign payments contribute 0 to INR financial summaries.
+- **Original payment currency is preserved in `currency`.**
+- **No Physical Payment Status Column:** There is no status or void_reason column in the physical sheet. Voiding physically removes the matching row via `sheet.deleteRow()` and records a durable tombstone `payment_void_<id>` in `ScriptProperties`.
+- **INR conversion is never done via third-party rate lookups.** Unconverted foreign payments contribute 0 to INR financial summaries.
 
 ---
 
@@ -110,7 +112,7 @@ Archived & Retired Sheets:
 | 5 | `attendance_status` | Enum | — | `NOT_MARKED`, `PRESENT`, `ATTENDED`, `ABSENT`, `CANCELLED`, `CANCELLED_LATE`. |
 | 6 | `session_status` | Enum | — | `SCHEDULED`, `COMPLETED`, `CANCELLED`. |
 | 7 | `deduct_class` | Boolean | — | `TRUE` if class consumes package balance; `FALSE` otherwise. |
-| 8 | `cancellation_reason` | Text | — | Reason for cancellation or rescheduling note. |
+| 8 | `cancellation_reason` | Text | — | Reason for cancellation provided by administrator. |
 | 9 | `session_notes` | Text | — | Lesson coverage, stories/topics taught, concepts discussed, remarks. |
 
 **Canonical Column Order:**
@@ -120,5 +122,6 @@ Archived & Retired Sheets:
 - **There is no session ID column and no stored end-time column** in Google Sheets.
 - **Session Identity:** Sessions are identified by composite key `student_id__schedule_date__schedule_time` (or 1-based row index).
 - **Derived End Time:** End time is dynamically derived as `schedule_time + Packages.class_duration`.
-- **Consumed Balance Derivation:** The application counts sessions for that student where `deduct_class === true`. Remaining balance is `classes_purchased - consumed_classes`.
-- **Lesson Notes Integration:** `session_notes` stores pedagogical notes and lesson coverage directly against the scheduled class session.
+- **Consumed Balance Derivation:** The application counts sessions for that student where `deduct_class === true`. Total available student balance is:
+  $$\text{Balance} = \sum_{p \in \text{Packages}} p.\text{classes\_purchased} - \sum_{s \in \text{ClassSessions}, s.\text{deduct\_class} = \text{true}} 1$$
+- **Lesson Notes Integration:** `session_notes` stores pedagogical notes and lesson coverage directly against the scheduled class session, preserved independently from `cancellation_reason`.

@@ -14,12 +14,6 @@ import PackageRepository from '../../02-backend/apps-script/packages/PackageRepo
 // @ts-ignore
 import ClassService from '../../02-backend/apps-script/classes/ClassService.gs';
 // @ts-ignore
-import MeetingLinkService from '../../02-backend/apps-script/meeting-links/MeetingLinkService.gs';
-// @ts-ignore
-import MeetingLinkRepository from '../../02-backend/apps-script/meeting-links/MeetingLinkRepository.gs';
-// @ts-ignore
-import NoteService from '../../02-backend/apps-script/notes/NoteService.gs';
-// @ts-ignore
 import ReportService from '../../02-backend/apps-script/reports/ReportService.gs';
 
 describe('Phase 5 — Classes, Credits, Meeting Links, and Notes', () => {

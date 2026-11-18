@@ -1,5 +1,14 @@
 # Pre-Launch Decisions for Project Owner Approval
 
+> [!NOTE]
+> **HISTORICAL / ARCHIVED RECORD**
+> **Status:** Historical Document (Preserved for Audit Trail)
+> **Superseded By:** Canonical Four-Table Architecture and Merged Implementation on `main` (Date: 2026-11-17)
+> **Authoritative Current Specs:** [`00-documentation/04-google-sheets-data-model.md`](../../00-documentation/04-google-sheets-data-model.md) and [`05-agent-handoff/00-project-state.md`](../../05-agent-handoff/00-project-state.md)
+>
+> *This document represents pre-launch proposals, early migration runbooks, or historical post-deployment audits from earlier project milestones. Its contents describe intermediate architectures (such as legacy six-table schemas, operational tabs, or earlier deployment versions) and are retained solely for historical auditability.*
+
+
 **Document Version:** 1.0.0  
 **Status:** Pending Project Owner Decisions  
 **Date:** October 21, 2026  

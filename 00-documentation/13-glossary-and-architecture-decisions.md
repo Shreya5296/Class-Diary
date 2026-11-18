@@ -5,7 +5,8 @@
 - **Product:** Personal Dashboard (Student Management Dashboard)
 - **Document ID:** 13
 - **Status:** Authoritative Glossary & ADR Specification
-- **Version:** 4.0.0
+- **Version:** 5.0.0 (Canonical Four-Table Datastore & Unified Workflows)
+- **Last Verified Date:** 2026-11-17
 - **Audience:** Developers, architects, AI coding agents
 
 ---
@@ -13,6 +14,7 @@
 ## 2. Terminology & Business Glossary
 
 - **Active Student:** A student whose status is not `INACTIVE` or `ARCHIVED`, who has remaining package balance ($> 0$), and whose last completed class occurred $< 1$ calendar month ago (or who has 0 completed classes).
+- **Available Credit:** Monetary surplus when total recorded payments exceed total package payable for a student in a specific currency ($\max(0, \text{Total Paid} - \text{Total Payable})$).
 - **Canonical Datastore:** The single private Google Spreadsheet containing strictly four active tables (`Students`, `Packages`, `Payments`, `ClassSessions`).
 - **Class Duration:** Duration of each individual class session in minutes (default `60`), stored in `Packages.class_duration`. Used to derive session end time.
 - **Class Schedule String:** Human-readable recurring weekly schedule string (e.g. `Mon - 6:00 PM, Wed - 6:00 PM, Sat - 10:00 AM`) stored directly inside `Packages.class_schedule`.
@@ -21,8 +23,12 @@
 - **Deduct Class (`deduct_class`):** Boolean column in `ClassSessions` indicating whether the class consumes 1 credit from the student's package balance.
 - **Manual `in_inr`:** The numeric column in `Payments` representing the manually verified INR-equivalent amount for foreign currency transactions.
 - **N-4 Rule:** The automated business rule calculating a package's `next_due_date` as the date of the 4th session before package completion ($\text{index} = \max(0, N - 5)$).
+- **Outstanding Amount:** Net unpaid balance for a student in a specific currency: $\max(0, \text{Total Payable} - \text{Total Paid})$. Never negative.
 - **Permanent Student ID:** Immutable sequential student identifier generated as `STU_001`, `STU_002`, ..., `STU_026`.
+- **Primary Meeting Link:** Single virtual meeting URL stored directly in `Students.primary_meeting_link`.
+- **Renewal Package Preservation:** Invariant that historical package rows are preserved intact upon renewal; the renewal appends a new package row.
 - **Replacement Session:** A new class session automatically generated at the next available recurring schedule slot when a session is cancelled with advance notice or credit waiver.
+- **Session Notes:** Pedagogical coverage, topics covered, and teacher remarks stored directly in `ClassSessions.session_notes`.
 - **Unified 3-Color Event Logic:** Calendar visualization standard:
   - Soft Muted Green (`PAST_COMPLETED`): Attended/completed past sessions.
   - Soft Muted Red (`CANCELLED`): Explicitly cancelled sessions or uncompleted past sessions.
@@ -76,3 +82,13 @@
 - **Context:** Tutoring clients pay in multiple currencies (INR, USD, GBP, EUR).
 - **Decision:** Retain original transaction currency in `Payments.currency` and require manual entry for `in_inr`. Never call third-party exchange rate APIs.
 - **Rationale:** Prevents arbitrary financial balance fluctuations and ensures accounting totals match bank deposits exactly.
+
+### ADR-10: Package Renewal Historical Preservation & Dynamic Aggregate Balance Derivation
+- **Context:** Early designs considered mutating the existing package row or resetting balances upon renewal.
+- **Decision:** When a package is renewed, the historical package row is preserved untouched in `Packages`. A new package row is appended storing only the new purchase. Aggregate available class balance is dynamically derived across all student packages minus all consumed sessions. Carried-forward classes do not increase the renewal package price.
+- **Rationale:** Completely preserves historical billing and class records, avoids destructive updates, and provides a clear audit trail.
+
+### ADR-11: Shared ScriptLock on Recurring Schedule Writes & Reentrant Locking
+- **Context:** Standalone schedule updates via `schedules.save` could potentially race with package renewals or other package writers.
+- **Decision:** All writers to `Packages.class_schedule` (including `Schedules_save` and `RenewalService`) acquire the shared script lock via `LockManager.withLock`. `LockManager.withLock` supports execution-local reentrancy so nested locking within the same execution context does not deadlock.
+- **Rationale:** Guarantees atomicity and eliminates concurrency races on the Packages sheet.

@@ -15,10 +15,6 @@ const PaymentService = require('../../02-backend/apps-script/payments/PaymentSer
 const PaymentRepository = require('../../02-backend/apps-script/payments/PaymentRepository.gs');
 const ClassService = require('../../02-backend/apps-script/classes/ClassService.gs');
 const ClassRepository = require('../../02-backend/apps-script/classes/ClassRepository.gs');
-const MeetingLinkService = require('../../02-backend/apps-script/meeting-links/MeetingLinkService.gs');
-const MeetingLinkRepository = require('../../02-backend/apps-script/meeting-links/MeetingLinkRepository.gs');
-const NoteService = require('../../02-backend/apps-script/notes/NoteService.gs');
-const NoteRepository = require('../../02-backend/apps-script/notes/NoteRepository.gs');
 const ReportService = require('../../02-backend/apps-script/reports/ReportService.gs');
 
 describe('Finalized 6-Table End-to-End User Workflows Verification', () => {

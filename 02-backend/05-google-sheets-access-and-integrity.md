@@ -5,7 +5,9 @@
 - **Product:** Personal Dashboard (Student Management Dashboard)
 - **Document ID:** Backend-05
 - **Status:** Authoritative Data Access Specification
-- **Version:** 4.0.0 (Strict Six-Table Architecture)
+- **Version:** 5.0.0 (Strict Four-Table Architecture)
+- **Last Verified Date:** 2026-11-17
+- **Audience:** Backend engineers, developers, AI coding agents
 
 ---
 
@@ -64,28 +66,16 @@ Google Spreadsheet (Physical Sheet)
   - `Packages`: `start_date`, `end_date`, `next_due_date`
   - `Payments`: `payment_date`
   - `ClassSessions`: `schedule_date`
-  - `StudentNotes`: `note_date`, `follow_up_date`
 - Converts raw strings into real Date objects set to noon (12:00:00) to prevent date shifts across timezones.
 
 ---
 
-## 5. Concurrency Protection (`LockManager.gs`)
+## 5. Concurrency Protection & Reentrant Locking (`LockManager.gs`)
 
-To prevent race conditions during simultaneous class scheduling or attendance updates:
-- Sensitive mutations acquire a lock via `LockService.getScriptLock()` with a timeout of 10,000–15,000 milliseconds.
-- Execution runs inside the lock and releases in a `finally` block:
-  ```javascript
-  function withLock(timeoutMs, actionFn) {
-    var lock = LockService.getScriptLock();
-    var acquired = lock.tryLock(timeoutMs || 10000);
-    if (!acquired) return { success: false, code: 'LOCK_TIMEOUT', message: 'Could not acquire lock' };
-    try {
-      return { success: true, result: actionFn() };
-    } finally {
-      lock.releaseLock();
-    }
-  }
-  ```
+To prevent race conditions during simultaneous class scheduling, schedule saves, package renewals, or attendance updates:
+- Sensitive mutations acquire a lock via `LockService.getScriptLock()` with a timeout of up to 30,000 milliseconds.
+- **Execution-Local Reentrancy:** `LockManager.withLock` tracks recursion depth within the execution context. If a caller already holds the script lock (such as `RenewalService` invoking `Schedules_save`), nested calls succeed immediately without self-deadlock, while acquiring and releasing the underlying Apps Script lock at root depth.
+- Rejection on timeout: If lock acquisition fails within the specified timeout, the operation aborts with code `LOCK_TIMEOUT` and zero sheet mutations occur.
 
 ---
 

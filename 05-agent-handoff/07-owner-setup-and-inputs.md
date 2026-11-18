@@ -1,6 +1,12 @@
 # 07 — Owner Setup and Inputs
 
-## 1. Purpose
+## 1. Document Control & Purpose
+
+- **Product:** Personal Dashboard (Student Management Dashboard)
+- **Document ID:** 05-07
+- **Status:** Authoritative Owner Setup & Inputs Specification
+- **Version:** 5.0.0
+- **Last Updated:** 2026-11-17
 
 This document lists the decisions, access, configuration, and operational inputs the project owner must provide to prepare the Student Management Dashboard for implementation, testing, migration, and eventual production use.
 

@@ -13,8 +13,6 @@ const { registerFeeOperations } = require('../../02-backend/apps-script/fees/Fee
 const { registerPaymentOperations } = require('../../02-backend/apps-script/payments/PaymentHandlers.gs');
 const { registerClassOperations } = require('../../02-backend/apps-script/classes/ClassHandlers.gs');
 const { registerReportOperations } = require('../../02-backend/apps-script/reports/ReportHandlers.gs');
-const { registerNoteOperations } = require('../../02-backend/apps-script/notes/NoteHandlers.gs');
-const { registerMeetingLinkOperations } = require('../../02-backend/apps-script/meeting-links/MeetingLinkHandlers.gs');
 const { registerClassScheduleOperations } = require('../../02-backend/apps-script/classes/ClassScheduleHandlers.gs');
 
 describe('Backend Operation Adapters and Compatibility', () => {
@@ -35,8 +33,6 @@ describe('Backend Operation Adapters and Compatibility', () => {
     registerPaymentOperations(mockRouter);
     registerClassOperations(mockRouter);
     registerReportOperations(mockRouter);
-    registerNoteOperations(mockRouter);
-    registerMeetingLinkOperations(mockRouter);
     registerClassScheduleOperations(mockRouter);
   });
 

@@ -27,10 +27,6 @@ import ClassRepository from '../../02-backend/apps-script/classes/ClassRepositor
 // @ts-ignore
 import FeeService from '../../02-backend/apps-script/fees/FeeService.gs';
 // @ts-ignore
-import MeetingLinkService from '../../02-backend/apps-script/meeting-links/MeetingLinkService.gs';
-// @ts-ignore
-import NoteService from '../../02-backend/apps-script/notes/NoteService.gs';
-// @ts-ignore
 import IdempotencyRetention from '../../02-backend/apps-script/packages/IdempotencyRetention.gs';
 
 describe('AuditLog Removal Safety & Architecture Verification', () => {

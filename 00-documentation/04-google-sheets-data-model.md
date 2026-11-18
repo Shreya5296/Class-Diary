@@ -6,6 +6,7 @@
 - **Document ID:** 04
 - **Status:** Authoritative Datastore Specification
 - **Version:** 5.0.0 (Strict Four-Table Canonical Architecture)
+- **Last Verified Date:** 2026-11-17
 - **Canonical Spreadsheet:** `Private Class Dashboard` (`1cVQknq_Ix-T6igp7c-DwwuYHvgn60fVGbwTGZfGSii8`)
 - **Spreadsheet Owner:** `ashreya0502@gmail.com`
 
@@ -14,7 +15,7 @@
 ## 2. Canonical Data Architecture Principles
 
 1. **Strictly Four Tables Only:**
-   The entire application datastore consists of **exactly four Google Sheets tables**: `Students`, `Packages`, `Payments`, and `ClassSessions`. `MeetingLinks` and `StudentNotes` are permanently removed.
+   The entire application datastore consists of **exactly four physical Google Sheets tables**: `Students`, `Packages`, `Payments`, and `ClassSessions`. `MeetingLinks` and `StudentNotes` are permanently removed.
 2. **Schema Restrictions (Non-Negotiable):**
    Documentation and code must never invent, reference, or create any of the following as active Google Sheets tables:
    - `MeetingLinks` (Permanently removed; replaced by `Students.primary_meeting_link`)
@@ -29,10 +30,12 @@
    - `Enrollments` (Permanently retired)
    - `AppConfig`, `ImportBatches`, `ImportRowResults` (Permanently retired)
 3. **No `package_id` Column:**
-   `Packages` has no `package_id` column. A package is uniquely associated with and retrieved by `student_id`.
+   `Packages` has no `package_id` column. Packages link directly to `Students.student_id`.
 4. **No `session_id` or Stored End-Time in `ClassSessions`:**
    `ClassSessions` has no `session_id` column and no stored end-time column. Individual sessions are identified by composite key `student_id__schedule_date__schedule_time` (or 1-based row index). Session end time is dynamically calculated using `schedule_time + Packages.class_duration`.
-5. **Direct Relational Links:**
+5. **No Payment Status Column in `Payments`:**
+   `Payments` has exactly 6 columns. There is no `status` or `payment_status` column. Voiding physically removes the row and stores a durable tombstone in `ScriptProperties`.
+6. **Direct Relational Links:**
    All tables link directly to `Students` via `student_id`.
 
 ---
@@ -69,7 +72,7 @@
 | 4 | `currency` | Text | Yes | Agreed currency code (e.g. `INR`, `USD`, `GBP`, `EUR`). Default `INR`. |
 | 5 | `package_price` | Numeric | Yes | Total agreed price for package or periodic billing amount. |
 | 6 | `per_class` | Numeric | No | Effective rate per individual class session. |
-| 7 | `classes_purchased` | Integer | Yes | Total sessions purchased (positive integer). |
+| 7 | `classes_purchased` | Integer | Yes | Total sessions purchased for this package row (positive integer). |
 | 8 | `start_date` | Date/Text | Yes | Package commencement date (`YYYY-MM-DD` / `dd/mm/yyyy`). |
 | 9 | `end_date` | Date/Text | No | Projected or agreed validity end date (`YYYY-MM-DD` / `dd/mm/yyyy`). |
 | 10 | `next_due_date` | Date/Text | No | Next billing or renewal due date (derived by N-4 rule). |
@@ -80,8 +83,9 @@
 `student_id, student_name, plan_type, currency, package_price, per_class, classes_purchased, start_date, end_date, next_due_date, class_duration, class_schedule`
 
 *Important Implementation Notes:*
-- There is **no `package_id` column** in the sheet. The backend identifies and updates a student's package by matching `student_id` (or row index). Ephemeral `package_id` strings created in-memory by API handlers are mapped back to `student_id`.
-- `class_schedule` is the authoritative storage for recurring weekly schedule patterns.
+- There is **no `package_id` column** in the sheet.
+- On renewal, the historical package row is preserved intact; a new row is appended with the new package purchase details.
+- `class_schedule` is the authoritative storage for recurring weekly schedule patterns. All writes are protected by shared ScriptLock.
 
 ---
 
@@ -101,7 +105,8 @@
 
 *Important Implementation Notes:*
 - Original payment currency is strictly preserved in `currency`.
-- INR conversion is never done via third-party rate lookups. If `currency === 'INR'`, `in_inr` equals `amount`. If foreign currency, `in_inr` is populated from the manually supplied value. If no manual `in_inr` exists, it contributes 0 to INR financial aggregations to avoid mixing currencies.
+- INR conversion is never done via third-party rate lookups. If `currency === 'INR'`, `in_inr` equals `amount`. If foreign currency, `in_inr` is populated from the manually supplied value. If no manual `in_inr` exists, it contributes 0 to INR financial aggregations.
+- Voiding physically deletes the matching row and records a durable tombstone in `ScriptProperties`.
 
 ---
 
@@ -116,7 +121,7 @@
 | 5 | `attendance_status` | Enum | Yes | `NOT_MARKED`, `PRESENT`, `ATTENDED`, `ABSENT`, `CANCELLED`, `CANCELLED_LATE`. |
 | 6 | `session_status` | Enum | Yes | `SCHEDULED`, `COMPLETED`, `CANCELLED`. |
 | 7 | `deduct_class` | Boolean | Yes | `TRUE` if class consumes package balance; `FALSE` otherwise. |
-| 8 | `cancellation_reason` | Text | No | Reason for cancellation or structured cancellation note. |
+| 8 | `cancellation_reason` | Text | No | Reason for cancellation supplied by administrator. |
 | 9 | `session_notes` | Text | No | Lesson coverage, stories/topics taught, concepts discussed, remarks. |
 
 **Canonical Column Order:**
@@ -124,17 +129,18 @@
 
 *Important Implementation Notes:*
 - There is **no session ID column** and **no stored end-time column** in Google Sheets.
-- **Session Identity:** Sessions are identified in memory and during API operations by composite key: `student_id__schedule_date__schedule_time` (e.g. `STU_001__2026-01-19__18:00`) or by 1-based `_rowIndex`.
-- **Derived End Time:** End time is computed on the fly as `schedule_time + class_duration` (using `Packages.class_duration` for that student, defaulting to 60 minutes).
-- **Consumed Balance Derivation:** The application counts sessions for that student where `deduct_class === true` (or `'TRUE'`). Remaining balance is `classes_purchased - consumed_classes`.
-- **Session Notes Responsibility:** `session_notes` is the per-session log for coverage and remarks. `cancellation_reason` remains the structured reason when a session is cancelled.
+- **Session Identity:** Sessions are identified by composite key `student_id__schedule_date__schedule_time` (e.g. `STU_001__2026-01-19__18:00`) or by 1-based `_rowIndex`.
+- **Derived End Time:** End time is computed as `schedule_time + class_duration` (using `Packages.class_duration` for that student, defaulting to 60 minutes).
+- **Consumed Balance Derivation:** The application counts sessions for that student where `deduct_class === true`. Aggregate student available balance is:
+  $$\text{Balance} = \sum_{p \in \text{Packages}} p.\text{classes\_purchased} - \sum_{s \in \text{ClassSessions}, s.\text{deduct\_class} = \text{true}} 1$$
+- **Session Notes vs Cancellation Reason:** `session_notes` stores coverage and remarks independently from `cancellation_reason`.
 
 ---
 
 ## 4. Header Normalization & Sheet Access Mechanics
 
 1. **Header Row Location:** Header names are on Row 1. Data begins strictly on Row 2.
-2. **Case-Sensitive Dynamic Resolution:** `HeaderMapper.gs` maps column names to 0-based row indexes dynamically by exact trimmed string matching. Code never relies on hardcoded column letters (e.g. "Column A").
+2. **Case-Sensitive Dynamic Resolution:** `HeaderMapper.gs` maps column names to 0-based row indexes dynamically by exact trimmed string matching. Code never relies on hardcoded column letters.
 3. **Date Normalization:**
    - On read, `HeaderMapper.gs` normalizes date strings formatted as `dd/mm/yyyy` (or Google Sheets Date objects) into ISO `yyyy-mm-dd`.
    - On write, `DateFormatService.gs` applies standard `dd/MM/yyyy` spreadsheet number formatting.

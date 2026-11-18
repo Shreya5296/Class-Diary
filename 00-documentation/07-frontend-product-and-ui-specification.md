@@ -5,7 +5,8 @@
 - **Product:** Personal Dashboard (Student Management Dashboard)
 - **Document ID:** 07
 - **Status:** Authoritative Frontend UI Specification
-- **Version:** 4.0.0
+- **Version:** 5.0.0 (Canonical Four-Table Datastore & Unified Workflows)
+- **Last Verified Date:** 2026-11-17
 - **Audience:** Frontend engineers, UI designers, AI coding agents
 
 ---
@@ -21,8 +22,7 @@ The application uses a persistent two-panel shell (`AppShell.tsx`):
      - 🎓 **Students** (`students`)
      - ⏱️ **Class Schedule** (`classes`)
      - 💰 **Finances** (`finances`)
-     - 🔗 **Meeting Links** (`meeting-links`)
-   - Footer: Authenticated user avatar, display name, and email.
+   - Footer: Authenticated user avatar, display name, email, Settings shortcut button, and Sign Out button.
    - Mobile: Responsive overlay sidebar with backdrop and toggle.
 2. **Top Bar (`TopBar.tsx`):**
    - Left: Mobile hamburger menu toggle.
@@ -38,11 +38,11 @@ The application uses a persistent two-panel shell (`AppShell.tsx`):
 - **TopBar Metrics (`DashboardSummary.tsx`):**
   - Active Students count.
   - Upcoming Classes (next 7 days).
-  - Total Outstanding Fees in INR.
+  - Total Outstanding Balance in INR.
 - **Today's Classes (`TodayClassesSection.tsx`):**
   - Displays scheduled sessions for current date in `Asia/Kolkata`.
   - Shows student name, enrolled subject, scheduled 12-hour time (e.g. `6:00 PM – 7:00 PM`).
-  - **Join Class Button:** Prominent green button linking directly to the student's meeting URL.
+  - **Join Class Button:** Prominent button linking directly to the student's meeting URL (`primary_meeting_link`).
 - **Weekly Schedule (`DashboardCalendar.tsx`):**
   - 7-day compact grid showing scheduled class slots.
 - **Things That Need Attention (`ThingsThatNeedAttention.tsx`):**
@@ -79,21 +79,24 @@ The application uses a persistent two-panel shell (`AppShell.tsx`):
   - Subject(s).
   - Recurring Schedule summary.
   - Class Progress bar (`consumed / purchased`, e.g. `01 / 48`).
+  - Explicit remaining balance subtitle on student row.
   - Row click expands inline details.
 - **Inline Expandable Details (`StudentExpandedDetails.tsx`):**
   - Personal contact info (student phone, student email).
   - Parent contact info (parent name, phone, email).
-  - Configured Meeting Links with 1-click launch and copy buttons.
+  - Primary Meeting Link with 1-click launch and copy buttons.
   - Package terms (plan type, rate, validity dates).
-  - Action buttons: **Edit Student**, **Add Note**.
+  - Action buttons: **Edit Student**, **Renew Package** (opens `StudentRenewalModal`).
 - **Add Student Modal (`AddStudentModal.tsx`):**
   - Section 1: Student Details & Multi-Subject Selector (chips with add/remove).
   - Section 2: Parent Details.
   - Section 3: Package Details with auto-calculated editable per-class rate.
   - Section 4: Schedule Details (multi-day recurring entries & first class date).
 - **Edit Student Modal (`EditStudentModal.tsx`):**
-  - Modal with scrolling body lock.
-  - Edit personal details, meeting links, package terms, and recurring schedule.
+  - Edit personal details, primary meeting link, package terms, and recurring schedule.
+- **Package Renewal Modal (`StudentRenewalModal.tsx`):**
+  - Multi-step modal: Select student, review current balance, configure renewal terms, update recurring schedule, optional payment recording, confirmation.
+  - Preserves historical package row and appends new package purchase row.
 
 ---
 
@@ -106,36 +109,36 @@ The application uses a persistent two-panel shell (`AppShell.tsx`):
   - Attendance Status badge (`PRESENT`, `ABSENT`, `NOT_MARKED`, `CANCELLED`).
   - Class Deduction badge (`Deducted` vs `Credit Preserved`).
   - **Inline Attendance Controls (`AttendanceControl.tsx`):**
-    - `Present`: Marks attended and deducts credit.
-    - `Absent`: Prompts deduction preference.
-    - `Cancel`: Prompts cancellation reason and waiver.
+    - `Attended`: Marks attended and deducts credit.
+    - `No-Show`: Prompts deduction preference.
+    - `Cancel`: Opens `CancelClassModal.tsx` requiring non-blank cancellation reason.
     - `Restore Credit`: Restores credit if mistakenly deducted.
+- **Session Notes Modal:** View and update lesson coverage and pedagogical remarks in `ClassSessions.session_notes`.
 
 ---
 
 ### 3.5 Finances (`FinancesPage.tsx`)
 - **Financial Metric Cards (`FinanceSummaryCards.tsx`):**
-  - **Total Invoice:** Agreed package billing value in INR.
+  - **Total Invoiced / Payable:** Agreed package billing value in INR.
   - **Collected Earnings:** Actual payments received in INR.
-  - **Total Outstanding:** Uncollected student debt in INR.
+  - **Total Outstanding:** Uncollected student debt in INR ($\max(0, \text{Payable} - \text{Paid})$).
 - **Tabs:**
   1. **Student Balances Tab (`StudentBalanceTable.tsx`):**
-     - Student Name, Total Invoiced, Total Paid, Net Outstanding Balance, Payment Count.
+     - Student Name, Total Invoiced, Total Paid, Net Outstanding Balance, Available Credit, Payment Count.
      - **Add Payment Button:** Opens `AddPaymentModal.tsx` prefilled with selected student, payment date picker, amount, currency, and manual `in_inr`.
   2. **Payment History Tab (`FinancialHistoryTable.tsx`):**
-     - Ascending chronological list of all payments.
-     - Search by student name or reference number.
+     - Chronological list of all payments.
+     - Search by student name or payment reference.
      - Date range filter.
      - **Export to CSV:** Client-side CSV generation of filtered payment records.
 
 ---
 
 ### 3.6 Primary Meeting Link Management (Integrated into Students)
-- The standalone Meeting Links page has been eliminated.
+- Standalone Meeting Links page has been permanently eliminated.
 - Primary meeting link is managed directly on the Students page (`EditStudentLinksSection.tsx`):
   - Single "Primary Meeting Link" input field with real-time platform preview and scheme validation.
   - Rendered with platform badge and copy action via `MeetingLinkButton.tsx`.
-  - Empty state clearly indicated when no link is configured.
   - Stored directly in `Students.primary_meeting_link`.
 
 ---

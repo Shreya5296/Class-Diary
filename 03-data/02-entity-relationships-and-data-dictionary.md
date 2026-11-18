@@ -5,7 +5,8 @@
 - **Product:** Personal Dashboard (Student Management Dashboard)
 - **Document ID:** Data-02
 - **Status:** Authoritative Entity Specification
-- **Version:** 4.0.0 (Strict Six-Table Model)
+- **Version:** 5.0.0 (Strict Four-Table Model)
+- **Last Verified Date:** 2026-11-17
 
 ---
 

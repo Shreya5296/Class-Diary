@@ -83,7 +83,7 @@ Protected operations include, at minimum:
 - Reading dashboard summaries.
 - Listing or searching students.
 - Reading student profiles and notes.
-- Reading enrollments, packages, fee obligations, and payments.
+- Reading packages, financial balances, and payments.
 - Reading class sessions, attendance, and meeting links.
 - Creating, editing, archiving, or reactivating records.
 - Importing or exporting data.
