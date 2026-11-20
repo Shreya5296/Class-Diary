@@ -25,7 +25,7 @@ test.describe('E2E — Classes and Attendance Workflow', () => {
     }, { timeout: 25000 });
     const randomDay = 10 + Math.floor(Math.random() * 18);
     const randomHour = 10 + Math.floor(Math.random() * 8);
-    const scheduleDate = `2028-08-${randomDay < 10 ? '0' + randomDay : randomDay}`;
+    const scheduleDate = `2029-05-${randomDay < 10 ? '0' + randomDay : randomDay}`;
     const scheduleTime = `${randomHour < 10 ? '0' + randomHour : randomHour}:00`;
     await page.getByLabel('Class Date').fill(scheduleDate);
     await page.getByLabel('Class Start Time').fill(scheduleTime);

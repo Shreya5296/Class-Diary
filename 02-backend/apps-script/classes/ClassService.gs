@@ -531,39 +531,154 @@ function Classes_restoreCredit(spreadsheet, data, actor) {
   });
 }
 
-function Classes_update(spreadsheet, data, actor) {
-  if (typeof data === 'string' || typeof data === 'number') {
-    return _clsRepo.Classes_update(spreadsheet, data, actor);
+var _ALLOWED_CLASS_UPDATE_FIELDS = {
+  schedule_date: true,
+  class_date: true,
+  schedule_time: true,
+  start_time: true,
+  scheduled_start: true,
+  scheduled_end: true,
+  attendance_status: true,
+  outcome: true,
+  session_status: true,
+  status: true,
+  deduct_class: true,
+  cancellation_reason: true,
+  session_notes: true,
+  notes: true,
+  duration_minutes: true,
+  topic: true,
+  class_title: true
+};
+
+var _ALLOWED_CLASS_META_FIELDS = {
+  class_session_id: true,
+  session_id: true,
+  _rowIndex: true,
+  rowIndex: true,
+  id: true,
+  student_id: true
+};
+
+function _resolveTargetSession(allSessions, item) {
+  var sidStr = (item.class_session_id || item.session_id || (typeof item.id === 'string' ? item.id : ''))
+    ? String(item.class_session_id || item.session_id || item.id).trim()
+    : '';
+  var rowVal = item._rowIndex !== undefined && item._rowIndex !== null && item._rowIndex !== ''
+    ? item._rowIndex
+    : (item.rowIndex !== undefined && item.rowIndex !== null && item.rowIndex !== '' ? item.rowIndex : null);
+  var rowNum = (rowVal !== null && !isNaN(Number(rowVal))) ? Number(rowVal) : null;
+
+  var recBySid = null;
+  if (sidStr) {
+    for (var i = 0; i < allSessions.length; i++) {
+      var s = allSessions[i];
+      if (s.class_session_id === sidStr || s.session_id === sidStr) {
+        recBySid = s;
+        break;
+      }
+      var parts = sidStr.split('__');
+      if (parts.length === 3 && s.student_id === parts[0] && s.schedule_date === parts[1] && s.schedule_time === parts[2]) {
+        recBySid = s;
+        break;
+      }
+    }
   }
-  var sid = (data && (data.class_session_id || data.session_id || data._rowIndex || data.rowIndex)) || '';
-  if (!sid) return { success: false, code: 'VALIDATION_ERROR', message: 'Session ID is required' };
+
+  var recByRow = null;
+  if (rowNum !== null && rowNum >= 2) {
+    for (var j = 0; j < allSessions.length; j++) {
+      if (allSessions[j]._rowIndex === rowNum) {
+        recByRow = allSessions[j];
+        break;
+      }
+    }
+  }
+
+  if (sidStr && rowNum !== null) {
+    if (!recBySid && !recByRow) {
+      return { error: { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found: ' + sidStr } };
+    }
+    if (recBySid && recByRow && recBySid._rowIndex !== recByRow._rowIndex) {
+      return { error: { success: false, code: 'IDENTITY_CONFLICT', message: 'Session ID and row index identify different records' } };
+    }
+    if (recBySid && !recByRow) {
+      return { error: { success: false, code: 'IDENTITY_CONFLICT', message: 'Row index ' + rowNum + ' does not match session ' + sidStr } };
+    }
+    if (!recBySid && recByRow) {
+      return { error: { success: false, code: 'IDENTITY_CONFLICT', message: 'Session ID ' + sidStr + ' does not match row ' + rowNum } };
+    }
+    return { record: recBySid };
+  }
+
+  if (recBySid) return { record: recBySid };
+  if (recByRow) return { record: recByRow };
+
+  return { error: { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found' } };
+}
+
+function _validateAndSanitizeSessionUpdates(existing, item) {
+  if (item.student_id && existing.student_id && String(item.student_id).trim() !== String(existing.student_id).trim()) {
+    return { error: { success: false, code: 'FORBIDDEN_MUTATION', message: 'Changing student_id on an existing class session is not permitted' } };
+  }
+
+  var updates = {
+    _rowIndex: existing._rowIndex,
+    student_id: existing.student_id
+  };
+
+  for (var k in item) {
+    if (!item.hasOwnProperty(k)) continue;
+    if (_ALLOWED_CLASS_META_FIELDS[k]) continue;
+    if (!_ALLOWED_CLASS_UPDATE_FIELDS[k]) {
+      return { error: { success: false, code: 'INVALID_FIELD', message: 'Unknown or protected field: ' + k } };
+    }
+    if (k === 'notes' && item.session_notes === undefined) {
+      updates.session_notes = item.notes;
+    } else if (k === 'outcome' && item.attendance_status === undefined) {
+      updates.attendance_status = item.outcome;
+    } else if (k === 'status' && item.session_status === undefined) {
+      updates.session_status = item.status;
+    } else if (k === 'class_date' && item.schedule_date === undefined) {
+      updates.schedule_date = item.class_date;
+    } else if (k === 'start_time' && item.schedule_time === undefined) {
+      updates.schedule_time = item.start_time;
+    } else {
+      updates[k] = item[k];
+    }
+  }
+
+  return { updates: updates };
+}
+
+function Classes_update(spreadsheet, data, actor) {
+  var item = {};
+  if (typeof data === 'string' || typeof data === 'number') {
+    item = (actor && typeof actor === 'object') ? Object.assign({}, actor) : {};
+    if (typeof data === 'number' || /^\d+$/.test(String(data))) {
+      item._rowIndex = Number(data);
+    } else {
+      item.class_session_id = String(data);
+    }
+  } else if (data && typeof data === 'object') {
+    item = Object.assign({}, data);
+  } else {
+    return { success: false, code: 'VALIDATION_ERROR', message: 'Invalid session update payload' };
+  }
+
+  var sid = item.class_session_id || item.session_id || item._rowIndex || item.rowIndex || item.id;
+  if (!sid && sid !== 0) return { success: false, code: 'VALIDATION_ERROR', message: 'Session ID or row index is required' };
 
   return _runWithClassLock(function() {
-    var existing = _clsRepo.Classes_getById(spreadsheet, sid);
-    if (!existing && (data._rowIndex || data.rowIndex)) {
-      var all = _clsRepo.Classes_getAll(spreadsheet) || [];
-      var rNum = Number(data._rowIndex || data.rowIndex);
-      for (var a = 0; a < all.length; a++) {
-        if (all[a]._rowIndex === rNum) {
-          existing = all[a];
-          break;
-        }
-      }
-    }
-    if (!existing) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found: ' + sid };
-    var updates = {};
-    if (existing && existing._rowIndex) updates._rowIndex = existing._rowIndex;
-    if (existing && existing.student_id) updates.student_id = existing.student_id;
-    for (var k in data) {
-      if (data.hasOwnProperty(k) && k !== 'class_session_id' && k !== 'session_id') {
-        updates[k] = data[k];
-      }
-    }
-    if (data.notes !== undefined && updates.session_notes === undefined) {
-      updates.session_notes = data.notes;
-    }
-    var updated = _clsRepo.Classes_update(spreadsheet, sid, updates);
-    if (!updated) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found: ' + sid };
+    var all = _clsRepo.Classes_getAll(spreadsheet) || [];
+    var resolved = _resolveTargetSession(all, item);
+    if (resolved.error) return resolved.error;
+
+    var sanitized = _validateAndSanitizeSessionUpdates(resolved.record, item);
+    if (sanitized.error) return sanitized.error;
+
+    var updated = _clsRepo.Classes_update(spreadsheet, resolved.record._rowIndex, sanitized.updates);
+    if (!updated) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found at row ' + resolved.record._rowIndex };
     return updated;
   });
 }
@@ -574,38 +689,53 @@ function Classes_batchUpdate(spreadsheet, data, actor) {
   if (!Array.isArray(items) || items.length === 0) {
     return { success: false, code: 'VALIDATION_ERROR', message: 'No updates provided' };
   }
+
   return _runWithClassLock(function() {
     var all = _clsRepo.Classes_getAll(spreadsheet) || [];
-    var updated = [];
+    var prepared = [];
+
+    // Phase 1: Validate EVERY item before writing. Fail whole batch on any defect.
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
-      var id = item.class_session_id || item.session_id || item._rowIndex || item.rowIndex;
-      if (id) {
-        var existing = _clsRepo.Classes_getById(spreadsheet, id);
-        if (!existing && (item._rowIndex || item.rowIndex)) {
-          var rNum = Number(item._rowIndex || item.rowIndex);
-          for (var a = 0; a < all.length; a++) {
-            if (all[a]._rowIndex === rNum) {
-              existing = all[a];
-              break;
-            }
-          }
-        }
-        var updates = {};
-        if (existing && existing._rowIndex) updates._rowIndex = existing._rowIndex;
-        if (existing && existing.student_id) updates.student_id = existing.student_id;
-        for (var k in item) {
-          if (item.hasOwnProperty(k) && k !== 'class_session_id' && k !== 'session_id') {
-            updates[k] = item[k];
-          }
-        }
-        if (item.notes !== undefined && updates.session_notes === undefined) {
-          updates.session_notes = item.notes;
-        }
-        var res = _clsRepo.Classes_update(spreadsheet, id, updates);
-        if (res) updated.push(res);
+      if (!item || typeof item !== 'object') {
+        return { success: false, code: 'VALIDATION_ERROR', message: 'Item at index ' + i + ' is invalid' };
       }
+      var sid = item.class_session_id || item.session_id || item._rowIndex || item.rowIndex || item.id;
+      if (!sid && sid !== 0) {
+        return { success: false, code: 'VALIDATION_ERROR', message: 'Item at index ' + i + ' is missing a session identifier' };
+      }
+
+      var resolved = _resolveTargetSession(all, item);
+      if (resolved.error) {
+        return Object.assign({}, resolved.error, {
+          message: resolved.error.message + ' (item index ' + i + ')'
+        });
+      }
+
+      var sanitized = _validateAndSanitizeSessionUpdates(resolved.record, item);
+      if (sanitized.error) {
+        return Object.assign({}, sanitized.error, {
+          message: sanitized.error.message + ' (item index ' + i + ')'
+        });
+      }
+
+      prepared.push({
+        record: resolved.record,
+        updates: sanitized.updates
+      });
     }
+
+    // Phase 2: Apply mutations only after all items are strictly validated.
+    var updated = [];
+    for (var j = 0; j < prepared.length; j++) {
+      var prep = prepared[j];
+      var res = _clsRepo.Classes_update(spreadsheet, prep.record._rowIndex, prep.updates);
+      if (!res) {
+        return { success: false, code: 'UPDATE_FAILED', message: 'Failed to update session at row ' + prep.record._rowIndex };
+      }
+      updated.push(res);
+    }
+
     return { success: true, count: updated.length, data: updated };
   }, 15000);
 }
