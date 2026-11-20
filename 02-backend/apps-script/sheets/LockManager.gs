@@ -89,18 +89,30 @@ function withLock(timeoutMs, actionFn) {
     }
 
     if (actionError) {
-      return {
+      var execRes = {
         success: false,
         code: 'EXECUTION_ERROR',
         message: actionError.message || String(actionError)
       };
+      if (releaseError) {
+        execRes.lockReleaseFailed = true;
+        execRes.lockReleaseError = 'Exception during lock release: ' + (releaseError.message || String(releaseError));
+      }
+      return execRes;
     }
 
     if (releaseError) {
+      var relDetail = 'Exception during lock release: ' + (releaseError.message || String(releaseError));
+      if (actionResult && typeof actionResult === 'object') {
+        actionResult.lockReleaseFailed = true;
+        actionResult.lockReleaseError = relDetail;
+      }
       return {
         success: false,
         code: 'LOCK_RELEASE_ERROR',
-        message: 'Exception during lock release: ' + (releaseError.message || String(releaseError))
+        message: relDetail,
+        lockReleaseFailed: true,
+        result: actionResult
       };
     }
   }

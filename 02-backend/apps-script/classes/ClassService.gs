@@ -30,6 +30,23 @@ function _runWithClassLock(fn, timeoutMs) {
   }
   var ms = typeof timeoutMs === 'number' ? timeoutMs : 10000;
   var lockRes = lockFn(ms, fn);
+
+  if (lockRes.code === 'LOCK_RELEASE_ERROR' || lockRes.lockReleaseFailed) {
+    if (lockRes.result && typeof lockRes.result === 'object') {
+      var merged = Object.assign({}, lockRes.result);
+      merged.lockReleaseFailed = true;
+      merged.lockReleaseError = lockRes.message || 'Exception during lock release';
+      return merged;
+    }
+    return {
+      success: false,
+      code: 'LOCK_RELEASE_ERROR',
+      lockReleaseFailed: true,
+      message: lockRes.message || 'Exception during lock release',
+      data: lockRes.result
+    };
+  }
+
   if (!lockRes.success) {
     var errMsg = lockRes.message || 'Operation failed under lock';
     if (errMsg.indexOf('SCHED_CONFLICT:') !== -1) {
