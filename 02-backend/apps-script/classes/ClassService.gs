@@ -23,12 +23,43 @@ var _sessionMetaMap = (typeof globalThis !== 'undefined' && globalThis.__session
   ? globalThis.__sessionMetaMap
   : ((typeof globalThis !== 'undefined') ? (globalThis.__sessionMetaMap = {}) : {});
 
-function _runWithClassLock(fn) {
+function _runWithClassLock(fn, timeoutMs) {
   var lockFn = (_clsLock && typeof _clsLock.withLock === 'function') ? _clsLock.withLock : null;
   if (!lockFn) {
     return { success: false, code: 'LOCK_UNAVAILABLE', message: 'Concurrency lock manager is unavailable' };
   }
-  var lockRes = lockFn(10000, fn);
+  var ms = typeof timeoutMs === 'number' ? timeoutMs : 10000;
+  var lockRes = lockFn(ms, fn);
+
+  if (lockRes.code === 'EXECUTION_ERROR') {
+    var execOut = {
+      success: false,
+      code: 'EXECUTION_ERROR',
+      message: lockRes.message || 'Operation failed during execution'
+    };
+    if (lockRes.lockReleaseFailed) {
+      execOut.lockReleaseFailed = true;
+      execOut.lockReleaseError = lockRes.lockReleaseError;
+    }
+    return execOut;
+  }
+
+  if (lockRes.code === 'LOCK_RELEASE_ERROR' || lockRes.lockReleaseFailed) {
+    if (lockRes.result && typeof lockRes.result === 'object') {
+      var merged = Object.assign({}, lockRes.result);
+      merged.lockReleaseFailed = true;
+      merged.lockReleaseError = lockRes.lockReleaseError || lockRes.message || 'Exception during lock release';
+      return merged;
+    }
+    return {
+      success: false,
+      code: 'LOCK_RELEASE_ERROR',
+      lockReleaseFailed: true,
+      message: lockRes.message || 'Exception during lock release',
+      data: lockRes.result
+    };
+  }
+
   if (!lockRes.success) {
     var errMsg = lockRes.message || 'Operation failed under lock';
     if (errMsg.indexOf('SCHED_CONFLICT:') !== -1) {
@@ -36,8 +67,13 @@ function _runWithClassLock(fn) {
     }
     return { success: false, code: lockRes.code || 'CONFLICT', message: errMsg };
   }
-  if (lockRes.result && lockRes.result.success === false) {
-    return lockRes.result;
+  if (lockRes.result && typeof lockRes.result === 'object') {
+    if (lockRes.result.success === false) {
+      return lockRes.result;
+    }
+    if (lockRes.result.success === true) {
+      return lockRes.result;
+    }
   }
   return { success: true, data: lockRes.result };
 }
@@ -192,8 +228,7 @@ function Classes_batchSchedule(spreadsheet, data, actor) {
     }
   }
 
-  var lockFn = _clsLock && _clsLock.withLock ? _clsLock.withLock : function(t, fn) { return { success: true, result: fn() }; };
-  var lockRes = lockFn(15000, function() {
+  return _runWithClassLock(function() {
     var allSessions = _clsRepo.Classes_getAll(spreadsheet) || [];
     var existingKeys = {};
     for (var i = 0; i < allSessions.length; i++) {
@@ -250,9 +285,7 @@ function Classes_batchSchedule(spreadsheet, data, actor) {
     }
 
     return { success: true, count: created.length, data: created };
-  });
-
-  return lockRes.success ? lockRes.result : { success: false, code: lockRes.code || 'LOCK_FAILED', message: lockRes.message };
+  }, 15000);
 }
 
 function Classes_complete(spreadsheet, data, actor) {
@@ -528,31 +561,301 @@ function Classes_restoreCredit(spreadsheet, data, actor) {
   });
 }
 
-function Classes_update(spreadsheet, data, actor) {
-  if (typeof data === 'string' || typeof data === 'number') {
-    return _clsRepo.Classes_update(spreadsheet, data, actor);
+var _PROTECTED_LIFECYCLE_FIELDS = {
+  session_status: true,
+  status: true,
+  attendance_status: true,
+  outcome: true,
+  deduct_class: true,
+  cancellation_reason: true
+};
+
+var _ALLOWED_CLASS_UPDATE_FIELDS = {
+  schedule_date: true,
+  class_date: true,
+  schedule_time: true,
+  start_time: true,
+  scheduled_start: true,
+  scheduled_end: true,
+  session_notes: true,
+  notes: true,
+  duration_minutes: true,
+  topic: true,
+  class_title: true
+};
+
+var _ALLOWED_CLASS_META_FIELDS = {
+  class_session_id: true,
+  session_id: true,
+  _rowIndex: true,
+  rowIndex: true,
+  id: true,
+  student_id: true
+};
+
+function _resolveTargetSession(allSessions, item) {
+  var sidStr = (item.class_session_id || item.session_id || (typeof item.id === 'string' ? item.id : ''))
+    ? String(item.class_session_id || item.session_id || item.id).trim()
+    : '';
+  var rowVal = item._rowIndex !== undefined && item._rowIndex !== null && item._rowIndex !== ''
+    ? item._rowIndex
+    : (item.rowIndex !== undefined && item.rowIndex !== null && item.rowIndex !== '' ? item.rowIndex : null);
+  var rowNum = (rowVal !== null && !isNaN(Number(rowVal))) ? Number(rowVal) : null;
+
+  var recBySid = null;
+  if (sidStr) {
+    for (var i = 0; i < allSessions.length; i++) {
+      var s = allSessions[i];
+      if (s.class_session_id === sidStr || s.session_id === sidStr) {
+        recBySid = s;
+        break;
+      }
+      var parts = sidStr.split('__');
+      if (parts.length === 3 && s.student_id === parts[0] && s.schedule_date === parts[1] && s.schedule_time === parts[2]) {
+        recBySid = s;
+        break;
+      }
+    }
   }
-  var sid = (data && (data.class_session_id || data.session_id)) || '';
-  if (!sid) return { success: false, code: 'VALIDATION_ERROR', message: 'Session ID is required' };
+
+  var recByRow = null;
+  if (rowNum !== null && rowNum >= 2) {
+    for (var j = 0; j < allSessions.length; j++) {
+      if (allSessions[j]._rowIndex === rowNum) {
+        recByRow = allSessions[j];
+        break;
+      }
+    }
+  }
+
+  if (sidStr && rowNum !== null) {
+    if (!recBySid && !recByRow) {
+      return { error: { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found: ' + sidStr } };
+    }
+    if (recBySid && recByRow && recBySid._rowIndex !== recByRow._rowIndex) {
+      return { error: { success: false, code: 'IDENTITY_CONFLICT', message: 'Session ID and row index identify different records' } };
+    }
+    if (recBySid && !recByRow) {
+      return { error: { success: false, code: 'IDENTITY_CONFLICT', message: 'Row index ' + rowNum + ' does not match session ' + sidStr } };
+    }
+    if (!recBySid && recByRow) {
+      return { error: { success: false, code: 'IDENTITY_CONFLICT', message: 'Session ID ' + sidStr + ' does not match row ' + rowNum } };
+    }
+    return { record: recBySid };
+  }
+
+  if (recBySid) return { record: recBySid };
+  if (recByRow) return { record: recByRow };
+
+  return { error: { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found' } };
+}
+
+function _validateAndSanitizeSessionUpdates(existing, item) {
+  if (item.student_id && existing.student_id && String(item.student_id).trim() !== String(existing.student_id).trim()) {
+    return { error: { success: false, code: 'FORBIDDEN_MUTATION', message: 'Changing student_id on an existing class session is not permitted' } };
+  }
+
+  // Reject attempts to update protected lifecycle or credit-accounting fields
+  for (var k in item) {
+    if (!item.hasOwnProperty(k)) continue;
+    if (_PROTECTED_LIFECYCLE_FIELDS[k]) {
+      return {
+        error: {
+          success: false,
+          code: 'LIFECYCLE_OPERATION_REQUIRED',
+          message: 'Field "' + k + '" cannot be updated via generic update. Use dedicated lifecycle operations (classes.complete, classes.cancel, classes.restoreCredit).'
+        }
+      };
+    }
+  }
+
+  var updates = {
+    _rowIndex: existing._rowIndex,
+    student_id: existing.student_id
+  };
+
+  for (var key in item) {
+    if (!item.hasOwnProperty(key)) continue;
+    if (_ALLOWED_CLASS_META_FIELDS[key]) continue;
+    if (!_ALLOWED_CLASS_UPDATE_FIELDS[key]) {
+      return { error: { success: false, code: 'INVALID_FIELD', message: 'Unknown or protected field: ' + key } };
+    }
+    if (key === 'notes' && item.session_notes === undefined) {
+      updates.session_notes = item.notes;
+    } else if (key === 'class_date' && item.schedule_date === undefined) {
+      updates.schedule_date = item.class_date;
+    } else if (key === 'start_time' && item.schedule_time === undefined) {
+      updates.schedule_time = item.start_time;
+    } else {
+      updates[key] = item[key];
+    }
+  }
+
+  return { updates: updates };
+}
+
+function Classes_update(spreadsheet, data, actor) {
+  var item = {};
+  if (typeof data === 'string' || typeof data === 'number') {
+    item = (actor && typeof actor === 'object') ? Object.assign({}, actor) : {};
+    if (typeof data === 'number' || /^\d+$/.test(String(data))) {
+      item._rowIndex = Number(data);
+    } else {
+      item.class_session_id = String(data);
+    }
+  } else if (data && typeof data === 'object') {
+    item = Object.assign({}, data);
+  } else {
+    return { success: false, code: 'VALIDATION_ERROR', message: 'Invalid session update payload' };
+  }
+
+  var sid = item.class_session_id || item.session_id || item._rowIndex || item.rowIndex || item.id;
+  if (!sid && sid !== 0) return { success: false, code: 'VALIDATION_ERROR', message: 'Session ID or row index is required' };
 
   return _runWithClassLock(function() {
-    var existing = _clsRepo.Classes_getById(spreadsheet, sid);
-    if (!existing) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Session not found' };
-    var updates = {};
-    if (existing && existing._rowIndex) updates._rowIndex = existing._rowIndex;
-    if (existing && existing.student_id) updates.student_id = existing.student_id;
-    if (data.session_notes !== undefined) updates.session_notes = data.session_notes;
-    if (data.attendance_status !== undefined) updates.attendance_status = data.attendance_status;
-    if (data.session_status !== undefined) updates.session_status = data.session_status;
-    if (data.deduct_class !== undefined) updates.deduct_class = data.deduct_class;
-    if (data.cancellation_reason !== undefined) updates.cancellation_reason = data.cancellation_reason;
-    if (data.schedule_date !== undefined) updates.schedule_date = data.schedule_date;
-    if (data.schedule_time !== undefined) updates.schedule_time = data.schedule_time;
-    if (data.scheduled_start !== undefined) updates.scheduled_start = data.scheduled_start;
-    if (data.scheduled_end !== undefined) updates.scheduled_end = data.scheduled_end;
-    var updated = _clsRepo.Classes_update(spreadsheet, sid, updates);
+    var all = _clsRepo.Classes_getAll(spreadsheet) || [];
+    var resolved = _resolveTargetSession(all, item);
+    if (resolved.error) return resolved.error;
+
+    var sanitized = _validateAndSanitizeSessionUpdates(resolved.record, item);
+    if (sanitized.error) return sanitized.error;
+
+    var updated = _clsRepo.Classes_update(spreadsheet, resolved.record._rowIndex, sanitized.updates);
+    if (!updated) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found at row ' + resolved.record._rowIndex };
+    if (!updated.class_session_id && !updated.session_id) {
+      updated.class_session_id = resolved.record.class_session_id || resolved.record.session_id || sid;
+      updated.session_id = updated.class_session_id;
+    }
     return updated;
   });
+}
+
+function Classes_batchUpdate(spreadsheet, data, actor) {
+  var p = data || {};
+  var items = p.updates || p.sessions || [];
+  if (!Array.isArray(items) || items.length === 0) {
+    return { success: false, code: 'VALIDATION_ERROR', message: 'No updates provided' };
+  }
+
+  return _runWithClassLock(function() {
+    var all = _clsRepo.Classes_getAll(spreadsheet) || [];
+    var prepared = [];
+
+    // Phase 1: Pre-validate EVERY item before any writes. Fail immediately if invalid or contains lifecycle fields.
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      if (!item || typeof item !== 'object') {
+        return { success: false, code: 'VALIDATION_ERROR', message: 'Item at index ' + i + ' is invalid' };
+      }
+      var sid = item.class_session_id || item.session_id || item._rowIndex || item.rowIndex || item.id;
+      if (!sid && sid !== 0) {
+        return { success: false, code: 'VALIDATION_ERROR', message: 'Item at index ' + i + ' is missing a session identifier' };
+      }
+
+      var resolved = _resolveTargetSession(all, item);
+      if (resolved.error) {
+        return Object.assign({}, resolved.error, {
+          message: resolved.error.message + ' (item index ' + i + ')'
+        });
+      }
+
+      var sanitized = _validateAndSanitizeSessionUpdates(resolved.record, item);
+      if (sanitized.error) {
+        return Object.assign({}, sanitized.error, {
+          message: sanitized.error.message + ' (item index ' + i + ')'
+        });
+      }
+
+      prepared.push({
+        record: resolved.record,
+        updates: sanitized.updates,
+        identifier: sid
+      });
+    }
+
+    // Phase 2: Sequential execution under lock with explicit partial failure tracking
+    var succeeded = [];
+    var failed = [];
+
+    for (var j = 0; j < prepared.length; j++) {
+      var prep = prepared[j];
+      var res = null;
+      var writeError = null;
+
+      try {
+        res = _clsRepo.Classes_update(spreadsheet, prep.record._rowIndex, prep.updates);
+      } catch (err) {
+        writeError = err;
+      }
+
+      if (res && !writeError) {
+        if (!res.class_session_id && !res.session_id) {
+          res.class_session_id = prep.record.class_session_id || prep.record.session_id || prep.identifier;
+          res.session_id = res.class_session_id;
+        }
+        succeeded.push(res);
+      } else {
+        var isException = !!writeError;
+        var errDetail = isException ? (writeError.message || String(writeError)) : 'Repository update returned no record';
+        failed.push({
+          identifier: prep.identifier,
+          rowIndex: prep.record._rowIndex,
+          error: errDetail,
+          outcomeUnknown: isException
+        });
+        var successfulIds = succeeded.map(function(s) { return s.class_session_id || s.session_id; });
+        var failedIds = failed.map(function(f) { return f.identifier; });
+
+        if (succeeded.length > 0) {
+          var partialRes = {
+            success: false,
+            code: 'PARTIAL_BATCH_FAILURE',
+            message: isException
+              ? ('Batch update partially failed: ' + succeeded.length + ' succeeded, write on ' + prep.identifier + ' encountered an exception (' + errDetail + '). Earlier changes were persisted; outcome of failed write is uncertain.')
+              : ('Batch update partially failed: ' + succeeded.length + ' succeeded, ' + failed.length + ' failed. Partial changes occurred and were not rolled back. Failed on ' + prep.identifier + ': ' + errDetail),
+            partialChangesOccurred: true,
+            successfulCount: succeeded.length,
+            failedCount: failed.length,
+            successfulSessions: successfulIds,
+            failedSessions: failedIds,
+            data: succeeded
+          };
+          if (isException) {
+            partialRes.writeOutcomeUnknown = true;
+          }
+          return partialRes;
+        } else {
+          if (isException) {
+            return {
+              success: false,
+              code: 'BATCH_UPDATE_FAILED',
+              message: 'Batch update encountered an exception on session ' + prep.identifier + ': ' + errDetail + '. Write outcome is uncertain; changes may or may not have persisted.',
+              writeOutcomeUnknown: true,
+              successfulCount: 0,
+              failedCount: 1,
+              successfulSessions: [],
+              failedSessions: failedIds,
+              data: []
+            };
+          } else {
+            return {
+              success: false,
+              code: 'BATCH_UPDATE_FAILED',
+              message: 'Batch update failed on session ' + prep.identifier + ': ' + errDetail + '. Zero changes occurred.',
+              partialChangesOccurred: false,
+              successfulCount: 0,
+              failedCount: 1,
+              successfulSessions: [],
+              failedSessions: failedIds,
+              data: []
+            };
+          }
+        }
+      }
+    }
+
+    return { success: true, count: succeeded.length, data: succeeded };
+  }, 15000);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -563,6 +866,7 @@ if (typeof module !== 'undefined' && module.exports) {
     Classes_cancel: Classes_cancel,
     Classes_restoreCredit: Classes_restoreCredit,
     Classes_update: Classes_update,
+    Classes_batchUpdate: Classes_batchUpdate,
     _setLockManager: function(lm) { _clsLock = lm; }
   };
 }

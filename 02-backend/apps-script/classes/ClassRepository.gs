@@ -156,7 +156,7 @@ function Classes_repoUpdate(spreadsheet, id, updates) {
         return null;
       }
       for (var k in updates) {
-        if (updates.hasOwnProperty(k) && k !== '_rowIndex' && k !== 'rowIndex') {
+        if (updates.hasOwnProperty(k) && k !== '_rowIndex' && k !== 'rowIndex' && k !== 'student_id') {
           rec[k] = updates[k];
         }
       }
@@ -215,7 +215,7 @@ function Classes_repoUpdate(spreadsheet, id, updates) {
         if (rVal[stuIdx] === sId && rowDate === sDate && rowTime === targetTime) {
           var currentRec = _clsMapper.rowToRecord(map2, rVal);
           for (var key in updates) {
-            if (updates.hasOwnProperty(key) && key !== '_rowIndex' && key !== 'rowIndex') {
+            if (updates.hasOwnProperty(key) && key !== '_rowIndex' && key !== 'rowIndex' && key !== 'student_id') {
               currentRec[key] = updates[key];
             }
           }

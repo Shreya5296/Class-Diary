@@ -96,11 +96,12 @@ function checkBookingEntitlement(spreadsheet, studentId, targetPkgId, allSession
     for (var k in mem) {
       var m = mem[k];
       if (!m || m.student_id !== studentId) continue;
-      var sameId = (p.package_id && m.package_id && p.package_id === m.package_id);
-      var sameRow = (p._rowIndex && m._rowIndex && p._rowIndex === m._rowIndex);
-      var sameDate = (p.start_date && m.start_date && p.start_date === m.start_date);
-      var samePlan = (!p.plan_type || !m.plan_type || String(p.plan_type).trim().toUpperCase() === String(m.plan_type).trim().toUpperCase());
-      if (sameId || sameRow || (sameDate && samePlan)) {
+      var hasBothRows = (p._rowIndex !== undefined && p._rowIndex !== null && m._rowIndex !== undefined && m._rowIndex !== null);
+      var isMatch = hasBothRows ? (Number(p._rowIndex) === Number(m._rowIndex)) :
+        ((p.package_id && m.package_id && p.package_id === m.package_id && String(p.package_id).indexOf('pkg_') !== 0) ||
+         (p.start_date && m.start_date && p.start_date === m.start_date &&
+          (!p.plan_type || !m.plan_type || String(p.plan_type).trim().toUpperCase() === String(m.plan_type).trim().toUpperCase())));
+      if (isMatch) {
         return Object.assign({}, p, { status: m.status || m.package_status || p.status, package_status: m.package_status || m.status || p.package_status });
       }
     }
@@ -137,6 +138,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isPackageEligible: isPackageEligible,
     calculatePendingReservations: calculatePendingReservations,
     calculateChronologicalBalances: calculateChronologicalBalances,
-    checkBookingEntitlement: checkBookingEntitlement
+    checkBookingEntitlement: checkBookingEntitlement,
+    _setPackageRepository: function(r) { _entPkgRepo = r; }
   };
 }
