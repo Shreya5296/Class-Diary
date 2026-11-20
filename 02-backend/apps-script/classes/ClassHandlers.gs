@@ -2,7 +2,15 @@
  * ClassHandlers: Adapts API requests to ClassService calls and registers operations.
  */
 
-var _clsSvcH = typeof Classes_schedule === 'function' ? { Classes_schedule: Classes_schedule, Classes_batchSchedule: Classes_batchSchedule, Classes_complete: Classes_complete, Classes_cancel: Classes_cancel, Classes_restoreCredit: Classes_restoreCredit } : (typeof require !== 'undefined' ? require('./ClassService.gs') : null);
+var _clsSvcH = typeof Classes_schedule === 'function' ? {
+  Classes_schedule: Classes_schedule,
+  Classes_batchSchedule: Classes_batchSchedule,
+  Classes_complete: Classes_complete,
+  Classes_cancel: Classes_cancel,
+  Classes_restoreCredit: Classes_restoreCredit,
+  Classes_update: Classes_update,
+  Classes_batchUpdate: Classes_batchUpdate
+} : (typeof require !== 'undefined' ? require('./ClassService.gs') : null);
 var _clsRepoH = typeof Classes_repoUpdate === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_repoUpdate } : (typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null));
 
 function registerClassOperations(router) {
@@ -70,9 +78,9 @@ function registerClassOperations(router) {
     var p = ctx.payload || ctx.data || {};
     var id = p.class_session_id || p.session_id || p._rowIndex || p.rowIndex;
     if (!id) return { success: false, code: 'VALIDATION_ERROR', message: 'Class session ID or row index is required' };
-    var updated = _clsRepoH.Classes_update(ctx.spreadsheet, id, p);
-    if (!updated) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found: ' + id };
-    return { success: true, data: updated };
+    return _clsSvcH.Classes_update(ctx.spreadsheet, p, {
+      actorId: ctx.actorId, email: ctx.verifiedEmail, requestId: ctx.requestId
+    });
   });
 
   reg('classes.batchUpdate', function(ctx) {
@@ -81,16 +89,9 @@ function registerClassOperations(router) {
     if (!Array.isArray(items) || items.length === 0) {
       return { success: false, code: 'VALIDATION_ERROR', message: 'No updates provided' };
     }
-    var updated = [];
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      var id = item.class_session_id || item.session_id || item._rowIndex || item.rowIndex;
-      if (id) {
-        var res = _clsRepoH.Classes_update(ctx.spreadsheet, id, item);
-        if (res) updated.push(res);
-      }
-    }
-    return { success: true, count: updated.length, data: updated };
+    return _clsSvcH.Classes_batchUpdate(ctx.spreadsheet, p, {
+      actorId: ctx.actorId, email: ctx.verifiedEmail, requestId: ctx.requestId
+    });
   });
 }
 

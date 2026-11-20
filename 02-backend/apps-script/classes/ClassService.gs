@@ -23,12 +23,13 @@ var _sessionMetaMap = (typeof globalThis !== 'undefined' && globalThis.__session
   ? globalThis.__sessionMetaMap
   : ((typeof globalThis !== 'undefined') ? (globalThis.__sessionMetaMap = {}) : {});
 
-function _runWithClassLock(fn) {
+function _runWithClassLock(fn, timeoutMs) {
   var lockFn = (_clsLock && typeof _clsLock.withLock === 'function') ? _clsLock.withLock : null;
   if (!lockFn) {
     return { success: false, code: 'LOCK_UNAVAILABLE', message: 'Concurrency lock manager is unavailable' };
   }
-  var lockRes = lockFn(10000, fn);
+  var ms = typeof timeoutMs === 'number' ? timeoutMs : 10000;
+  var lockRes = lockFn(ms, fn);
   if (!lockRes.success) {
     var errMsg = lockRes.message || 'Operation failed under lock';
     if (errMsg.indexOf('SCHED_CONFLICT:') !== -1) {
@@ -36,8 +37,13 @@ function _runWithClassLock(fn) {
     }
     return { success: false, code: lockRes.code || 'CONFLICT', message: errMsg };
   }
-  if (lockRes.result && lockRes.result.success === false) {
-    return lockRes.result;
+  if (lockRes.result && typeof lockRes.result === 'object') {
+    if (lockRes.result.success === false) {
+      return lockRes.result;
+    }
+    if (lockRes.result.success === true) {
+      return lockRes.result;
+    }
   }
   return { success: true, data: lockRes.result };
 }
@@ -192,8 +198,7 @@ function Classes_batchSchedule(spreadsheet, data, actor) {
     }
   }
 
-  var lockFn = _clsLock && _clsLock.withLock ? _clsLock.withLock : function(t, fn) { return { success: true, result: fn() }; };
-  var lockRes = lockFn(15000, function() {
+  return _runWithClassLock(function() {
     var allSessions = _clsRepo.Classes_getAll(spreadsheet) || [];
     var existingKeys = {};
     for (var i = 0; i < allSessions.length; i++) {
@@ -250,9 +255,7 @@ function Classes_batchSchedule(spreadsheet, data, actor) {
     }
 
     return { success: true, count: created.length, data: created };
-  });
-
-  return lockRes.success ? lockRes.result : { success: false, code: lockRes.code || 'LOCK_FAILED', message: lockRes.message };
+  }, 15000);
 }
 
 function Classes_complete(spreadsheet, data, actor) {
@@ -532,27 +535,79 @@ function Classes_update(spreadsheet, data, actor) {
   if (typeof data === 'string' || typeof data === 'number') {
     return _clsRepo.Classes_update(spreadsheet, data, actor);
   }
-  var sid = (data && (data.class_session_id || data.session_id)) || '';
+  var sid = (data && (data.class_session_id || data.session_id || data._rowIndex || data.rowIndex)) || '';
   if (!sid) return { success: false, code: 'VALIDATION_ERROR', message: 'Session ID is required' };
 
   return _runWithClassLock(function() {
     var existing = _clsRepo.Classes_getById(spreadsheet, sid);
-    if (!existing) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Session not found' };
+    if (!existing && (data._rowIndex || data.rowIndex)) {
+      var all = _clsRepo.Classes_getAll(spreadsheet) || [];
+      var rNum = Number(data._rowIndex || data.rowIndex);
+      for (var a = 0; a < all.length; a++) {
+        if (all[a]._rowIndex === rNum) {
+          existing = all[a];
+          break;
+        }
+      }
+    }
+    if (!existing) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found: ' + sid };
     var updates = {};
     if (existing && existing._rowIndex) updates._rowIndex = existing._rowIndex;
     if (existing && existing.student_id) updates.student_id = existing.student_id;
-    if (data.session_notes !== undefined) updates.session_notes = data.session_notes;
-    if (data.attendance_status !== undefined) updates.attendance_status = data.attendance_status;
-    if (data.session_status !== undefined) updates.session_status = data.session_status;
-    if (data.deduct_class !== undefined) updates.deduct_class = data.deduct_class;
-    if (data.cancellation_reason !== undefined) updates.cancellation_reason = data.cancellation_reason;
-    if (data.schedule_date !== undefined) updates.schedule_date = data.schedule_date;
-    if (data.schedule_time !== undefined) updates.schedule_time = data.schedule_time;
-    if (data.scheduled_start !== undefined) updates.scheduled_start = data.scheduled_start;
-    if (data.scheduled_end !== undefined) updates.scheduled_end = data.scheduled_end;
+    for (var k in data) {
+      if (data.hasOwnProperty(k) && k !== 'class_session_id' && k !== 'session_id') {
+        updates[k] = data[k];
+      }
+    }
+    if (data.notes !== undefined && updates.session_notes === undefined) {
+      updates.session_notes = data.notes;
+    }
     var updated = _clsRepo.Classes_update(spreadsheet, sid, updates);
+    if (!updated) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found: ' + sid };
     return updated;
   });
+}
+
+function Classes_batchUpdate(spreadsheet, data, actor) {
+  var p = data || {};
+  var items = p.updates || p.sessions || [];
+  if (!Array.isArray(items) || items.length === 0) {
+    return { success: false, code: 'VALIDATION_ERROR', message: 'No updates provided' };
+  }
+  return _runWithClassLock(function() {
+    var all = _clsRepo.Classes_getAll(spreadsheet) || [];
+    var updated = [];
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var id = item.class_session_id || item.session_id || item._rowIndex || item.rowIndex;
+      if (id) {
+        var existing = _clsRepo.Classes_getById(spreadsheet, id);
+        if (!existing && (item._rowIndex || item.rowIndex)) {
+          var rNum = Number(item._rowIndex || item.rowIndex);
+          for (var a = 0; a < all.length; a++) {
+            if (all[a]._rowIndex === rNum) {
+              existing = all[a];
+              break;
+            }
+          }
+        }
+        var updates = {};
+        if (existing && existing._rowIndex) updates._rowIndex = existing._rowIndex;
+        if (existing && existing.student_id) updates.student_id = existing.student_id;
+        for (var k in item) {
+          if (item.hasOwnProperty(k) && k !== 'class_session_id' && k !== 'session_id') {
+            updates[k] = item[k];
+          }
+        }
+        if (item.notes !== undefined && updates.session_notes === undefined) {
+          updates.session_notes = item.notes;
+        }
+        var res = _clsRepo.Classes_update(spreadsheet, id, updates);
+        if (res) updated.push(res);
+      }
+    }
+    return { success: true, count: updated.length, data: updated };
+  }, 15000);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -563,6 +618,7 @@ if (typeof module !== 'undefined' && module.exports) {
     Classes_cancel: Classes_cancel,
     Classes_restoreCredit: Classes_restoreCredit,
     Classes_update: Classes_update,
+    Classes_batchUpdate: Classes_batchUpdate,
     _setLockManager: function(lm) { _clsLock = lm; }
   };
 }
