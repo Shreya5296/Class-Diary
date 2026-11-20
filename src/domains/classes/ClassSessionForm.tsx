@@ -55,7 +55,7 @@ export const ClassSessionForm: React.FC<ClassSessionFormProps> = ({
 
     const [y, m, d] = classDate.split('-').map(Number);
     const [sh, sm] = startTime.split(':').map(Number);
-    const [eh, em] = endTime.split(':').map(Number);
+    const [eh, em] = (endTime || startTime).split(':').map(Number);
     const startDt = new Date(y, m - 1, d, sh, sm, 0);
     const endDt = new Date(y, m - 1, d, eh, em, 0);
     const sName = selectedStudent?.student_name || selectedStudent?.full_name || '';
@@ -129,14 +129,8 @@ export const ClassSessionForm: React.FC<ClassSessionFormProps> = ({
       </FormField>
 
       <div style={{ padding: '8px 12px', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border-subtle)', fontSize: 'var(--font-size-xs)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>Class Duration: </span>
-          <span style={{ color: 'var(--color-text-muted)' }}>{durationMinutes} min ({hasPackageDuration ? 'from student package' : 'standard default'})</span>
-        </div>
-        <div>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>End Time: </span>
-          <span style={{ color: endTime ? 'var(--color-text-muted)' : 'var(--color-danger)' }}>{endTime || 'Crosses midnight!'}</span>
-        </div>
+        <div><span style={{ fontWeight: 600 }}>Class Duration: </span><span style={{ color: 'var(--color-text-muted)' }}>{durationMinutes} min ({hasPackageDuration ? 'from package' : 'standard'})</span></div>
+        <div><span style={{ fontWeight: 600 }}>End Time: </span><span style={{ color: endTime ? 'var(--color-text-muted)' : 'var(--color-danger)' }}>{endTime || 'Crosses midnight!'}</span></div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>

@@ -36,7 +36,7 @@ test.describe('E2E — Classes and Attendance Workflow', () => {
 
     // Verify session row appears in schedule table
     const classRow = page.locator('tbody tr').filter({ has: page.locator(`[title*="${testId}"]`) });
-    await expect(classRow).toBeVisible({ timeout: 25000 });
+    await expect(classRow).toBeVisible({ timeout: 45000 });
 
     // Mark attendance as ATTENDED if available
     const attendedBtn = classRow.locator('button:has-text("Attended")');

@@ -43,7 +43,6 @@ export const ClassesPage: React.FC = () => {
     <div>
       <PageHeader
         title="Class Schedule & Attendance"
-        subtitle="Manage upcoming live classes, launch meeting rooms, and record attendance with package credit deductions."
         actions={
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             <Button variant="secondary" onClick={() => setRefreshKey((k) => k + 1)} aria-label="Refresh classes">

@@ -6,12 +6,14 @@ import styles from './calendarControlsBar.module.css';
 export interface CalendarControlsBarProps {
   viewMode: CalendarViewMode;
   onChangeViewMode: (mode: CalendarViewMode) => void;
-  titleText: string;
+  titleText?: string;
   countLabel?: string;
+  showTitle?: boolean;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
-  onRefresh: () => void;
+  onScheduleExtraClass?: () => void;
+  onRefresh?: () => void;
 }
 
 export const CalendarControlsBar: React.FC<CalendarControlsBarProps> = ({
@@ -19,10 +21,11 @@ export const CalendarControlsBar: React.FC<CalendarControlsBarProps> = ({
   onChangeViewMode,
   titleText,
   countLabel,
+  showTitle = true,
   onPrev,
   onNext,
   onToday,
-  onRefresh,
+  onScheduleExtraClass,
 }) => {
   const prevLabel = viewMode === 'day' ? '‹ Prev Day' : viewMode === 'week' ? '‹ Prev Week' : '‹ Prev Month';
   const nextLabel = viewMode === 'day' ? 'Next Day ›' : viewMode === 'week' ? 'Next Week ›' : 'Next Month ›';
@@ -47,9 +50,16 @@ export const CalendarControlsBar: React.FC<CalendarControlsBarProps> = ({
         </div>
 
         <div className={styles.navGroup}>
-          <Button variant="secondary" size="sm" onClick={onRefresh} aria-label="Refresh calendar">
-            ↻ Refresh
-          </Button>
+          {onScheduleExtraClass && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onScheduleExtraClass}
+              aria-label="Schedule Extra Class"
+            >
+              + Schedule Extra Class
+            </Button>
+          )}
           <div className={styles.navButtonGroup} role="group" aria-label="Date navigation controls">
             <button type="button" onClick={onPrev} aria-label={prevLabel} title={prevLabel} className={styles.navArrowBtn}>‹</button>
             <button type="button" onClick={onToday} aria-label={todayLabel} className={styles.navTodayBtn}>{todayLabel}</button>
@@ -58,12 +68,14 @@ export const CalendarControlsBar: React.FC<CalendarControlsBarProps> = ({
         </div>
       </div>
 
-      <div className={styles.titleRow}>
-        <div className={styles.titleWrapper}>
-          <span className={styles.titleText}>{titleText}</span>
-          {countLabel && <span className={styles.countLabel}>({countLabel})</span>}
+      {showTitle && titleText && (
+        <div className={styles.titleRow}>
+          <div className={styles.titleWrapper}>
+            <span className={styles.titleText}>{titleText}</span>
+            {countLabel && <span className={styles.countLabel}>({countLabel})</span>}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

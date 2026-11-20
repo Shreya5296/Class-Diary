@@ -11,6 +11,13 @@ export interface RequestOptions {
   timeoutMs?: number;
 }
 
+const inFlightMap = new Map<string, Promise<ApiResponse<any>>>();
+
+function isReadOnlyOp(op: string, idempKey?: string): boolean {
+  if (idempKey) return false;
+  return op.endsWith('.list') || op.endsWith('.get') || op.endsWith('.overview') || op.endsWith('.getBalance');
+}
+
 export async function sendApiRequest<T = unknown>(
   operation: string,
   payload: Record<string, unknown> = {},
@@ -23,6 +30,13 @@ export async function sendApiRequest<T = unknown>(
 
   if (config.useMockData) {
     return handleMockApiRequest<T>(operation, payload, requestId);
+  }
+
+  const isDedupe = isReadOnlyOp(operation, idempKey);
+  const cacheKey = isDedupe ? `${operation}:${JSON.stringify(payload)}:${options.token || ''}` : '';
+
+  if (isDedupe && inFlightMap.has(cacheKey)) {
+    return inFlightMap.get(cacheKey) as Promise<ApiResponse<T>>;
   }
 
   const bodyData = {
@@ -43,48 +57,50 @@ export async function sendApiRequest<T = unknown>(
     }, requestId);
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs || 60000);
+  const exec = async (): Promise<ApiResponse<T>> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs || 60000);
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      },
-      body: JSON.stringify(bodyData),
-      redirect: 'follow',
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new ApiNetworkError(`HTTP Error ${response.status}: ${response.statusText}`);
-    }
-
-    let json: ApiResponse<T>;
     try {
-      json = await response.json();
-    } catch {
-      throw new ApiNetworkError('Backend returned invalid response (HTML or non-JSON)');
-    }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(bodyData),
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    if (!json.ok && json.error) {
-      throw new ApiClientError(json.error, json.meta?.requestId || requestId);
-    }
+      if (!response.ok) {
+        throw new ApiNetworkError(`HTTP Error ${response.status}: ${response.statusText}`);
+      }
 
-    return json;
-  } catch (err: unknown) {
-    clearTimeout(timeoutId);
-    if (err instanceof ApiClientError || err instanceof ApiNetworkError) {
-      throw err;
+      let json: ApiResponse<T>;
+      try {
+        json = await response.json();
+      } catch {
+        throw new ApiNetworkError('Backend returned invalid response (HTML or non-JSON)');
+      }
+
+      if (!json.ok && json.error) {
+        throw new ApiClientError(json.error, json.meta?.requestId || requestId);
+      }
+      return json;
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      if (err instanceof ApiClientError || err instanceof ApiNetworkError) throw err;
+      if ((err as Error)?.name === 'AbortError') {
+        const sec = Math.round((options.timeoutMs || 60000) / 1000);
+        throw new ApiNetworkError(`Request timed out after ${sec}s`);
+      }
+      const rawMsg = (err as Error)?.message || '';
+      throw new ApiNetworkError(rawMsg ? `Network request failed: ${rawMsg}` : 'Network request failed', err);
+    } finally {
+      if (isDedupe) inFlightMap.delete(cacheKey);
     }
-    if ((err as Error)?.name === 'AbortError') {
-      const sec = Math.round((options.timeoutMs || 60000) / 1000);
-      throw new ApiNetworkError(`Request timed out after ${sec}s`);
-    }
-    const rawMsg = (err as Error)?.message || '';
-    throw new ApiNetworkError(rawMsg ? `Network request failed: ${rawMsg}` : 'Network request failed', err);
-  }
+  };
+
+  const promise = exec();
+  if (isDedupe) inFlightMap.set(cacheKey, promise);
+  return promise;
 }

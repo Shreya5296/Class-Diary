@@ -3,6 +3,6 @@ import { APP_NAME } from '../config/publicConfig';
 
 export function usePageTitle(title: string): void {
   useEffect(() => {
-    document.title = title ? `${title} | ${APP_NAME}` : APP_NAME;
+    document.title = title ? (APP_NAME ? `${title} | ${APP_NAME}` : title) : (APP_NAME || 'Personal Dashboard');
   }, [title]);
 }

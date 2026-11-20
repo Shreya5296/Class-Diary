@@ -18,9 +18,9 @@ test.describe('E2E — Account Dropdown, Branding, Preferences & Calendar', () =
     await expect(page.locator('button[aria-label="Log out of session"]')).toBeVisible({ timeout: 10000 });
   });
 
-  test('verifies single product title Student Manager and no dev/mock badge in top bar', async ({ page }) => {
-    // Brand title is Student Manager
-    await expect(page.locator('aside span:has-text("Student Manager")')).toBeVisible();
+  test('verifies Student Manager is removed and no dev/mock badge in top bar', async ({ page }) => {
+    // Brand title Student Manager is removed globally
+    await expect(page.locator('aside span:has-text("Student Manager")')).toHaveCount(0);
     await expect(page.locator('text=Tutor Administration')).toHaveCount(0);
 
     // Development / Mock badge is completely absent from top bar
