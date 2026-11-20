@@ -33,7 +33,7 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({ studentId }) => {
 
   const progressMap = useMemo(() => buildSessionProgressMap(sessions, packages), [sessions, packages]);
 
-  const { upcoming, past } = useMemo(() => {
+  const { upcoming, past, invalid } = useMemo(() => {
     return splitAndSortSessions(sessions, nowMs, activeTz);
   }, [sessions, nowMs, activeTz]);
 
@@ -94,6 +94,12 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({ studentId }) => {
           <span className={styles.badge}>{past.length}</span>
         </button>
       </div>
+
+      {invalid.length > 0 && (
+        <div className={styles.invalidNotice} role="status">
+          ⚠️ {invalid.length} session{invalid.length > 1 ? 's have' : ' has'} invalid or missing scheduled dates and {invalid.length > 1 ? 'are' : 'is'} excluded from the schedule view.
+        </div>
+      )}
 
       {displayedSessions.length === 0 ? (
         <EmptyState

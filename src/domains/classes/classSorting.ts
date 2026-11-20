@@ -94,7 +94,7 @@ export function splitAndSortSessions(
 
   return {
     upcoming: upcomingWithTs.map((item) => item.session),
-    past: [...pastWithTs.map((item) => item.session), ...invalid],
+    past: pastWithTs.map((item) => item.session),
     invalid,
   };
 }
