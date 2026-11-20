@@ -39,22 +39,31 @@ describe('Extra Class Mutation Lock Boundary & Package Identity', () => {
 
     const updRes = registry['classes.update']({
       spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-      payload: { class_session_id: s1.data.class_session_id, attendance_status: 'PRESENT', deduct_class: true, session_status: 'COMPLETED' }
+      payload: { class_session_id: s1.data.class_session_id, session_notes: 'Updated lesson plan' }
     });
     expect(updRes.success).toBe(true);
-    expect(updRes.data.attendance_status).toBe('PRESENT');
-    expect(updRes.data.deduct_class).toBe(true);
+    expect(updRes.data.session_notes).toBe('Updated lesson plan');
 
     const bUpdRes = registry['classes.batchUpdate']({
       spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-      payload: { updates: [{ class_session_id: s2.data.class_session_id, attendance_status: 'ABSENT_UNEXCUSED', deduct_class: true, notes: 'Missed' }] }
+      payload: { updates: [{ class_session_id: s2.data.class_session_id, notes: 'Batch note' }] }
     });
     expect(bUpdRes.success).toBe(true);
     expect(bUpdRes.count).toBe(1);
-    expect(bUpdRes.data[0].attendance_status).toBe('ABSENT_UNEXCUSED');
+    expect(bUpdRes.data[0].session_notes).toBe('Batch note');
+
+    // Dedicated completion records attendance under lock
+    const compRes = registry['classes.complete']({
+      spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
+      payload: { class_session_id: s1.data.class_session_id, attendance_status: 'PRESENT' }
+    });
+    expect(compRes.success).toBe(true);
+    expect(compRes.data.session_status).toBe('COMPLETED');
+    expect(compRes.data.deduct_class).toBe(true);
 
     const bal = env.getBackendAvailableBalance(env.studentAId);
-    expect(bal.consumed).toBe(2);
+    expect(bal.consumed).toBe(1);
+    expect(bal.reserved).toBe(1);
     expect(bal.available).toBe(8);
   });
 

@@ -531,6 +531,15 @@ function Classes_restoreCredit(spreadsheet, data, actor) {
   });
 }
 
+var _PROTECTED_LIFECYCLE_FIELDS = {
+  session_status: true,
+  status: true,
+  attendance_status: true,
+  outcome: true,
+  deduct_class: true,
+  cancellation_reason: true
+};
+
 var _ALLOWED_CLASS_UPDATE_FIELDS = {
   schedule_date: true,
   class_date: true,
@@ -538,12 +547,6 @@ var _ALLOWED_CLASS_UPDATE_FIELDS = {
   start_time: true,
   scheduled_start: true,
   scheduled_end: true,
-  attendance_status: true,
-  outcome: true,
-  session_status: true,
-  status: true,
-  deduct_class: true,
-  cancellation_reason: true,
   session_notes: true,
   notes: true,
   duration_minutes: true,
@@ -622,29 +625,39 @@ function _validateAndSanitizeSessionUpdates(existing, item) {
     return { error: { success: false, code: 'FORBIDDEN_MUTATION', message: 'Changing student_id on an existing class session is not permitted' } };
   }
 
+  // Reject attempts to update protected lifecycle or credit-accounting fields
+  for (var k in item) {
+    if (!item.hasOwnProperty(k)) continue;
+    if (_PROTECTED_LIFECYCLE_FIELDS[k]) {
+      return {
+        error: {
+          success: false,
+          code: 'LIFECYCLE_OPERATION_REQUIRED',
+          message: 'Field "' + k + '" cannot be updated via generic update. Use dedicated lifecycle operations (classes.complete, classes.cancel, classes.restoreCredit).'
+        }
+      };
+    }
+  }
+
   var updates = {
     _rowIndex: existing._rowIndex,
     student_id: existing.student_id
   };
 
-  for (var k in item) {
-    if (!item.hasOwnProperty(k)) continue;
-    if (_ALLOWED_CLASS_META_FIELDS[k]) continue;
-    if (!_ALLOWED_CLASS_UPDATE_FIELDS[k]) {
-      return { error: { success: false, code: 'INVALID_FIELD', message: 'Unknown or protected field: ' + k } };
+  for (var key in item) {
+    if (!item.hasOwnProperty(key)) continue;
+    if (_ALLOWED_CLASS_META_FIELDS[key]) continue;
+    if (!_ALLOWED_CLASS_UPDATE_FIELDS[key]) {
+      return { error: { success: false, code: 'INVALID_FIELD', message: 'Unknown or protected field: ' + key } };
     }
-    if (k === 'notes' && item.session_notes === undefined) {
+    if (key === 'notes' && item.session_notes === undefined) {
       updates.session_notes = item.notes;
-    } else if (k === 'outcome' && item.attendance_status === undefined) {
-      updates.attendance_status = item.outcome;
-    } else if (k === 'status' && item.session_status === undefined) {
-      updates.session_status = item.status;
-    } else if (k === 'class_date' && item.schedule_date === undefined) {
+    } else if (key === 'class_date' && item.schedule_date === undefined) {
       updates.schedule_date = item.class_date;
-    } else if (k === 'start_time' && item.schedule_time === undefined) {
+    } else if (key === 'start_time' && item.schedule_time === undefined) {
       updates.schedule_time = item.start_time;
     } else {
-      updates[k] = item[k];
+      updates[key] = item[key];
     }
   }
 
@@ -679,6 +692,10 @@ function Classes_update(spreadsheet, data, actor) {
 
     var updated = _clsRepo.Classes_update(spreadsheet, resolved.record._rowIndex, sanitized.updates);
     if (!updated) return { success: false, code: 'RECORD_NOT_FOUND', message: 'Class session not found at row ' + resolved.record._rowIndex };
+    if (!updated.class_session_id && !updated.session_id) {
+      updated.class_session_id = resolved.record.class_session_id || resolved.record.session_id || sid;
+      updated.session_id = updated.class_session_id;
+    }
     return updated;
   });
 }
@@ -694,7 +711,7 @@ function Classes_batchUpdate(spreadsheet, data, actor) {
     var all = _clsRepo.Classes_getAll(spreadsheet) || [];
     var prepared = [];
 
-    // Phase 1: Validate EVERY item before writing. Fail whole batch on any defect.
+    // Phase 1: Pre-validate EVERY item before any writes. Fail immediately if invalid or contains lifecycle fields.
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
       if (!item || typeof item !== 'object') {
@@ -721,22 +738,46 @@ function Classes_batchUpdate(spreadsheet, data, actor) {
 
       prepared.push({
         record: resolved.record,
-        updates: sanitized.updates
+        updates: sanitized.updates,
+        identifier: sid
       });
     }
 
-    // Phase 2: Apply mutations only after all items are strictly validated.
-    var updated = [];
+    // Phase 2: Sequential execution under lock with explicit partial failure tracking
+    var succeeded = [];
+    var failed = [];
+
     for (var j = 0; j < prepared.length; j++) {
       var prep = prepared[j];
       var res = _clsRepo.Classes_update(spreadsheet, prep.record._rowIndex, prep.updates);
-      if (!res) {
-        return { success: false, code: 'UPDATE_FAILED', message: 'Failed to update session at row ' + prep.record._rowIndex };
+      if (res) {
+        if (!res.class_session_id && !res.session_id) {
+          res.class_session_id = prep.record.class_session_id || prep.record.session_id || prep.identifier;
+          res.session_id = res.class_session_id;
+        }
+        succeeded.push(res);
+      } else {
+        failed.push({
+          identifier: prep.identifier,
+          rowIndex: prep.record._rowIndex
+        });
+        var successfulIds = succeeded.map(function(s) { return s.class_session_id || s.session_id; });
+        var failedIds = failed.map(function(f) { return f.identifier; });
+        return {
+          success: false,
+          code: 'PARTIAL_BATCH_FAILURE',
+          message: 'Batch update partially failed: ' + succeeded.length + ' succeeded, ' + failed.length + ' failed. Partial changes occurred and were not rolled back.',
+          partialChangesOccurred: true,
+          successfulCount: succeeded.length,
+          failedCount: failed.length,
+          successfulSessions: successfulIds,
+          failedSessions: failedIds,
+          data: succeeded
+        };
       }
-      updated.push(res);
     }
 
-    return { success: true, count: updated.length, data: updated };
+    return { success: true, count: succeeded.length, data: succeeded };
   }, 15000);
 }
 
