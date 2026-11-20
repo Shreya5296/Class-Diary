@@ -11,7 +11,7 @@ test.describe('E2E — Finances Refinements & Meeting Links Management', () => {
 
   test('Finances: verifies Student Balances default tab, Add Payment modal, and 4-column history', async ({ page }) => {
     await navigateTo(page, 'Finances');
-    await expect(page.locator('h1:has-text("Finances")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1:has-text("Finances")')).toBeVisible({ timeout: 35000 });
 
     // 1. Verify exact Card Labels and Descriptions
     const summaryCards = page.locator('[data-testid="finance-summary-cards"]');

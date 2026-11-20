@@ -11,18 +11,31 @@ import { buildClassScheduleColumns } from './classScheduleColumns';
 import { buildSessionProgressMap } from './sessionProgressCalculator';
 import { getSessionStatusStyle } from './sessionStatusStyles';
 import { EditSessionNotesModal } from './EditSessionNotesModal';
+import { splitAndSortSessions } from './classSorting';
+import styles from './classSchedule.module.css';
 
-export const ClassSchedule: React.FC<{ studentId?: string; onRefreshTrigger?: number }> = ({ studentId }) => {
+export interface ClassScheduleProps {
+  studentId?: string;
+  onRefreshTrigger?: number;
+}
+
+export const ClassSchedule: React.FC<ClassScheduleProps> = ({ studentId }) => {
   const { token } = useAuth();
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [notesSession, setNotesSession] = useState<ClassSession | null>(null);
   const {
     sessions, packages, loading, refetch, getStudentConsumedClasses, getStudentMeetingLink,
   } = useClassScheduleData(studentId, token);
 
-  const todayKey = toInputDateFormat(new Date(), 'Asia/Kolkata');
+  const activeTz = 'Asia/Kolkata';
+  const todayKey = toInputDateFormat(new Date(), activeTz);
   const nowMs = Date.now();
 
   const progressMap = useMemo(() => buildSessionProgressMap(sessions, packages), [sessions, packages]);
+
+  const { upcoming, past } = useMemo(() => {
+    return splitAndSortSessions(sessions, nowMs, activeTz);
+  }, [sessions, nowMs, activeTz]);
 
   const getProgress = (s: ClassSession) => {
     return progressMap.get(s.session_id) || progressMap.get(`${s.student_id}__${s.schedule_date}__${s.schedule_time}`);
@@ -49,14 +62,8 @@ export const ClassSchedule: React.FC<{ studentId?: string; onRefreshTrigger?: nu
   });
 
   if (loading) return <LoadingState message="Loading class schedule…" />;
-  if (sessions.length === 0) {
-    return (
-      <EmptyState
-        title={studentId ? 'No classes scheduled for this student' : 'No classes scheduled'}
-        description={studentId ? 'This student currently has no upcoming or historical class sessions.' : 'No upcoming or historical class sessions found.'}
-      />
-    );
-  }
+
+  const displayedSessions = activeTab === 'upcoming' ? upcoming : past;
 
   const rowStyle = (session: ClassSession) => {
     const statusCfg = getSessionStatusStyle(session.session_status || session.status, session.attendance_status);
@@ -64,8 +71,39 @@ export const ClassSchedule: React.FC<{ studentId?: string; onRefreshTrigger?: nu
   };
 
   return (
-    <>
-      <DataTable fixedLayout minWidth="920px" columns={columns} data={sessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />
+    <div className={styles.container}>
+      <div className={styles.tabBar} role="tablist" aria-label="Class schedule views">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'upcoming'}
+          className={`${styles.tabButton} ${activeTab === 'upcoming' ? styles.tabButtonActive : ''}`}
+          onClick={() => setActiveTab('upcoming')}
+        >
+          <span>Upcoming Classes</span>
+          <span className={styles.badge}>{upcoming.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'past'}
+          className={`${styles.tabButton} ${activeTab === 'past' ? styles.tabButtonActive : ''}`}
+          onClick={() => setActiveTab('past')}
+        >
+          <span>Past Classes</span>
+          <span className={styles.badge}>{past.length}</span>
+        </button>
+      </div>
+
+      {displayedSessions.length === 0 ? (
+        <EmptyState
+          title={activeTab === 'upcoming' ? 'No upcoming classes' : 'No past classes'}
+          description={activeTab === 'upcoming' ? 'No classes scheduled for now or in the future.' : 'No past scheduled classes recorded.'}
+        />
+      ) : (
+        <DataTable fixedLayout minWidth="920px" columns={columns} data={displayedSessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />
+      )}
+
       {notesSession && (
         <EditSessionNotesModal
           session={notesSession}
@@ -75,6 +113,6 @@ export const ClassSchedule: React.FC<{ studentId?: string; onRefreshTrigger?: nu
           onSaved={refetch}
         />
       )}
-    </>
+    </div>
   );
 };
