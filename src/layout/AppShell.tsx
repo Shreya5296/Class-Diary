@@ -27,6 +27,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       />
       <div className={styles.mainArea}>
         <TopBar
+          activeSection={activeSection}
           onToggleMenu={() => setMobileMenuOpen((open) => !open)}
           onNavigate={onNavigate}
         />

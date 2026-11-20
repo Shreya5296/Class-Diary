@@ -5,6 +5,7 @@ import { fetchSchedules, WeeklyScheduleEntry } from '../classes/scheduleApi';
 import { parseCanonicalScheduleString } from '../students/scheduleFormatter';
 import { fetchStudents } from '../students/studentApi';
 import { fetchPackages } from '../packages/packageApi';
+import { sendApiRequest } from '../../api/apiClient';
 import { ClassSession } from '../classes/classTypes';
 import { Student } from '../students/studentTypes';
 import { Package } from '../packages/packageTypes';
@@ -17,6 +18,7 @@ export function useDashboardData(token?: string | null) {
   const [students, setStudents] = useState<Student[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [meetingLinks, setMeetingLinks] = useState<any[]>([]);
+  const [fees, setFees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,12 +26,13 @@ export function useDashboardData(token?: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const [ov, cls, schedList, stuList, pkgList] = await Promise.all([
+      const [ov, cls, schedList, stuList, pkgList, feeList] = await Promise.all([
         fetchDashboardOverview(token),
         fetchClasses(undefined, token).catch(() => []),
         fetchSchedules(undefined, token).catch(() => []),
         fetchStudents({}, token).catch(() => []),
         fetchPackages(undefined, token).catch(() => []),
+        sendApiRequest<any[]>('fees.list', {}, { token }).then((r) => r.data || []).catch(() => []),
       ]);
       let finalScheds = schedList;
       if (finalScheds.length === 0 && pkgList.length > 0) {
@@ -51,6 +54,7 @@ export function useDashboardData(token?: string | null) {
       setSchedules(finalScheds);
       setStudents(stuList);
       setPackages(pkgList);
+      setFees(feeList);
       const derived = stuList.map((s) => ({
         student_id: s.student_id,
         student_name: s.student_name,
@@ -76,6 +80,7 @@ export function useDashboardData(token?: string | null) {
     students,
     packages,
     meetingLinks,
+    fees,
     loading,
     error,
     refreshData: loadData,

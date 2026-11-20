@@ -42,15 +42,22 @@ export function handleMockClassRecordAttendance(payload: Record<string, unknown>
   const sid = String(payload.session_id || payload.class_session_id || '');
   const classesList = MOCK_CLASSES as unknown as Record<string, unknown>[];
   const session = classesList.find((c) => c.session_id === sid || c.class_session_id === sid);
+  const rawOutcome = String(payload.outcome || payload.attendance_status || 'PRESENT').toUpperCase();
+  const isAbsent = rawOutcome === 'NO_SHOW' || rawOutcome === 'ABSENT' || rawOutcome === 'ABSENT_UNEXCUSED';
+  const attStatus = isAbsent ? 'NO_SHOW' : 'PRESENT';
+  const deduct = isAbsent ? Boolean(payload.deduct_class ?? true) : true;
   if (session) {
-    session.attendance_status = 'PRESENT';
+    session.attendance_status = attStatus;
     session.session_status = 'COMPLETED';
     session.status = 'COMPLETED';
-    session.deduct_class = true;
-    session.class_credit_effect = 'CONSUME';
+    session.deduct_class = deduct;
+    session.class_credit_effect = deduct ? 'CONSUME' : 'NO_CONSUME';
+    if (payload.session_notes !== undefined) {
+      session.session_notes = String(payload.session_notes).trim();
+    }
     return session;
   }
-  return { session_id: sid, attendance_status: 'PRESENT', session_status: 'COMPLETED', deduct_class: true };
+  return { session_id: sid, attendance_status: attStatus, session_status: 'COMPLETED', deduct_class: deduct };
 }
 
 export function handleMockClassCancel(payload: Record<string, unknown>) {

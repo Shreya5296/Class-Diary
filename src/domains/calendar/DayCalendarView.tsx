@@ -25,55 +25,51 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxWidth: '800px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxWidth: '880px', margin: '0 auto' }}>
       {isToday && (
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: 'var(--radius-full)', fontSize: 'var(--font-size-xs)', fontWeight: 600, width: 'fit-content' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#2563eb' }} /> Today
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', backgroundColor: 'var(--color-primary-bg, #eff6ff)', color: 'var(--color-primary, #2563eb)', border: '1px solid var(--color-primary-border, #bfdbfe)', borderRadius: 'var(--radius-full)', fontSize: 'var(--font-size-xs)', fontWeight: 600, width: 'fit-content' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-primary)' }} /> Today
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         {events.map((evt) => {
           const isCancelled = evt.category === 'CANCELLED' || evt.isCancelled;
           const isPastCompleted = evt.category === 'PAST_COMPLETED';
+
+          const cardBg = isCancelled ? 'rgba(254, 242, 242, 0.85)' : isPastCompleted ? 'rgba(236, 253, 245, 0.85)' : 'rgba(255, 255, 255, 0.82)';
+          const borderLeftColor = isCancelled ? '#dc2626' : isPastCompleted ? '#059669' : evt.isRecurring ? 'var(--color-secondary-accent, #0d9488)' : 'var(--color-primary)';
+          const borderStyle = evt.isRecurring && !isCancelled && !isPastCompleted ? 'dashed' : 'solid';
 
           return (
             <div
               key={evt.id}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '1rem 1.25rem',
-                backgroundColor: isCancelled ? '#fbe7e7' : isPastCompleted ? '#e5f4ea' : '#fffbeb',
-                border: isCancelled ? '1px solid #eab4b4' : isPastCompleted ? '1px solid #b7dfc4' : isToday ? '1px solid #f59e0b' : '1px solid #fde68a',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.95rem 1.25rem', background: cardBg,
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                border: `1px ${borderStyle} rgba(220, 227, 240, 0.9)`,
+                borderLeft: `4px solid ${borderLeftColor}`,
                 borderRadius: 'var(--radius-lg)',
-                boxShadow: isPastCompleted || isCancelled ? 'none' : 'var(--shadow-xs)',
-                opacity: isCancelled || isPastCompleted ? 0.82 : 1,
-                filter: isPastCompleted || isCancelled ? 'saturate(0.75)' : undefined,
-                gap: 'var(--space-4)',
+                boxShadow: '0 2px 8px rgba(23, 37, 84, 0.04)',
+                gap: 'var(--space-4)', flexWrap: 'wrap',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-                <div style={{ minWidth: '120px', display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: 'var(--font-size-md)', fontWeight: 700, color: isPastCompleted ? '#276749' : isCancelled ? '#a63f3f' : '#92400e', fontFamily: 'monospace' }}>
+                <div style={{ minWidth: '120px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: 'var(--font-size-md)', fontWeight: 700, color: 'var(--color-text-main)', fontFamily: 'var(--font-mono)' }}>
                     {evt.startTime12}
                   </span>
-                  <span style={{ fontSize: '11px', color: isPastCompleted ? '#276749' : isCancelled ? '#a63f3f' : '#b45309', opacity: 0.9 }}>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
                     until {evt.endTime12} ({evt.durationMinutes} min)
                   </span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: isPastCompleted ? '#276749' : isCancelled ? '#a63f3f' : '#92400e' }}>
-                      {evt.studentName}
-                    </span>
-                    {evt.isRecurring && !isCancelled && (
-                      <span className={styles.badgeSubtle}>Recurring</span>
-                    )}
-                  </div>
-                  <span style={{ fontSize: 'var(--font-size-xs)', color: isPastCompleted ? '#276749' : isCancelled ? '#a63f3f' : '#b45309', opacity: 0.9 }}>
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                    {evt.studentName}
+                  </span>
+                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 500 }}>
                     {evt.subject}
                   </span>
                 </div>
@@ -83,29 +79,19 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
                 {!isCancelled && (
                   <span
                     style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      padding: '3px 8px',
-                      borderRadius: 'var(--radius-sm)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                      backgroundColor: isPastCompleted ? '#e5f4ea' : '#fef3c7',
-                      color: isPastCompleted ? '#276749' : '#92400e',
-                      border: isPastCompleted ? '1px solid #b7dfc4' : '1px solid #fde68a',
+                      fontSize: '11px', fontWeight: 600, padding: '3px 8px',
+                      borderRadius: 'var(--radius-md)', letterSpacing: '0.02em',
+                      backgroundColor: isPastCompleted ? '#dcfce7' : '#eff6ff',
+                      color: isPastCompleted ? '#166534' : '#1d4ed8',
+                      border: `1px solid ${isPastCompleted ? '#86efac' : '#bfdbfe'}`,
                     }}
                   >
-                    {isPastCompleted ? 'Completed' : (evt.isRecurring ? 'Recurring' : 'Upcoming')}
+                    {isPastCompleted ? 'Completed' : 'Upcoming'}
                   </span>
                 )}
 
                 {evt.canJoin && evt.meetingUrl && (
-                  <a
-                    href={evt.meetingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.joinBtn}
-                    style={{ textDecoration: 'none' }}
-                  >
+                  <a href={evt.meetingUrl} target="_blank" rel="noopener noreferrer" className={styles.joinBtn} style={{ textDecoration: 'none' }}>
                     Join Class ↗
                   </a>
                 )}

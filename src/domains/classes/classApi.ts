@@ -71,7 +71,8 @@ export async function recordAttendance(
   sessionId: string,
   outcome: AttendanceStatus,
   token?: string | null,
-  cancellationReason?: string
+  cancellationReason?: string,
+  sessionNotes?: string
 ): Promise<ClassSession> {
   const normOutcome = (outcome === 'ATTENDED' || outcome === 'PRESENT') ? 'PRESENT' : outcome;
   const payload: Record<string, unknown> = {
@@ -81,6 +82,9 @@ export async function recordAttendance(
   };
   if (cancellationReason) {
     payload.cancellation_reason = cancellationReason;
+  }
+  if (sessionNotes) {
+    payload.session_notes = sessionNotes;
   }
   const response = await sendApiRequest<ClassSession>(
     'classes.recordAttendance',

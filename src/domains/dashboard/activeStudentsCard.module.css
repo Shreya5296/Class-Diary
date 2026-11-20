@@ -1,0 +1,146 @@
+.featuredCard {
+  background: linear-gradient(135deg, #172554 0%, #1e3a8a 52%, #2563eb 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 10px 25px -4px rgba(37, 99, 235, 0.32), 0 4px 12px rgba(23, 37, 84, 0.18);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  box-sizing: border-box;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.featuredCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.4), 0 6px 16px rgba(23, 37, 84, 0.22);
+}
+
+.featuredHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.featuredLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: #93c5fd;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.featuredIconWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.14);
+  color: #bfdbfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+}
+
+.featuredBody {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: 0.5rem;
+}
+
+.featuredMetricGroup {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ratioValueWrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.featuredValue {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.featuredTotal {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: -0.02em;
+}
+
+.featuredSubtext {
+  margin: 0.25rem 0 0;
+  font-size: var(--font-size-xs);
+  color: #bfdbfe;
+  font-weight: 500;
+}
+
+.ringWrapper {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ringSvg {
+  transform: rotate(-90deg);
+  width: 58px;
+  height: 58px;
+}
+
+.ringBg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 4.5;
+}
+
+.ringFill {
+  fill: none;
+  stroke: #38bdf8;
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 350ms ease;
+  filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.6));
+}
+
+.ringText {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+}
+
+.skeletonFeaturedRatio {
+  width: 90px;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.15);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featuredCard { transition: none; }
+  .featuredCard:hover { transform: none; }
+  .skeletonFeaturedRatio { animation: none; }
+}

@@ -6,14 +6,18 @@ import { formatTimeTo12Hour } from '../../lib/time12Format';
 export interface WeeklyTimeGridProps {
   dayColumns: DayColumnData[];
   startHour?: number;
-  endHour?: number;
 }
 
-const HOURS = [
-  '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
-  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
-  '19:00', '20:00', '21:00', '22:00',
-];
+export const DEFAULT_START_HOUR = 9;
+export const END_HOUR = 22;
+
+export function getCalendarHours(startHour = DEFAULT_START_HOUR): string[] {
+  const hours: string[] = [];
+  for (let h = startHour; h <= END_HOUR; h++) {
+    hours.push(`${String(h).padStart(2, '0')}:00`);
+  }
+  return hours;
+}
 
 function getEventCardClass(evt: CalendarEventItem): string {
   if (evt.category === 'CANCELLED' || evt.isCancelled) return styles.cardCancelled;
@@ -25,14 +29,26 @@ function getEventCardClass(evt: CalendarEventItem): string {
   return evt.isRecurring ? styles.recurringCard : styles.sessionCard;
 }
 
-export const WeeklyTimeGrid: React.FC<WeeklyTimeGridProps> = ({ dayColumns }) => {
+export const WeeklyTimeGrid: React.FC<WeeklyTimeGridProps> = ({ dayColumns, startHour: propStartHour }) => {
+  let computedStart = DEFAULT_START_HOUR;
+  for (const col of dayColumns) {
+    for (const evt of col.events) {
+      if (typeof evt.startHour === 'number' && evt.startHour < computedStart) {
+        computedStart = Math.max(0, evt.startHour);
+      }
+    }
+  }
+  const effectiveStartHour = propStartHour !== undefined ? propStartHour : computedStart;
+  const hours = getCalendarHours(effectiveStartHour);
+  const baseMin = effectiveStartHour * 60;
+
   return (
     <div className={styles.calendarOuter}>
       <div className={styles.scrollContainer}>
         <div className={styles.gridTable}>
           <div className={styles.timeAxis}>
             <div className={styles.timeAxisHeader} />
-            {HOURS.map((hourStr) => (
+            {hours.map((hourStr) => (
               <div key={hourStr} className={styles.timeSlot}>
                 {formatTimeTo12Hour(hourStr)}
               </div>
@@ -50,7 +66,6 @@ export const WeeklyTimeGrid: React.FC<WeeklyTimeGridProps> = ({ dayColumns }) =>
                 <div className={`${styles.dayBody} ${col.isToday ? styles.dayBodyToday : ''}`}>
                   {col.events.map((evt) => {
                     const cardClass = getEventCardClass(evt);
-                    const baseMin = 7 * 60;
                     const evtMin = evt.startHour * 60 + evt.startMinute;
                     const diffMin = Math.max(0, evtMin - baseMin);
                     const topPx = Math.round((diffMin / 60) * 56);
@@ -64,15 +79,9 @@ export const WeeklyTimeGrid: React.FC<WeeklyTimeGridProps> = ({ dayColumns }) =>
                         key={evt.id}
                         className={`${styles.eventCard} ${cardClass}`}
                         style={{
-                          position: 'absolute',
-                          top: `${topPx}px`,
-                          left: '2px',
-                          right: '2px',
-                          height: `${heightPx}px`,
-                          overflow: 'hidden',
-                          margin: 0,
-                          padding: isCompact ? '2px 4px' : '3px 5px',
-                          zIndex: evt.isRecurring ? 5 : 6,
+                          position: 'absolute', top: `${topPx}px`, left: '2px', right: '2px',
+                          height: `${heightPx}px`, overflow: 'hidden', margin: 0,
+                          padding: isCompact ? '2px 4px' : '4px 6px', zIndex: evt.isRecurring ? 5 : 6,
                         }}
                         title={`${evt.studentName} — ${evt.subject} (${evt.timeRange12})`}
                       >
@@ -85,20 +94,11 @@ export const WeeklyTimeGrid: React.FC<WeeklyTimeGridProps> = ({ dayColumns }) =>
                           <>
                             <div className={styles.eventHeader}>
                               <span className={styles.eventStudent}>{evt.studentName}</span>
-                              {evt.isRecurring && !evt.isCancelled && evt.category !== 'CANCELLED' && (
-                                <span className={styles.badgeSubtle}>Recurring</span>
-                              )}
                             </div>
                             <span className={styles.eventSubject}>{evt.subject}</span>
                             <span className={styles.eventTime}>{evt.timeRange12}</span>
                             {evt.canJoin && evt.meetingUrl && (
-                              <a
-                                href={evt.meetingUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.joinBtn}
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                              <a href={evt.meetingUrl} target="_blank" rel="noopener noreferrer" className={styles.joinBtn} onClick={(e) => e.stopPropagation()}>
                                 Join Class ↗
                               </a>
                             )}

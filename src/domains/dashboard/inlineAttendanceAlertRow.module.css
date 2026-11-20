@@ -1,0 +1,87 @@
+.row {
+  display: flex; flex-direction: column; gap: 0.4rem; padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(220, 227, 240, 0.85); box-shadow: 0 2px 8px rgba(23, 37, 84, 0.04);
+  transition: all var(--transition-fast);
+}
+.row:hover { border-color: rgba(199, 210, 254, 0.9); box-shadow: 0 4px 12px rgba(23, 37, 84, 0.06); }
+.unexpandedHeader {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
+}
+.alertInfo { display: flex; align-items: flex-start; gap: 0.5rem; min-width: 0; flex: 1; }
+.dotPending {
+  width: 8px; height: 8px; border-radius: var(--radius-full); background: #d97706;
+  box-shadow: 0 0 5px rgba(217, 119, 6, 0.4); flex-shrink: 0; margin-top: 4px;
+}
+.alertDetails { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.alertStudent { font-size: var(--font-size-xs); font-weight: 700; color: var(--color-text-main); }
+.classDate { font-size: 11px; font-weight: 600; color: var(--color-primary); letter-spacing: -0.01em; }
+.alertReason { font-size: 11px; color: var(--color-text-muted); font-weight: 500; }
+.actionButtonsRow { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.btnPresent {
+  background: rgba(22, 163, 74, 0.12); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.35);
+  border-radius: var(--radius-md); box-shadow: 0 1px 3px rgba(22, 163, 74, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-size: var(--font-size-xs); font-weight: 600; padding: 0.35rem 0.65rem; cursor: pointer; transition: all var(--transition-fast);
+}
+.btnPresent:hover:not(:disabled) { background: #16a34a; color: #ffffff; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3); transform: translateY(-1px); }
+.btnPresent:active:not(:disabled) { box-shadow: var(--neu-pressed); transform: translateY(0); }
+.btnPresent:focus-visible { outline: 2px solid #16a34a; outline-offset: 1px; }
+.btnPresent:disabled { opacity: 0.6; cursor: not-allowed; }
+.btnAbsent {
+  background: rgba(220, 38, 38, 0.12); color: #b91c1c; border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: var(--radius-md); box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-size: var(--font-size-xs); font-weight: 600; padding: 0.35rem 0.65rem; cursor: pointer; transition: all var(--transition-fast);
+}
+.btnAbsent:hover:not(:disabled) { background: #dc2626; color: #ffffff; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3); transform: translateY(-1px); }
+.btnAbsent:active:not(:disabled) { box-shadow: var(--neu-pressed); transform: translateY(0); }
+.btnAbsent:focus-visible { outline: 2px solid #dc2626; outline-offset: 1px; }
+.btnAbsent:disabled { opacity: 0.6; cursor: not-allowed; }
+.btnRescheduled {
+  background: rgba(37, 99, 235, 0.12); color: #1d4ed8; border: 1px solid rgba(37, 99, 235, 0.35);
+  border-radius: var(--radius-md); box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-size: var(--font-size-xs); font-weight: 600; padding: 0.35rem 0.65rem; cursor: pointer; transition: all var(--transition-fast);
+}
+.btnRescheduled:hover:not(:disabled) { background: var(--color-primary); color: #ffffff; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3); transform: translateY(-1px); }
+.btnRescheduled:active:not(:disabled) { box-shadow: var(--neu-pressed); transform: translateY(0); }
+.btnRescheduled:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.btnRescheduled:disabled { opacity: 0.6; cursor: not-allowed; }
+.btnCancel {
+  background: rgba(148, 163, 184, 0.12); color: #475569; border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: var(--radius-md); box-shadow: 0 1px 3px rgba(71, 85, 105, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-size: var(--font-size-xs); font-weight: 500; padding: 0.35rem 0.65rem; cursor: pointer; transition: all var(--transition-fast);
+}
+.btnCancel:hover:not(:disabled) { background: rgba(148, 163, 184, 0.25); color: var(--color-text-main); transform: translateY(-1px); }
+.btnCancel:active:not(:disabled) { box-shadow: var(--neu-pressed); transform: translateY(0); }
+.notesContainer {
+  display: flex; flex-direction: column; gap: 4px; padding-top: 0.25rem;
+}
+.notesInput {
+  padding: 0.35rem 0.55rem; font-size: var(--font-size-xs); border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: var(--radius-md); background: #ffffff; color: var(--color-text-main);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.notesInput:focus { outline: none; border-color: var(--color-primary); box-shadow: var(--focus-ring); }
+.inputError { border-color: var(--color-danger) !important; background: #fff5f5 !important; }
+.validationText { font-size: 11px; font-weight: 600; color: var(--color-danger); }
+.rescheduleSection {
+  margin-top: 0.25rem; padding-top: 0.4rem; border-top: 1px dashed rgba(220, 227, 240, 0.85);
+  display: flex; flex-direction: column; gap: 0.45rem;
+}
+.rescheduleInputs { display: flex; align-items: flex-end; gap: 0.65rem; flex-wrap: wrap; }
+.inputGroup { display: flex; flex-direction: column; gap: 2px; }
+.inputGroupGrow { flex: 1; min-width: 140px; }
+.inputLabel { font-size: 10px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; }
+.inputField {
+  padding: 0.35rem 0.5rem; font-size: var(--font-size-xs); border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: var(--radius-md); background: #ffffff; color: var(--color-text-main);
+}
+.inputField:focus { outline: none; border-color: var(--color-primary); box-shadow: var(--focus-ring); }
+.feedbackSuccess {
+  font-size: var(--font-size-xs); font-weight: 600; padding: 0.35rem 0.65rem; border-radius: var(--radius-md);
+  background: #dcfce7; color: #166534; border: 1px solid #86efac;
+}
+.feedbackError {
+  font-size: var(--font-size-xs); font-weight: 600; padding: 0.35rem 0.65rem; border-radius: var(--radius-md);
+  background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;
+}

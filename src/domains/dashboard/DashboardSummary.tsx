@@ -1,92 +1,25 @@
 import React from 'react';
+import styles from './dashboardSummary.module.css';
 import { DashboardOverviewData } from './dashboardTypes';
-import { StudentsIcon, ClassesIcon } from '../../components/icons/NavIcons';
+import { Student } from '../students/studentTypes';
+import { DashboardWelcomePanel } from './DashboardWelcomePanel';
+import { ActiveStudentsCard } from './ActiveStudentsCard';
 
 export interface DashboardSummaryProps {
   overview: DashboardOverviewData;
+  students?: Student[];
+  loading?: boolean;
 }
 
-export const DashboardSummary: React.FC<DashboardSummaryProps> = ({ overview }) => {
-  const cards = [
-    {
-      title: 'Active Students',
-      value: overview.activeStudentsCount.toLocaleString(),
-      description: 'Currently enrolled active learners',
-      Icon: StudentsIcon,
-      accentColor: 'var(--color-primary)',
-      accentBg: 'var(--color-primary-bg)',
-    },
-    {
-      title: 'Upcoming Classes (7 Days)',
-      value: overview.classesUpcoming7Days.toLocaleString(),
-      description: 'Sessions scheduled in next 7 days',
-      Icon: ClassesIcon,
-      accentColor: '#059669',
-      accentBg: '#ecfdf5',
-    },
-  ];
-
+export const DashboardSummary: React.FC<DashboardSummaryProps> = ({
+  overview,
+  students,
+  loading = false,
+}) => {
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: 'var(--space-4)',
-      }}
-    >
-      {cards.map((c) => {
-        const { Icon } = c;
-        return (
-          <div
-            key={c.title}
-            style={{
-              backgroundColor: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border-subtle)',
-              borderRadius: 'var(--radius-xl)',
-              padding: '1.25rem 1.5rem',
-              boxShadow: 'var(--shadow-xs)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-              <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-                {c.title}
-              </span>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: 'var(--radius-lg)',
-                  backgroundColor: c.accentBg,
-                  color: c.accentColor,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon size={18} />
-              </div>
-            </div>
-            <div
-              style={{
-                fontSize: '1.75rem',
-                fontWeight: 700,
-                color: 'var(--color-text-main)',
-                letterSpacing: '-0.02em',
-                lineHeight: 1.2,
-                margin: '4px 0 6px',
-              }}
-            >
-              {c.value}
-            </div>
-            <p style={{ margin: 0, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-subtle)' }}>
-              {c.description}
-            </p>
-          </div>
-        );
-      })}
-    </div>
+    <section className={styles.container} aria-label="Welcome and Student Overview">
+      <DashboardWelcomePanel />
+      <ActiveStudentsCard overview={overview} students={students} loading={loading} />
+    </section>
   );
 };

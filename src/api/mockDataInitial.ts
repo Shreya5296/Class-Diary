@@ -19,7 +19,8 @@ export const MOCK_PAYMENTS: Array<Record<string, unknown>> = [
 export const MOCK_CLASSES = [
   { session_id: 'cls_401', student_id: 'STU_001', topic: 'AP Calculus: Multivariable Integration', start_time: new Date(Date.now() + 86400000).toISOString(), duration_minutes: 60, status: 'SCHEDULED', meeting_url: 'https://meet.google.com/abc-xyz-pqr', session_notes: 'Multivariable Integration prep', class_credit_effect: 'NONE' },
   { session_id: 'cls_402', student_id: 'STU_002', topic: 'IB Physics: Electromagnetic Induction', start_time: new Date(Date.now() + 172800000).toISOString(), duration_minutes: 90, status: 'SCHEDULED', meeting_url: 'https://zoom.us/j/987654321', session_notes: '', class_credit_effect: 'NONE' },
-  { session_id: 'cls_403', student_id: 'STU_001', topic: 'AP Calculus: Differential Equations Review', start_time: new Date(Date.now() - 172800000).toISOString(), duration_minutes: 60, status: 'ATTENDED', meeting_url: 'https://meet.google.com/abc-xyz-pqr', session_notes: 'Covered differential equations and slope fields.', class_credit_effect: 'CONSUME' }
+  { session_id: 'cls_403', student_id: 'STU_001', topic: 'AP Calculus: Differential Equations Review', start_time: new Date(Date.now() - 172800000).toISOString(), duration_minutes: 60, status: 'ATTENDED', meeting_url: 'https://meet.google.com/abc-xyz-pqr', session_notes: 'Covered differential equations and slope fields.', class_credit_effect: 'CONSUME' },
+  { session_id: 'cls_404', student_id: 'STU_003', student_name: 'Rohan Verma', topic: 'Grade 10 Mathematics: Quadratics', start_time: new Date(Date.now() - 86400000).toISOString(), duration_minutes: 60, status: 'SCHEDULED', attendance_status: 'NOT_MARKED', session_status: 'SCHEDULED', meeting_url: 'https://meet.google.com/def-uvw-rst', session_notes: '', class_credit_effect: 'PENDING' }
 ];
 
 export const MOCK_LINKS = [

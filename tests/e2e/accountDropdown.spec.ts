@@ -99,17 +99,28 @@ test.describe('E2E — Account Dropdown, Branding, Preferences & Calendar', () =
     await expect(page.locator('h1:has-text("Students Directory")')).toBeVisible();
   });
 
-  test('displays weekly class schedule calendar on Dashboard starting on Monday', async ({ page }) => {
+  test('displays Dashboard with KPIs and Today Classes without weekly schedule', async ({ page }) => {
     await page.locator('aside button:has-text("Dashboard")').click();
-    await expect(page.locator('h1:has-text("Administrative Dashboard")')).toBeVisible();
+    await expect(page.locator('h1:has-text("Dashboard")')).toHaveCount(0);
+    await expect(page.locator('text=Welcome back')).toBeVisible();
 
-    // Calendar view header
-    await expect(page.locator('h3:has-text("Weekly Class Schedule")')).toBeVisible();
-    await expect(page.locator('button:has-text("This Week")')).toBeVisible();
+    // Verify Weekly Class Schedule is absent from Dashboard
+    await expect(page.locator('h3:has-text("Weekly Class Schedule")')).toHaveCount(0);
 
-    // Calendar week starts on Monday
-    const firstColDay = page.locator('div[class*="dayCol"]').first();
-    await expect(firstColDay.locator('text=Mon')).toBeVisible();
+    // Verify KPIs and Class Schedule are visible
+    await expect(page.locator('text=Active Students')).toBeVisible();
+    await expect(page.locator('h3:has-text("Class Schedule")')).toBeVisible();
+
+    // Verify Welcome Back avatar, edit button reveals on hover, and modal opens via portal without flickering
+    await page.locator('div[class*="avatarContainer"]').hover();
+    const editBtn = page.locator('button[aria-label="Edit profile picture"]');
+    await expect(editBtn).toBeVisible();
+    await editBtn.click();
+    await expect(page.locator('#picModalTitle')).toBeVisible();
+    // Verify modal backdrop is mounted directly under body
+    await expect(page.locator('body > div[role="dialog"]')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#picModalTitle')).toHaveCount(0);
   });
 
   test('navigates to Finances page and displays summary cards and unified records', async ({ page }) => {
@@ -120,5 +131,48 @@ test.describe('E2E — Account Dropdown, Branding, Preferences & Calendar', () =
     await expect(summaryCards.getByText('Lifetime Payments Received')).toBeVisible();
     await expect(summaryCards.getByText('Recorded INR Value')).toBeVisible();
     await expect(page.locator('button:has-text("Export Finances CSV")')).toBeVisible();
+  });
+
+  test('manages attendance pending alert inline on dashboard with date, present, absent, reschedule', async ({ page }) => {
+    await page.locator('aside button:has-text("Dashboard")').click();
+    await expect(page.locator('text=Things That Need Attention')).toBeVisible();
+
+    // Find attendance alert row for Aarav Sharma
+    const alertRow = page.locator('div[class*="row"]').filter({ hasText: 'Aarav Sharma' }).filter({ hasText: 'Attendance not marked' });
+    await expect(alertRow).toBeVisible();
+    await expect(alertRow.locator('text=Class date: Wednesday, 18 November 2026')).toBeVisible();
+
+    // Click Mark Attendance -> expands inline without navigation
+    await alertRow.getByRole('button', { name: /Mark Attendance/ }).click();
+
+    // Verify expanded status controls and mandatory notes input
+    const notesInput = alertRow.locator('input[placeholder*="Enter attendance notes..."]');
+    await expect(notesInput).toBeVisible();
+    const presentBtn = alertRow.locator('button:has-text("Present")');
+    const absentBtn = alertRow.locator('button:has-text("Absent")');
+    const rescheduleBtn = alertRow.locator('button:has-text("Rescheduled")');
+    await expect(presentBtn).toBeVisible();
+    await expect(absentBtn).toBeVisible();
+    await expect(rescheduleBtn).toBeVisible();
+
+    // Verify mandatory notes validation: clicking Present without notes fails
+    await presentBtn.click();
+    await expect(alertRow.locator('text=Attendance notes are required.')).toBeVisible();
+
+    // Test inline reschedule toggle
+    await rescheduleBtn.click();
+    await expect(alertRow.locator('input[type="date"]')).toBeVisible();
+    await expect(alertRow.locator('input[type="time"]')).toBeVisible();
+
+    // Click Back to return to status choices
+    await alertRow.locator('button:has-text("Back")').click();
+    await expect(notesInput).toBeVisible();
+
+    // Fill valid attendance notes and click Present
+    await notesInput.fill('Class conducted successfully as scheduled.');
+    await presentBtn.click();
+
+    // Verify resolved alert automatically disappears after data refresh
+    await expect(page.locator('div[class*="row"]').filter({ hasText: 'Aarav Sharma' }).filter({ hasText: 'Attendance not marked' })).toHaveCount(0);
   });
 });

@@ -1,0 +1,41 @@
+.liveClockPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.liveDate {
+  font-size: var(--font-size-xs);
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.dotSeparator {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+}
+
+.liveTime {
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: #38bdf8;
+  font-variant-numeric: tabular-nums;
+}
+
+.tzBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #93c5fd;
+  background: rgba(37, 99, 235, 0.3);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+}

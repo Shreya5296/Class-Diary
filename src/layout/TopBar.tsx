@@ -4,20 +4,22 @@ import { useAuth } from '../auth/AuthProvider';
 import { MenuIcon } from '../components/icons/ActionIcons';
 import { NavSection } from './Sidebar';
 import { useLiveHeaderTime } from './useLiveHeaderTime';
+import { resolveDisplayName } from '../auth/userProfileStorage';
 
 export interface TopBarProps {
+  activeSection?: NavSection;
   onToggleMenu?: () => void;
   onNavigate?: (section: NavSection) => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ onToggleMenu }) => {
+export const TopBar: React.FC<TopBarProps> = ({ activeSection, onToggleMenu }) => {
   const { user } = useAuth();
   const { dateStr, timeStr } = useLiveHeaderTime();
-
-  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'Admin');
+  const displayName = resolveDisplayName(user?.name, user?.email);
+  const isDashboard = activeSection === 'dashboard';
 
   return (
-    <header className={styles.topBar}>
+    <header className={`${styles.topBar} ${isDashboard ? styles.topBarDashboard : ''}`}>
       <div className={styles.leftGroup}>
         {onToggleMenu && (
           <button
@@ -30,17 +32,22 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleMenu }) => {
           </button>
         )}
 
-        <span className={styles.welcomeText}>
-          Welcome Back {displayName}!
-        </span>
+        {!isDashboard && (
+          <div className={styles.welcomeContainer}>
+            <span className={styles.welcomeGreeting}>Welcome back,</span>
+            <span className={styles.welcomeName}>{displayName}</span>
+          </div>
+        )}
       </div>
 
       <div className={styles.rightGroup}>
-        <div className={styles.dateTimeWrapper} aria-label="Current date and time">
-          <span className={styles.dateLabel}>{dateStr}</span>
-          <span className={styles.dateDot}>•</span>
-          <span className={styles.timeValue}>{timeStr}</span>
-        </div>
+        {!isDashboard && (
+          <div className={styles.dateTimeWrapper} aria-label="Current date and time">
+            <span className={styles.dateLabel}>{dateStr}</span>
+            <span className={styles.dateDot}>•</span>
+            <span className={styles.timeValue}>{timeStr}</span>
+          </div>
+        )}
       </div>
     </header>
   );

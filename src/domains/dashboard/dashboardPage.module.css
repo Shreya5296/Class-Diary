@@ -1,0 +1,65 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-top: 1.75rem;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 2.1fr 1fr;
+  grid-template-areas:
+    "schedule calendar"
+    "attention calendar";
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.scheduleArea {
+  grid-area: schedule;
+  min-width: 0;
+}
+
+.attentionArea {
+  grid-area: attention;
+  min-width: 0;
+}
+
+.calendarArea {
+  grid-area: calendar;
+  min-width: 0;
+  height: fit-content;
+  align-self: start;
+}
+
+@media (max-width: 1024px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "schedule"
+      "calendar"
+      "attention";
+    gap: var(--space-5);
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding-top: 1rem;
+    gap: var(--space-4);
+  }
+  .mainGrid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .scheduleArea {
+    order: 1;
+  }
+  .calendarArea {
+    order: 2;
+  }
+  .attentionArea {
+    order: 3;
+  }
+}

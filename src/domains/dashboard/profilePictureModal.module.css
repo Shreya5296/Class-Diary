@@ -1,0 +1,132 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.modal {
+  background: #ffffff;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(220, 227, 240, 0.9);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2), 0 0 20px rgba(37, 99, 235, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.closeBtn:hover {
+  color: var(--color-text-main);
+}
+
+.previewArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+}
+
+.previewCircle {
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 3px solid #3b82f6;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+}
+
+.previewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.initialsFallback {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.previewHelp {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+.errorMessage {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: #fee2e2;
+  border: 1px solid #f87171;
+  color: #b91c1c;
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(220, 227, 240, 0.7);
+  padding-top: 1rem;
+}
+
+.removeBtn {
+  margin-right: auto;
+  background: none;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.removeBtn:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}

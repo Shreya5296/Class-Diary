@@ -1,0 +1,85 @@
+.welcomeCard {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 52%, #1e3a8a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.35), 0 4px 12px rgba(37, 99, 235, 0.15);
+  display: flex; flex-direction: column; justify-content: center;
+  height: 100%; box-sizing: border-box; position: relative; overflow: hidden;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.welcomeCard::before {
+  content: ''; position: absolute; top: -30%; left: -20%; width: 140%; height: 140%;
+  background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 45%),
+              radial-gradient(circle at 80% 80%, rgba(56, 189, 248, 0.12), transparent 45%);
+  pointer-events: none;
+}
+.welcomeCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.42), 0 6px 16px rgba(37, 99, 235, 0.22);
+}
+
+.welcomeBody {
+  display: flex; align-items: center; gap: 1.5rem; /* 24px spacing between avatar and content */
+  position: relative; z-index: 1;
+}
+
+.avatarContainer { position: relative; width: 92px; height: 92px; flex-shrink: 0; }
+.avatarCircle {
+  width: 92px; height: 92px; border-radius: var(--radius-full); overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.45); box-shadow: 0 4px 16px rgba(37, 99, 235, 0.32);
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #1e3a8a, #3b82f6); cursor: pointer; padding: 0;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.avatarCircle:hover { transform: scale(1.03); box-shadow: 0 0 20px rgba(56, 189, 248, 0.45), 0 8px 24px rgba(37, 99, 235, 0.4); }
+.avatarCircle:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
+.avatarImg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatarInitials { font-size: 2rem; font-weight: 700; color: #ffffff; letter-spacing: -0.02em; user-select: none; }
+
+.avatarEditBtn {
+  position: absolute; bottom: 0; right: 0; width: 28px; height: 28px;
+  border-radius: var(--radius-full); background: #2563eb; color: #ffffff;
+  border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); cursor: pointer; padding: 0;
+  opacity: 0; transform: scale(0.85); pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease, background-color 120ms ease;
+}
+.avatarContainer:hover .avatarEditBtn,
+.avatarContainer:focus-within .avatarEditBtn,
+.avatarCircle:focus-visible ~ .avatarEditBtn {
+  opacity: 1; transform: scale(1); pointer-events: auto;
+}
+.avatarEditBtn:hover { background: #1d4ed8; transform: scale(1.08); }
+.avatarEditBtn:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; opacity: 1; pointer-events: auto; }
+
+.contentColumn { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; flex: 1; }
+.greetingGroup { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.greetingTitle { margin: 0; font-size: 1.35rem; font-weight: 500; color: #f1f5f9; letter-spacing: -0.02em; line-height: 1.25; }
+.userName { font-weight: 700; color: #ffffff; background: linear-gradient(135deg, #ffffff 40%, #93c5fd 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.supportingText { margin: 0; font-size: var(--font-size-sm); color: #cbd5e1; font-weight: 400; line-height: 1.4; }
+.clockRow { display: flex; align-items: center; }
+
+@media (max-width: 900px) {
+  .avatarContainer, .avatarCircle { width: 84px; height: 84px; }
+  .avatarInitials { font-size: 1.75rem; }
+  .avatarEditBtn { width: 26px; height: 26px; }
+  .welcomeBody { gap: 1.25rem; }
+}
+
+@media (max-width: 640px) {
+  .avatarContainer, .avatarCircle { width: 76px; height: 76px; }
+  .avatarInitials { font-size: 1.5rem; }
+  .avatarEditBtn { width: 24px; height: 24px; opacity: 1; pointer-events: auto; transform: scale(1); }
+  .greetingTitle { font-size: 1.15rem; }
+  .welcomeBody { gap: 1rem; }
+}
+
+@media (hover: none) {
+  .avatarEditBtn { opacity: 1; pointer-events: auto; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcomeCard, .avatarCircle, .avatarEditBtn { transition: none; }
+  .welcomeCard:hover, .avatarCircle:hover, .avatarEditBtn:hover { transform: none; }
+}

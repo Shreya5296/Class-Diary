@@ -1,58 +1,101 @@
 import { Student } from '../students/studentTypes';
-import { Package } from '../packages/packageTypes';
-import { MeetingLink } from '../meeting-links/meetingLinkTypes';
-import { WeeklyScheduleEntry } from '../classes/scheduleApi';
-import { ClassSession } from '../classes/classTypes';
-import { NavSection } from '../../layout/Sidebar';
+import { toInputDateFormat } from '../../lib/dateFormat';
 import { getLatestCompletedClassDate, isStudentActive } from '../students/studentStatusClassifier';
+import { isSessionAttendanceOverdue, checkFeeAlert, formatAlertClassDate } from './attentionAlertsHelpers';
+import { getSessionDate } from '../classes/sessionTimeNormalizer';
+import { AttentionAlert, AttentionAlertParams, AttentionCategory, AttentionUrgency } from './attentionAlertTypes';
 
-export interface AttentionAlert {
-  id: string;
-  studentId: string;
-  studentName: string;
-  reason: string;
-  severity: 'warning' | 'danger' | 'info';
-  actionLabel: string;
-  targetSection: NavSection;
-  student: Student;
-}
+export type { AttentionAlert, AttentionAlertParams, AttentionCategory, AttentionUrgency };
 
-export interface AttentionAlertParams {
-  students: Student[];
-  schedules: WeeklyScheduleEntry[];
-  meetingLinks: MeetingLink[];
-  packages: Package[];
-  sessions?: ClassSession[];
-  activeTz?: string;
-  referenceDateStr?: string;
-}
+const SEVERITY_WEIGHT: Record<string, number> = { danger: 1, warning: 2, info: 3 };
 
 export function generateAttentionAlerts(params: AttentionAlertParams): AttentionAlert[] {
-  const { students = [], schedules = [], meetingLinks = [], packages = [], sessions = [], activeTz = 'Asia/Kolkata', referenceDateStr } = params;
+  const {
+    students = [], schedules = [], meetingLinks = [], packages = [],
+    sessions = [], fees = [], activeTz = 'Asia/Kolkata', referenceDateStr,
+    currentTimestampMs = Date.now(),
+  } = params;
 
-  // Filter strictly ACTIVE students:
-  // Inactive students (by status or last completed class >= 1 calendar month ago) are excluded
-  // Students with 0 completed classes remain active.
+  const todayKey = referenceDateStr || toInputDateFormat(new Date(currentTimestampMs), activeTz);
+  const studentMap = new Map<string, Student>(students.map((s) => [s.student_id, s]));
+
   const activeStudents = students.filter((stu) => {
     const st = (stu.status || '').trim().toUpperCase();
     if (st === 'ARCHIVED' || st === 'INACTIVE') return false;
-
     if (sessions.length > 0) {
       const lastCompleted = getLatestCompletedClassDate(sessions, stu.student_id, activeTz);
-      if (!isStudentActive(stu, { lastCompletedDate: lastCompleted, referenceDateStr })) {
+      if (!isStudentActive(stu, { lastCompletedDate: lastCompleted, referenceDateStr: todayKey })) {
         return false;
       }
     }
     return true;
   });
 
-  const alerts: AttentionAlert[] = [];
+  const alertsMap = new Map<string, AttentionAlert>();
 
+  // 1. Unmarked Attendance (Category C)
+  for (const sess of sessions) {
+    if (isSessionAttendanceOverdue(sess, currentTimestampMs, activeTz)) {
+      const sid = sess.student_id;
+      const sName = sess.student_name || studentMap.get(sid)?.student_name || sid;
+      const sessId = sess.session_id || sess.class_session_id || `${sid}__${sess.schedule_date || ''}__${sess.schedule_time || ''}`;
+      const rawDate = getSessionDate(sess, activeTz);
+      const formattedDate = formatAlertClassDate(rawDate);
+      alertsMap.set(`alert_att_${sessId}`, {
+        id: `alert_att_${sessId}`, studentId: sid, studentName: sName,
+        reason: 'Attendance not marked', severity: 'warning',
+        actionLabel: 'Mark Attendance', targetSection: 'classes',
+        student: studentMap.get(sid), category: 'attendance', urgency: 'pending',
+        sessionId: sessId, session: sess,
+        classDate: rawDate, formattedClassDate: formattedDate,
+      });
+    }
+  }
+
+  // 2. Fee Reminders (Category B)
+  for (const fee of fees) {
+    const res = checkFeeAlert(fee, todayKey);
+    if (res) {
+      const sid = fee.student_id || 'unknown';
+      const sName = studentMap.get(sid)?.student_name || fee.student_name || sid;
+      const feeId = fee.fee_id || fee.id || `f_${sid}`;
+      alertsMap.set(`alert_fee_${feeId}`, {
+        id: `alert_fee_${feeId}`, studentId: sid, studentName: sName,
+        reason: res.reason, severity: res.severity,
+        actionLabel: 'View Fees', targetSection: 'finances',
+        student: studentMap.get(sid), category: 'fee', urgency: res.urgency,
+      });
+    }
+  }
+
+  // Active student checks: Category A & Category D
   for (const stu of activeStudents) {
     const sid = stu.student_id;
     const sName = stu.student_name || stu.full_name || sid;
 
-    // 1. Missing Meeting Link (only for active students)
+    // 3. Category A: Low Balance / Renewal (<= 3 classes)
+    const stuPkgs = packages.filter((p) => p.student_id === sid && p.status !== 'VOID' && p.status !== 'CANCELLED');
+    if (stuPkgs.length > 0) {
+      let totalPurchased = 0, totalConsumed = 0;
+      for (const p of stuPkgs) {
+        totalPurchased += Number(p.classes_purchased !== undefined ? p.classes_purchased : p.total_classes) || 0;
+        totalConsumed += Number(p.consumed_classes !== undefined ? p.consumed_classes : p.classes_consumed) || 0;
+      }
+      const remaining = Math.max(0, totalPurchased - totalConsumed);
+      if (remaining <= 3) {
+        const reason = remaining === 0
+          ? 'No classes remaining — renewal required.'
+          : `Only ${remaining} ${remaining === 1 ? 'class' : 'classes'} remaining — renewal pending.`;
+        alertsMap.set(`alert_balance_${sid}`, {
+          id: `alert_balance_${sid}`, studentId: sid, studentName: sName,
+          reason, severity: remaining === 0 ? 'danger' : 'warning',
+          actionLabel: 'Renew Package', targetSection: 'finances', student: stu,
+          category: 'renewal', urgency: remaining === 0 ? 'critical' : 'pending',
+        });
+      }
+    }
+
+    // 4. Category D: Missing Meeting Link
     const link = meetingLinks.find((l) => l.student_id === sid);
     const hasValidLink = Boolean(
       (stu.primary_meeting_link && stu.primary_meeting_link.trim()) ||
@@ -60,59 +103,29 @@ export function generateAttentionAlerts(params: AttentionAlertParams): Attention
       (link?.meeting_link_2 && link.meeting_link_2.trim()) ||
       (link?.meeting_url && link.meeting_url.trim())
     );
-
     if (!hasValidLink) {
-      alerts.push({
-        id: `alert_link_${sid}`,
-        studentId: sid,
-        studentName: sName,
-        reason: 'Meeting link not configured',
-        severity: 'warning',
-        actionLabel: 'Configure Link',
-        targetSection: 'students',
-        student: stu,
+      alertsMap.set(`alert_link_${sid}`, {
+        id: `alert_link_${sid}`, studentId: sid, studentName: sName,
+        reason: 'Meeting link not configured', severity: 'warning',
+        actionLabel: 'Configure Link', targetSection: 'students', student: stu,
+        category: 'schedule', urgency: 'pending',
       });
     }
 
-    // 2. Missing Class Schedule (only for active students)
+    // 5. Category D: Missing Class Schedule
     const studentSchedules = schedules.filter((sch) => sch.student_id === sid && sch.is_active !== false);
     if (studentSchedules.length === 0) {
-      alerts.push({
-        id: `alert_sched_${sid}`,
-        studentId: sid,
-        studentName: sName,
-        reason: 'No class schedule configured',
-        severity: 'warning',
-        actionLabel: 'Set Schedule',
-        targetSection: 'students',
-        student: stu,
+      alertsMap.set(`alert_sched_${sid}`, {
+        id: `alert_sched_${sid}`, studentId: sid, studentName: sName,
+        reason: 'No class schedule configured', severity: 'warning',
+        actionLabel: 'Set Schedule', targetSection: 'students', student: stu,
+        category: 'schedule', urgency: 'pending',
       });
-    }
-
-    // 3. Four or fewer classes remaining / Package Renewal (only for active students)
-    const stuPkgs = packages.filter((p) => p.student_id === sid && p.status !== 'VOID' && p.status !== 'CANCELLED');
-    if (stuPkgs.length > 0) {
-      let totalPurchased = 0;
-      let totalConsumed = 0;
-      for (const p of stuPkgs) {
-        totalPurchased += Number(p.classes_purchased !== undefined ? p.classes_purchased : p.total_classes) || 0;
-        totalConsumed += Number(p.consumed_classes !== undefined ? p.consumed_classes : p.classes_consumed) || 0;
-      }
-      const remaining = Math.max(0, totalPurchased - totalConsumed);
-      if (remaining <= 4) {
-        alerts.push({
-          id: `alert_balance_${sid}`,
-          studentId: sid,
-          studentName: sName,
-          reason: remaining === 0 ? 'No classes remaining (balance exhausted)' : `${remaining} ${remaining === 1 ? 'class' : 'classes'} remaining`,
-          severity: remaining === 0 ? 'danger' : 'warning',
-          actionLabel: 'Renew Package',
-          targetSection: 'finances',
-          student: stu,
-        });
-      }
     }
   }
 
-  return alerts;
+  return Array.from(alertsMap.values()).sort((a, b) => {
+    const diff = (SEVERITY_WEIGHT[a.severity] ?? 9) - (SEVERITY_WEIGHT[b.severity] ?? 9);
+    return diff !== 0 ? diff : a.studentName.localeCompare(b.studentName);
+  });
 }

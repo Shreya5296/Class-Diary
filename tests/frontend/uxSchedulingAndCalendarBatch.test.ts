@@ -123,7 +123,7 @@ describe('Next Implementation Batch — UX, Scheduling & Calendar', () => {
 
       const balAlert = alerts.find((a) => a.reason.includes('remaining'));
       expect(balAlert).toBeDefined();
-      expect(balAlert?.reason).toBe('3 classes remaining');
+      expect(balAlert?.reason).toMatch(/3 classes remaining/);
       expect(balAlert?.severity).toBe('warning');
     });
 

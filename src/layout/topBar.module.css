@@ -1,12 +1,12 @@
 .topBar {
-  height: var(--topbar-height);
+  min-height: var(--topbar-height);
   box-sizing: border-box;
-  background-color: var(--color-bg-surface);
-  border-bottom: 1px solid var(--color-border-subtle);
+  background-color: transparent;
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
+  padding: 1.125rem 1.5rem;
   position: sticky;
   top: 0;
   z-index: 30;
@@ -31,14 +31,28 @@
   flex-shrink: 0;
 }
 
-.welcomeText {
-  font-size: var(--font-size-base);
-  font-weight: 700;
-  color: var(--color-text-main);
-  line-height: 1.2;
+.welcomeContainer {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.welcomeGreeting {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: -0.01em;
+}
+
+.welcomeName {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  letter-spacing: -0.01em;
 }
 
 .rightGroup {
@@ -56,38 +70,40 @@
   color: var(--color-text-muted);
   font-weight: 500;
   white-space: nowrap;
+  background: #ffffff;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 4px 14px rgba(23, 37, 84, 0.05),
+    0 0 10px rgba(37, 99, 235, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95);
 }
 
-.timeValue {
-  font-family: var(--font-mono);
-  color: var(--color-primary);
-  font-weight: 600;
+.dateDot { color: var(--color-border-strong); }
+.timeValue { font-family: var(--font-mono); color: var(--color-primary); font-weight: 600; }
+
+.topBarDashboard {
+  min-height: 0;
+  padding: 0;
+  margin: 0;
 }
 
 @media (max-width: 900px) {
-  .menuToggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  .topBar { padding: 0.875rem 1rem; }
+  .topBarDashboard { min-height: var(--topbar-height); padding: 0.875rem 1rem; }
+  .menuToggle { display: flex; align-items: center; justify-content: center; }
 }
 
 @media (max-width: 640px) {
-  .dateLabel,
-  .dateDot {
-    display: none;
-  }
-  .welcomeText {
-    font-size: var(--font-size-sm);
-    max-width: 180px;
-  }
+  .dateLabel, .dateDot { display: none; }
+  .welcomeContainer { max-width: 200px; }
 }
 
 @media (max-width: 400px) {
-  .topBar {
-    padding: 0.75rem 0.875rem;
-  }
-  .welcomeText {
-    max-width: 130px;
-  }
+  .topBar { padding: 0.75rem 0.875rem; }
+  .welcomeContainer { max-width: 140px; }
 }

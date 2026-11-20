@@ -19,11 +19,7 @@ export interface MonthCalendarViewProps {
 const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const MonthCalendarView: React.FC<MonthCalendarViewProps> = ({
-  yearMonthStr,
-  sessions,
-  students,
-  onSelectDate,
-  activeTz = 'Asia/Kolkata',
+  yearMonthStr, sessions, students, onSelectDate, activeTz = 'Asia/Kolkata',
 }) => {
   const { year, month } = parseYearMonth(yearMonthStr);
   const gridDates = getMonthGridDates(year, month);
@@ -31,7 +27,6 @@ export const MonthCalendarView: React.FC<MonthCalendarViewProps> = ({
   const currentMonthPrefix = `${year}-${String(month).padStart(2, '0')}`;
   const studentMap = new Map(students.map((s) => [s.student_id, s.student_name || s.full_name || s.student_id]));
 
-  // Index sessions by date string
   const sessionsByDate = new Map<string, ClassSession[]>();
   for (const s of sessions) {
     const dKey = s.schedule_date || s.class_date || (s.scheduled_start ? s.scheduled_start.slice(0, 10) : '');
@@ -43,22 +38,20 @@ export const MonthCalendarView: React.FC<MonthCalendarViewProps> = ({
   }
 
   return (
-    <div style={{ background: 'var(--color-bg-surface, #fff)', border: '1px solid var(--color-border-subtle, #e2e8f0)', borderRadius: '8px', overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'var(--color-bg-subtle, #f8fafc)', borderBottom: '1px solid var(--color-border-subtle, #e2e8f0)' }}>
+    <div style={{ background: 'var(--glass-bg, rgba(255, 255, 255, 0.78))', backdropFilter: 'var(--glass-blur, blur(16px))', WebkitBackdropFilter: 'var(--glass-blur, blur(16px))', border: '1px solid var(--glass-border-subtle, rgba(220, 227, 240, 0.85))', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--glass-shadow)', overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: 'rgba(248, 250, 252, 0.85)', borderBottom: '1px solid rgba(220, 227, 240, 0.85)' }}>
         {WEEKDAY_NAMES.map((name) => (
-          <div key={name} style={{ padding: '8px 4px', textAlign: 'center', fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted, #64748b)' }}>
+          <div key={name} style={{ padding: '8px 4px', textAlign: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
             {name}
           </div>
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(96px, 1fr)' }}>
         {gridDates.map((dateStr) => {
-          const isCurrentMonth = dateStr.startsWith(currentMonthPrefix);
-          const isToday = dateStr === todayStr;
+          const isCurrentMonth = dateStr.startsWith(currentMonthPrefix), isToday = dateStr === todayStr;
           const dayNum = parseInt(dateStr.slice(8), 10);
           const daySessions = sessionsByDate.get(dateStr) || [];
-          const visibleSessions = daySessions.slice(0, 2);
-          const overflowCount = daySessions.length - visibleSessions.length;
+          const visibleSessions = daySessions.slice(0, 2), overflowCount = daySessions.length - visibleSessions.length;
 
           return (
             <div
@@ -69,42 +62,30 @@ export const MonthCalendarView: React.FC<MonthCalendarViewProps> = ({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectDate(dateStr); }}
               title={`Click to view day view for ${dateStr}`}
               style={{
-                borderRight: '1px solid var(--color-border-subtle, #e2e8f0)',
-                borderBottom: '1px solid var(--color-border-subtle, #e2e8f0)',
-                padding: '4px 6px',
-                background: isToday ? '#eff6ff' : isCurrentMonth ? '#fff' : '#fcfcfc',
-                opacity: isCurrentMonth ? 1 : 0.45,
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                transition: 'background 0.15s ease',
+                borderRight: '1px solid rgba(220, 227, 240, 0.7)', borderBottom: '1px solid rgba(220, 227, 240, 0.7)',
+                padding: '6px 8px', background: isToday ? 'rgba(239, 246, 255, 0.7)' : isCurrentMonth ? 'rgba(255, 255, 255, 0.6)' : 'rgba(248, 250, 252, 0.4)',
+                opacity: isCurrentMonth ? 1 : 0.5, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px',
+                transition: 'background var(--transition-fast)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span
                   style={{
-                    fontSize: '12px',
-                    fontWeight: isToday ? 700 : 500,
-                    width: '20px',
-                    height: '20px',
-                    lineHeight: '20px',
-                    textAlign: 'center',
-                    borderRadius: '50%',
-                    background: isToday ? '#2563eb' : 'transparent',
-                    color: isToday ? '#fff' : 'var(--color-text-main, #1e293b)',
+                    fontSize: '12px', fontWeight: isToday ? 700 : 500, width: '22px', height: '22px', lineHeight: '22px',
+                    textAlign: 'center', borderRadius: '50%', background: isToday ? 'var(--color-primary)' : 'transparent',
+                    color: isToday ? '#fff' : 'var(--color-text-main)', boxShadow: isToday ? '0 2px 6px rgba(37, 99, 235, 0.4)' : 'none',
                   }}
                 >
                   {dayNum}
                 </span>
                 {daySessions.length > 0 && (
-                  <span style={{ fontSize: '10px', fontWeight: 600, color: '#059669' }}>
-                    {daySessions.length}
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                    {daySessions.length} {daySessions.length === 1 ? 'class' : 'classes'}
                   </span>
                 )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', overflow: 'hidden' }}>
                 {visibleSessions.map((sess, idx) => {
                   const studentName = studentMap.get(sess.student_id) || sess.student_id;
                   const sTime = cleanTime(sess.schedule_time || sess.start_time);
@@ -116,11 +97,9 @@ export const MonthCalendarView: React.FC<MonthCalendarViewProps> = ({
                     <div
                       key={sess.session_id || idx}
                       style={{
-                        fontSize: '10px',
-                        padding: '1px 3px',
-                        borderRadius: '3px',
+                        fontSize: '10px', padding: '2px 5px', borderRadius: 'var(--radius-sm)',
                         background: st.bg, border: st.border, color: st.color, opacity: st.opacity,
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500,
                       }}
                     >
                       {time12 ? `${time12} ` : ''}{studentName}
@@ -128,7 +107,7 @@ export const MonthCalendarView: React.FC<MonthCalendarViewProps> = ({
                   );
                 })}
                 {overflowCount > 0 && (
-                  <div style={{ fontSize: '10px', color: '#2563eb', fontWeight: 500 }}>
+                  <div style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 600 }}>
                     +{overflowCount} more
                   </div>
                 )}
