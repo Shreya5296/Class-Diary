@@ -765,20 +765,24 @@ function Classes_batchUpdate(spreadsheet, data, actor) {
         }
         succeeded.push(res);
       } else {
-        var errDetail = writeError ? (writeError.message || String(writeError)) : 'Repository update returned no record';
+        var isException = !!writeError;
+        var errDetail = isException ? (writeError.message || String(writeError)) : 'Repository update returned no record';
         failed.push({
           identifier: prep.identifier,
           rowIndex: prep.record._rowIndex,
-          error: errDetail
+          error: errDetail,
+          outcomeUnknown: isException
         });
         var successfulIds = succeeded.map(function(s) { return s.class_session_id || s.session_id; });
         var failedIds = failed.map(function(f) { return f.identifier; });
 
         if (succeeded.length > 0) {
-          return {
+          var partialRes = {
             success: false,
             code: 'PARTIAL_BATCH_FAILURE',
-            message: 'Batch update partially failed: ' + succeeded.length + ' succeeded, ' + failed.length + ' failed. Partial changes occurred and were not rolled back. Failed on ' + prep.identifier + ': ' + errDetail,
+            message: isException
+              ? ('Batch update partially failed: ' + succeeded.length + ' succeeded, write on ' + prep.identifier + ' encountered an exception (' + errDetail + '). Earlier changes were persisted; outcome of failed write is uncertain.')
+              : ('Batch update partially failed: ' + succeeded.length + ' succeeded, ' + failed.length + ' failed. Partial changes occurred and were not rolled back. Failed on ' + prep.identifier + ': ' + errDetail),
             partialChangesOccurred: true,
             successfulCount: succeeded.length,
             failedCount: failed.length,
@@ -786,18 +790,36 @@ function Classes_batchUpdate(spreadsheet, data, actor) {
             failedSessions: failedIds,
             data: succeeded
           };
+          if (isException) {
+            partialRes.writeOutcomeUnknown = true;
+          }
+          return partialRes;
         } else {
-          return {
-            success: false,
-            code: 'BATCH_UPDATE_FAILED',
-            message: 'Batch update failed on session ' + prep.identifier + ': ' + errDetail + '. Zero changes occurred.',
-            partialChangesOccurred: false,
-            successfulCount: 0,
-            failedCount: 1,
-            successfulSessions: [],
-            failedSessions: failedIds,
-            data: []
-          };
+          if (isException) {
+            return {
+              success: false,
+              code: 'BATCH_UPDATE_FAILED',
+              message: 'Batch update encountered an exception on session ' + prep.identifier + ': ' + errDetail + '. Write outcome is uncertain; changes may or may not have persisted.',
+              writeOutcomeUnknown: true,
+              successfulCount: 0,
+              failedCount: 1,
+              successfulSessions: [],
+              failedSessions: failedIds,
+              data: []
+            };
+          } else {
+            return {
+              success: false,
+              code: 'BATCH_UPDATE_FAILED',
+              message: 'Batch update failed on session ' + prep.identifier + ': ' + errDetail + '. Zero changes occurred.',
+              partialChangesOccurred: false,
+              successfulCount: 0,
+              failedCount: 1,
+              successfulSessions: [],
+              failedSessions: failedIds,
+              data: []
+            };
+          }
         }
       }
     }
