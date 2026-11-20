@@ -31,11 +31,24 @@ function _runWithClassLock(fn, timeoutMs) {
   var ms = typeof timeoutMs === 'number' ? timeoutMs : 10000;
   var lockRes = lockFn(ms, fn);
 
+  if (lockRes.code === 'EXECUTION_ERROR') {
+    var execOut = {
+      success: false,
+      code: 'EXECUTION_ERROR',
+      message: lockRes.message || 'Operation failed during execution'
+    };
+    if (lockRes.lockReleaseFailed) {
+      execOut.lockReleaseFailed = true;
+      execOut.lockReleaseError = lockRes.lockReleaseError;
+    }
+    return execOut;
+  }
+
   if (lockRes.code === 'LOCK_RELEASE_ERROR' || lockRes.lockReleaseFailed) {
     if (lockRes.result && typeof lockRes.result === 'object') {
       var merged = Object.assign({}, lockRes.result);
       merged.lockReleaseFailed = true;
-      merged.lockReleaseError = lockRes.message || 'Exception during lock release';
+      merged.lockReleaseError = lockRes.lockReleaseError || lockRes.message || 'Exception during lock release';
       return merged;
     }
     return {

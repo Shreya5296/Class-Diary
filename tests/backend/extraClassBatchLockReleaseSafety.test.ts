@@ -30,11 +30,9 @@ describe('Batch Lock Release Failure Safety & Outcome Preservation', () => {
     ClassService._setLockManager(LockManager);
   });
 
-  it('preserves successful batch mutation result and reports lockReleaseFailed when releaseLock throws', () => {
-    const s1 = registry['classes.schedule']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-      payload: { student_id: env.studentAId, scheduled_start: '2026-11-20T10:00:00.000Z' } });
-    const s2 = registry['classes.schedule']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-      payload: { student_id: env.studentAId, scheduled_start: '2026-11-21T10:00:00.000Z' } });
+  it('preserves successful batch mutation and reports lockReleaseFailed when releaseLock throws', () => {
+    const s1 = registry['classes.schedule']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId, payload: { student_id: env.studentAId, scheduled_start: '2026-11-20T10:00:00.000Z' } });
+    const s2 = registry['classes.schedule']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId, payload: { student_id: env.studentAId, scheduled_start: '2026-11-21T10:00:00.000Z' } });
 
     (globalThis as any).LockService = {
       getScriptLock: () => ({ tryLock: () => true, releaseLock: () => { throw new Error('LockService release timeout'); } })
@@ -42,10 +40,7 @@ describe('Batch Lock Release Failure Safety & Outcome Preservation', () => {
 
     const res = registry['classes.batchUpdate']({
       spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-      payload: { updates: [
-        { class_session_id: s1.data.class_session_id, notes: 'Persisted Note 1' },
-        { class_session_id: s2.data.class_session_id, notes: 'Persisted Note 2' }
-      ] }
+      payload: { updates: [{ class_session_id: s1.data.class_session_id, notes: 'Persisted Note 1' }, { class_session_id: s2.data.class_session_id, notes: 'Persisted Note 2' }] }
     });
 
     expect(res.success).toBe(true);
@@ -57,10 +52,8 @@ describe('Batch Lock Release Failure Safety & Outcome Preservation', () => {
   });
 
   it('preserves partial batch failure details and reports lockReleaseFailed when release throws', () => {
-    const s1 = registry['classes.schedule']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-      payload: { student_id: env.studentAId, scheduled_start: '2026-11-20T10:00:00.000Z' } });
-    const s2 = registry['classes.schedule']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-      payload: { student_id: env.studentAId, scheduled_start: '2026-11-21T10:00:00.000Z' } });
+    const s1 = registry['classes.schedule']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId, payload: { student_id: env.studentAId, scheduled_start: '2026-11-20T10:00:00.000Z' } });
+    const s2 = registry['classes.schedule']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId, payload: { student_id: env.studentAId, scheduled_start: '2026-11-21T10:00:00.000Z' } });
 
     const s2Row = ClassRepository.Classes_getAll(env.spreadsheet).find((s: any) => s.class_session_id === s2.data.class_session_id)._rowIndex;
     const origRepoUpdate = ClassRepository.Classes_update;
@@ -76,10 +69,7 @@ describe('Batch Lock Release Failure Safety & Outcome Preservation', () => {
     try {
       const res = registry['classes.batchUpdate']({
         spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-        payload: { updates: [
-          { class_session_id: s1.data.class_session_id, notes: 'Saved Note 1' },
-          { class_session_id: s2.data.class_session_id, notes: 'Dropped Note 2' }
-        ] }
+        payload: { updates: [{ class_session_id: s1.data.class_session_id, notes: 'Saved Note 1' }, { class_session_id: s2.data.class_session_id, notes: 'Dropped Note 2' }] }
       });
 
       expect(res.success).toBe(false);
@@ -96,30 +86,43 @@ describe('Batch Lock Release Failure Safety & Outcome Preservation', () => {
     }
   });
 
-  it('prevents all mutations when lock acquisition fails', () => {
+  it('preserves EXECUTION_ERROR and release failure when mutation callback and releaseLock both throw', () => {
+    const origGetAll = ClassRepository.Classes_getAll;
+    ClassRepository.Classes_getAll = () => { throw new Error('Database read crash inside batch'); };
+
     (globalThis as any).LockService = {
-      getScriptLock: () => ({ tryLock: () => false, releaseLock: () => {} })
+      getScriptLock: () => ({ tryLock: () => true, releaseLock: () => { throw new Error('Secondary release lock failure'); } })
     };
 
-    const res = registry['classes.batchUpdate']({
-      spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
-      payload: { updates: [{ class_session_id: 'any_session', notes: 'Should not write' }] }
-    });
+    try {
+      const res = registry['classes.batchUpdate']({
+        spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
+        payload: { updates: [{ class_session_id: 's_1', notes: 'Note' }] }
+      });
 
+      expect(res.success).toBe(false);
+      expect(res.code).toBe('EXECUTION_ERROR');
+      expect(res.message).toBe('Database read crash inside batch');
+      expect(res.lockReleaseFailed).toBe(true);
+      expect(res.lockReleaseError).toContain('Secondary release lock failure');
+      expect(LockManager._getLockDepth()).toBe(0);
+    } finally {
+      ClassRepository.Classes_getAll = origGetAll;
+    }
+  });
+
+  it('prevents all mutations when lock acquisition fails', () => {
+    (globalThis as any).LockService = { getScriptLock: () => ({ tryLock: () => false, releaseLock: () => {} }) };
+    const res = registry['classes.batchUpdate']({ spreadsheet: env.spreadsheet, actorId: env.actor.actorId,
+      payload: { updates: [{ class_session_id: 'any_session', notes: 'Should not write' }] } });
     expect(res.success).toBe(false);
     expect(res.code).toBe('CONFLICT');
     expect(res.lockReleaseFailed).toBeUndefined();
   });
 
   it('handles callback exceptions properly with execution error', () => {
-    (globalThis as any).LockService = {
-      getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} })
-    };
-
-    const res = LockManager.withLock(5000, () => {
-      throw new Error('Callback boom');
-    });
-
+    (globalThis as any).LockService = { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) };
+    const res = LockManager.withLock(5000, () => { throw new Error('Callback boom'); });
     expect(res.success).toBe(false);
     expect(res.code).toBe('EXECUTION_ERROR');
     expect(res.message).toBe('Callback boom');
@@ -127,10 +130,7 @@ describe('Batch Lock Release Failure Safety & Outcome Preservation', () => {
   });
 
   it('completes normal callback and lock release without release errors', () => {
-    (globalThis as any).LockService = {
-      getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} })
-    };
-
+    (globalThis as any).LockService = { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) };
     const res = LockManager.withLock(5000, () => ({ success: true, count: 5 }));
     expect(res.success).toBe(true);
     expect(res.result.count).toBe(5);
