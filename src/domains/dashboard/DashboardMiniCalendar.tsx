@@ -11,7 +11,7 @@ export interface DashboardMiniCalendarProps {
   activeTz?: string;
 }
 
-const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 export const DashboardMiniCalendar: React.FC<DashboardMiniCalendarProps> = ({
   classes,
@@ -34,7 +34,7 @@ export const DashboardMiniCalendar: React.FC<DashboardMiniCalendarProps> = ({
 
   const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(viewYear, viewMonth, 1));
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const startDay = new Date(viewYear, viewMonth, 1).getDay();
+  const startDay = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
 
   const handlePrevMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }

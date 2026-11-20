@@ -12,6 +12,7 @@ import {
   SettingsIcon,
 } from '../components/icons/NavIcons';
 import { CloseIcon, LogOutIcon } from '../components/icons/ActionIcons';
+import { useProfileImage } from '../domains/dashboard/useProfileImage';
 
 export type NavSection =
   | 'dashboard'
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
 }) => {
   const { user, signOut } = useAuth();
+  const profileImage = useProfileImage();
   const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'Admin');
   const initial = (displayName[0] || 'A').toUpperCase();
 
@@ -90,7 +92,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {user && (
           <div className={footerStyles.sidebarFooter}>
             <div className={footerStyles.userProfileRow}>
-              <div className={footerStyles.userAvatar} aria-hidden="true">{initial}</div>
+              <div className={footerStyles.userAvatar} aria-hidden="true">
+                {profileImage ? (
+                  <img src={profileImage} alt={displayName} className={footerStyles.userAvatarImg} />
+                ) : (
+                  initial
+                )}
+              </div>
               <div className={footerStyles.userInfo}>
                 <span className={footerStyles.userName} title={displayName}>{displayName}</span>
                 <span className={footerStyles.userEmail}>{user.email || 'Administrator'}</span>

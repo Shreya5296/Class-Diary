@@ -97,6 +97,16 @@ export function updateMockPackage(payload: Record<string, unknown>) {
 
 export function scheduleMockClass(payload: Record<string, unknown>) {
   const sid = String(payload.student_id || '');
+  const stuPkgs = MOCK_PACKAGES.filter((p) => p.student_id === sid);
+  const totalPurch = stuPkgs.reduce((acc, p) => acc + (Number(p.classes_purchased !== undefined ? p.classes_purchased : p.total_classes) || 0), 0);
+  if (totalPurch > 0) {
+    const stuSessions = MOCK_CLASSES.filter((c) => c.student_id === sid) as Record<string, unknown>[];
+    const consumed = stuSessions.filter((s) => s.deduct_class === true || s.class_credit_effect === 'CONSUME').length;
+    const reserved = stuSessions.filter((s) => (s.session_status === 'SCHEDULED' || s.status === 'SCHEDULED') && s.attendance_status === 'NOT_MARKED' && s.deduct_class !== true).length;
+    if (totalPurch - consumed - reserved <= 0) {
+      throw new Error(`Insufficient package credits: Student has ${totalPurch - consumed - reserved} available entitlements`);
+    }
+  }
   const start = String(payload.scheduled_start || payload.start_time || new Date().toISOString());
   const dur = Number(payload.duration_minutes || 60);
   let end = String(payload.scheduled_end || '');
@@ -121,6 +131,8 @@ export function scheduleMockClass(payload: Record<string, unknown>) {
     attendance_status: 'NOT_MARKED',
     meeting_url: String(payload.meeting_url || ''),
     session_notes: String(payload.session_notes || ''),
+    schedule_date: String(payload.schedule_date || payload.class_date || (start.includes('T') ? start.slice(0, 10) : start)),
+    schedule_time: String(payload.schedule_time || (start.includes('T') ? start.slice(11, 16) : payload.start_time || '10:00')),
     class_credit_effect: 'PENDING',
     deduct_class: false,
   };

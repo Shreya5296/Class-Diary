@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import styles from './dashboardWelcomePanel.module.css';
 import { useAuth } from '../../auth/AuthProvider';
 import { resolveDisplayName } from '../../auth/userProfileStorage';
-import { getStoredProfileImage, saveStoredProfileImage, deleteStoredProfileImage } from './profileImageStorage';
+import { saveStoredProfileImage, deleteStoredProfileImage } from './profileImageStorage';
+import { useProfileImage } from './useProfileImage';
 import { ProfilePictureModal } from './ProfilePictureModal';
 import { DashboardLiveClock } from './DashboardLiveClock';
 
@@ -18,16 +19,8 @@ export const DashboardWelcomePanel: React.FC = () => {
   const displayName = resolveDisplayName(user?.name, user?.email);
   const initials = extractInitials(displayName);
 
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const profileImage = useProfileImage();
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    getStoredProfileImage().then((img) => {
-      if (mounted) setProfileImage(img);
-    });
-    return () => { mounted = false; };
-  }, []);
 
   const handleOpenModal = useCallback((e?: React.MouseEvent) => {
     if (e) {
@@ -43,12 +36,10 @@ export const DashboardWelcomePanel: React.FC = () => {
 
   const handleSaveImage = useCallback(async (dataUrl: string) => {
     await saveStoredProfileImage(dataUrl);
-    setProfileImage(dataUrl);
   }, []);
 
   const handleRemoveImage = useCallback(async () => {
     await deleteStoredProfileImage();
-    setProfileImage(null);
   }, []);
 
   return (

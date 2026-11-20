@@ -36,6 +36,14 @@
   justify-content: center;
   flex-shrink: 0;
   box-shadow: 0 0 8px rgba(37, 99, 235, 0.35);
+  overflow: hidden;
+}
+
+.userAvatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-full);
 }
 
 .userInfo { display: flex; flex-direction: column; min-width: 0; }

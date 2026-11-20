@@ -23,6 +23,7 @@ var _pkgReg = {
 var _pkgMap = typeof createHeaderMap === 'function' ? { createHeaderMap: createHeaderMap, rowToRecord: rowToRecord, recordToRow: recordToRow } : (typeof require !== 'undefined' ? require('../sheets/HeaderMapper.gs') : null);
 var _pkgSvcRowReader = typeof readAllRecords === 'function' ? { readAllRecords: readAllRecords, findRecordById: findRecordById } : (typeof require !== 'undefined' ? require('../sheets/RowReader.gs') : null);
 var _pkgLock = typeof withLock === 'function' ? { withLock: withLock } : (typeof require !== 'undefined' ? require('../sheets/LockManager.gs') : null);
+var _pkgEntitlement = typeof calculateChronologicalBalances === 'function' ? { calculateChronologicalBalances: calculateChronologicalBalances } : (typeof require !== 'undefined' ? require('../classes/ClassEntitlementService.gs') : null);
 
 var _DAY_ABBRS = { MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed', THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat', SUNDAY: 'Sun' };
 var _ABBR_TO_DAY = { MON: 'MONDAY', TUE: 'TUESDAY', WED: 'WEDNESDAY', THU: 'THURSDAY', FRI: 'FRIDAY', SAT: 'SATURDAY', SUN: 'SUNDAY' };
@@ -192,10 +193,11 @@ function Packages_create(spreadsheet, data, actor) {
       schedStr = _formatScheduleString(data.schedules);
     }
 
+    var pPlanType = data.plan_type || data.package_name || data.plan_name || 'PACKAGE';
     var record = {
       student_id: String(data.student_id).trim(),
       student_name: studentName,
-      plan_type: data.plan_type || 'PACKAGE',
+      plan_type: pPlanType,
       currency: data.currency ? String(data.currency).trim().toUpperCase() : 'INR',
       package_price: rawPrice,
       per_class: rawPerClass,
@@ -204,7 +206,9 @@ function Packages_create(spreadsheet, data, actor) {
       end_date: data.end_date || data.expiry_date || '',
       next_due_date: data.next_due_date || '',
       class_duration: rawDuration !== undefined && rawDuration !== '' ? Number(rawDuration) : 60,
-      class_schedule: schedStr
+      class_schedule: schedStr,
+      status: data.package_status || data.status || 'ACTIVE',
+      package_status: data.package_status || data.status || 'ACTIVE'
     };
 
     var isYearly = String(record.plan_type || '').toUpperCase().indexOf('YEARLY') !== -1;
@@ -256,7 +260,8 @@ function Packages_create(spreadsheet, data, actor) {
         matchingPkg = ex;
         break;
       }
-      if (Number(ex.classes_purchased) === Number(record.classes_purchased) &&
+      var sameName = String(record.plan_type || '').trim().toUpperCase() === String(ex.plan_type || '').trim().toUpperCase();
+      if (sameName && Number(ex.classes_purchased) === Number(record.classes_purchased) &&
           (ex.start_date === record.start_date || (!ex.start_date && !record.start_date))) {
         matchingPkg = ex;
         break;
@@ -287,82 +292,53 @@ function Packages_create(spreadsheet, data, actor) {
 
 function Packages_enrichWithBalance(spreadsheet, pkgRecord) {
   if (!pkgRecord) return null;
+  if (Array.isArray(pkgRecord)) {
+    return pkgRecord.map(function(p) { return Packages_enrichWithBalance(spreadsheet, p); });
+  }
   var sessionSheet = spreadsheet.getSheetByName(_pkgReg.SHEET_NAMES.CLASS_SESSIONS);
-  var sessions = _pkgSvcRowReader.readAllRecords(sessionSheet, _pkgMap);
-  var metaMap = (typeof globalThis !== 'undefined' && globalThis.__sessionMetaMap) ? globalThis.__sessionMetaMap : {};
+  var sessions = sessionSheet ? _pkgSvcRowReader.readAllRecords(sessionSheet, _pkgMap) : [];
 
+  var pkgSheet = spreadsheet.getSheetByName(_pkgReg.SHEET_NAMES.PACKAGES);
+  var allPackages = pkgSheet ? _pkgSvcRowReader.readAllRecords(pkgSheet, _pkgMap) : [pkgRecord];
+  var studentPackages = allPackages.filter(function(p) { return p && p.student_id === pkgRecord.student_id; });
+  if (!studentPackages.length) studentPackages = [pkgRecord];
+
+  var entCalc = (_pkgEntitlement && _pkgEntitlement.calculateChronologicalBalances) || (typeof calculateChronologicalBalances === 'function' ? calculateChronologicalBalances : null);
   var consumed = 0;
-  var hasExplicitPkg = false;
 
-  for (var i = 0; i < sessions.length; i++) {
-    var s = sessions[i];
-    if (!s) continue;
-    var sDate = '';
-    if (s.schedule_date instanceof Date) {
-      var dy = s.schedule_date.getFullYear();
-      var dm = s.schedule_date.getMonth() + 1;
-      var dd = s.schedule_date.getDate();
-      sDate = dy + '-' + (dm < 10 ? '0' + dm : String(dm)) + '-' + (dd < 10 ? '0' + dd : String(dd));
-    } else {
-      sDate = String(s.schedule_date || s.class_date || (s.scheduled_start ? String(s.scheduled_start).slice(0, 10) : '')).trim().replace(/^'/, '');
-    }
-
-    var sTimeStr = '00:00';
-    if (s.schedule_time instanceof Date) {
-      var th = s.schedule_time.getHours();
-      var tm = s.schedule_time.getMinutes();
-      sTimeStr = (th < 10 ? '0' + th : String(th)) + ':' + (tm < 10 ? '0' + tm : String(tm));
-    } else {
-      sTimeStr = String(s.schedule_time || s.start_time || (s.scheduled_start ? String(s.scheduled_start).slice(11, 16) : '00:00')).trim().replace(/^'/, '').slice(0, 5);
-    }
-    var compId = (s.student_id || '') + '__' + sDate + '__' + sTimeStr;
-    var pkgId = s.package_id || (metaMap[s.class_session_id] ? metaMap[s.class_session_id].package_id : '') || (metaMap[compId] ? metaMap[compId].package_id : '');
-    if (pkgId) {
-      hasExplicitPkg = true;
-      if (pkgId === pkgRecord.package_id) {
-        if (s.deduct_class === true || s.deduct_class === 'TRUE' || s.deduct_class === 'true' || s.class_credit_effect === 'CONSUME') {
-          consumed++;
-        }
+  if (entCalc) {
+    var chrono = entCalc(studentPackages, sessions, pkgRecord.student_id);
+    for (var k in chrono.balances) {
+      var b = chrono.balances[k];
+      var hasBothRows = (b.package._rowIndex !== undefined && b.package._rowIndex !== null && pkgRecord._rowIndex !== undefined && pkgRecord._rowIndex !== null);
+      var isTargetPkg = false;
+      if (hasBothRows) {
+        isTargetPkg = (Number(b.package._rowIndex) === Number(pkgRecord._rowIndex));
+      } else if (b.package === pkgRecord) {
+        isTargetPkg = true;
+      } else if (b.package.package_id && pkgRecord.package_id && b.package.package_id === pkgRecord.package_id && String(b.package.package_id).indexOf('pkg_') !== 0) {
+        isTargetPkg = true;
+      } else if (studentPackages.length === 1) {
+        isTargetPkg = true;
+      } else if (b.package.start_date && pkgRecord.start_date && b.package.start_date === pkgRecord.start_date && (!b.package.plan_type || !pkgRecord.plan_type || String(b.package.plan_type).trim().toUpperCase() === String(pkgRecord.plan_type).trim().toUpperCase())) {
+        isTargetPkg = true;
+      }
+      if (isTargetPkg) {
+        consumed = b.allocated;
+        break;
       }
     }
-  }
-
-  if (!hasExplicitPkg) {
-    var pkgSheet = spreadsheet.getSheetByName(_pkgReg.SHEET_NAMES.PACKAGES);
-    var allPackages = pkgSheet ? _pkgSvcRowReader.readAllRecords(pkgSheet, _pkgMap) : [pkgRecord];
-    var studentPackages = allPackages.filter(function(p) { return p && p.student_id === pkgRecord.student_id; });
-
-    studentPackages.sort(function(a, b) {
-      var da = a.start_date || a.package_id || '';
-      var db = b.start_date || b.package_id || '';
-      return da < db ? -1 : (da > db ? 1 : 0);
-    });
-
-    var totalStudentConsumed = 0;
+  } else {
+    var totalConsumed = 0;
     for (var j = 0; j < sessions.length; j++) {
       var sj = sessions[j];
       if (sj && sj.student_id === pkgRecord.student_id) {
         if (sj.deduct_class === true || sj.deduct_class === 'TRUE' || sj.deduct_class === 'true' || sj.class_credit_effect === 'CONSUME') {
-          totalStudentConsumed++;
+          totalConsumed++;
         }
       }
     }
-
-    var remainingToDeduct = totalStudentConsumed;
-    for (var k = 0; k < studentPackages.length; k++) {
-      var sp = studentPackages[k];
-      var spPurchased = Number(sp.classes_purchased !== undefined ? sp.classes_purchased : sp.purchased_classes) || 0;
-      var allocated = Math.min(remainingToDeduct, spPurchased);
-      var isTargetPkg = (sp.package_id && pkgRecord.package_id && sp.package_id === pkgRecord.package_id) ||
-        (sp.start_date && pkgRecord.start_date && sp.start_date === pkgRecord.start_date) ||
-        (sp._rowIndex && pkgRecord._rowIndex && sp._rowIndex === pkgRecord._rowIndex) ||
-        (studentPackages.length === 1);
-      if (isTargetPkg) {
-        consumed = allocated;
-        break;
-      }
-      remainingToDeduct = Math.max(0, remainingToDeduct - allocated);
-    }
+    consumed = Math.min(totalConsumed, Number(pkgRecord.classes_purchased || pkgRecord.purchased_classes || 0));
   }
 
   var purchased = Number(pkgRecord.classes_purchased !== undefined ? pkgRecord.classes_purchased : pkgRecord.purchased_classes) || 0;

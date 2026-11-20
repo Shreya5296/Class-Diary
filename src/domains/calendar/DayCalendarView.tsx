@@ -2,7 +2,6 @@ import React from 'react';
 import { CalendarEventItem } from './calendarTypes';
 import { EmptyState } from '../../components/feedback/EmptyState';
 import { formatDateDdMmYyyy } from '../../lib/dateFormat';
-import styles from './weeklyTimeGrid.module.css';
 
 export interface DayCalendarViewProps {
   selectedDateStr: string;
@@ -75,15 +74,23 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 {!isCancelled && (
                   <span
                     style={{
-                      fontSize: '11px', fontWeight: 600, padding: '3px 8px',
-                      borderRadius: 'var(--radius-md)', letterSpacing: '0.02em',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '32px',
+                      padding: '0 12px',
+                      fontSize: 'var(--font-size-xs)',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-md)',
+                      boxSizing: 'border-box',
                       backgroundColor: isPastCompleted ? '#dcfce7' : '#eff6ff',
                       color: isPastCompleted ? '#166534' : '#1d4ed8',
                       border: `1px solid ${isPastCompleted ? '#86efac' : '#bfdbfe'}`,
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {isPastCompleted ? 'Completed' : 'Upcoming'}
@@ -91,7 +98,29 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
                 )}
 
                 {evt.canJoin && evt.meetingUrl && (
-                  <a href={evt.meetingUrl} target="_blank" rel="noopener noreferrer" className={styles.joinBtn} style={{ textDecoration: 'none' }}>
+                  <a
+                    href={evt.meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '32px',
+                      padding: '0 12px',
+                      fontSize: 'var(--font-size-xs)',
+                      fontWeight: 600,
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--color-primary)',
+                      color: '#ffffff',
+                      border: '1px solid var(--color-primary)',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 1px 3px rgba(37, 99, 235, 0.25)',
+                      transition: 'all var(--transition-fast)',
+                      cursor: 'pointer',
+                    }}
+                  >
                     Join Class ↗
                   </a>
                 )}

@@ -63,19 +63,6 @@ export const CalendarControlsBar: React.FC<CalendarControlsBarProps> = ({
           <span className={styles.titleText}>{titleText}</span>
           {countLabel && <span className={styles.countLabel}>({countLabel})</span>}
         </div>
-
-        {viewMode === 'week' && (
-          <div className={styles.legendWrapper}>
-            <div className={styles.legendItem}>
-              <span className={styles.legendDotDated} />
-              <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>Dated Session</span>
-            </div>
-            <div className={styles.legendItem}>
-              <span className={styles.legendDotRecurring} />
-              <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>Recurring Slot (dashed)</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -48,11 +48,19 @@ export async function getStoredProfileImage(): Promise<string | null> {
   }
 }
 
+export const PROFILE_IMAGE_EVENT = 'smd_profile_image_updated';
+
+export function notifyProfileImageChanged(image: string | null): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(PROFILE_IMAGE_EVENT, { detail: image }));
+  }
+}
+
 export async function saveStoredProfileImage(dataUrl: string): Promise<void> {
   memoryFallback = dataUrl;
   try {
     const db = await openDb();
-    return new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       const req = store.put(dataUrl, AVATAR_KEY);
@@ -62,13 +70,14 @@ export async function saveStoredProfileImage(dataUrl: string): Promise<void> {
   } catch {
     // Stored in memory fallback
   }
+  notifyProfileImageChanged(dataUrl);
 }
 
 export async function deleteStoredProfileImage(): Promise<void> {
   memoryFallback = null;
   try {
     const db = await openDb();
-    return new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
       const req = store.delete(AVATAR_KEY);
@@ -78,6 +87,7 @@ export async function deleteStoredProfileImage(): Promise<void> {
   } catch {
     // Memory fallback cleared
   }
+  notifyProfileImageChanged(null);
 }
 
 export function validateImageFile(file: File): { valid: boolean; error?: string } {

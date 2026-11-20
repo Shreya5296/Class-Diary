@@ -117,6 +117,9 @@ export function handleMockClassRestoreCredit(payload: Record<string, unknown>) {
   const classesList = MOCK_CLASSES as unknown as Record<string, unknown>[];
   const session = classesList.find((c) => c.session_id === sid || c.class_session_id === sid);
   if (session) {
+    if (session.deduct_class !== true && session.class_credit_effect !== 'CONSUME') {
+      return { success: false, code: 'CONFLICT', message: 'Can only restore credits for sessions with deducted class' };
+    }
     session.deduct_class = false;
     session.class_credit_effect = 'CREDIT_BACK';
     return session;

@@ -3,6 +3,7 @@ import { WeeklyScheduleEntry, cleanTime } from '../classes/scheduleApi';
 import { Student } from '../students/studentTypes';
 import { Package } from '../packages/packageTypes';
 import { getSessionStartTime, getSessionDuration, isSessionOnDate } from '../classes/sessionTimeNormalizer';
+import { buildRecurringSuppressionMap } from '../calendar/extraClassAccounting';
 
 export const WEEKDAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 
@@ -72,6 +73,8 @@ export function generateCalendarEvents(params: {
   const { datedSessions = [], recurringSchedules = [], students = [], packages = [], weekDates, activeTz } = params;
   const stuMap = new Map((students || []).map((s) => [s.student_id, s]));
   const pkgMap = new Map((packages || []).map((p) => [p.student_id, p]));
+  const todayStr = getDateKeyInTz(new Date(), activeTz);
+  const suppressionMap = buildRecurringSuppressionMap({ packages, recurringSchedules, datedSessions, todayStr });
   const events: ClassSession[] = [];
 
   for (const dateStr of weekDates) {
@@ -82,26 +85,18 @@ export function generateCalendarEvents(params: {
     const dayDated = datedSessions.filter((c) => isSessionOnDate(c, dateStr, activeTz)).map((c) => {
       const pkg = pkgMap.get(c.student_id);
       const matchSched = (recurringSchedules || []).find((s) => s.student_id === c.student_id && s.day_of_week?.toUpperCase() === dayOfWeek);
-      let sTime = getSessionStartTime(c, activeTz);
-      if (!sTime && matchSched?.start_time) sTime = cleanTime(matchSched.start_time);
+      let sTime = getSessionStartTime(c, activeTz) || (matchSched?.start_time ? cleanTime(matchSched.start_time) : '');
       const dur = getSessionDuration(c, pkg) || (matchSched ? Math.max(15, parseTimeToMin(matchSched.end_time) - parseTimeToMin(matchSched.start_time)) : 60);
       const startIso = sTime ? makeIsoInTz(dateStr, sTime, activeTz) : (c.scheduled_start || makeIsoInTz(dateStr, '18:00', activeTz));
       const endMins = sTime ? parseTimeToMin(sTime) + dur : 0;
-      const endHH = String(Math.floor(endMins / 60)).padStart(2, '0');
-      const endMM = String(endMins % 60).padStart(2, '0');
-      const endIso = sTime ? makeIsoInTz(dateStr, `${endHH}:${endMM}`, activeTz) : c.scheduled_end;
+      const endIso = sTime ? makeIsoInTz(dateStr, `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`, activeTz) : c.scheduled_end;
       return {
-        ...c,
-        schedule_date: dateStr,
-        schedule_time: sTime || cleanTime(c.schedule_time),
-        start_time: sTime || cleanTime(c.start_time),
-        duration_minutes: dur,
-        scheduled_start: startIso,
-        scheduled_end: endIso,
+        ...c, schedule_date: dateStr, schedule_time: sTime || cleanTime(c.schedule_time),
+        start_time: sTime || cleanTime(c.start_time), duration_minutes: dur,
+        scheduled_start: startIso, scheduled_end: endIso,
         meeting_url: c.meeting_url || stuMap.get(c.student_id)?.primary_meeting_link || '',
       };
     });
-
     events.push(...dayDated);
 
     const matchingScheds = (recurringSchedules || []).filter(
@@ -116,6 +111,8 @@ export function generateCalendarEvents(params: {
       const pkg = pkgMap.get(sid);
       const stuStart = pkg?.start_date || (stu as unknown as { first_class_date?: string })?.first_class_date || '';
       if ((stuStart && dateStr < stuStart) || (pkg?.end_date && dateStr > pkg.end_date)) continue;
+      const maxAllowed = suppressionMap.get(sid);
+      if (maxAllowed !== undefined && dateStr > maxAllowed) continue;
 
       const stuDated = datedSessions.filter((ds) => ds.student_id === sid && ds.session_status !== 'CANCELLED');
       if (stuDated.length > 0) {
@@ -135,6 +132,7 @@ export function generateCalendarEvents(params: {
         events.push({
           session_id: `rec_${sched.schedule_id || sid}_${dateStr}`, student_id: sid,
           student_name: stu?.student_name || stu?.full_name || sched.student_name || sid || 'Student',
+          schedule_date: dateStr, schedule_time: startTime,
           topic: stu?.subject || 'Class Session', start_time: startIso, scheduled_start: startIso,
           scheduled_end: endIso, duration_minutes: duration, status: 'SCHEDULED', session_status: 'SCHEDULED',
           attendance_status: 'NOT_MARKED', class_credit_effect: 'PENDING', is_recurring: true,

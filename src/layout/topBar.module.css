@@ -1,16 +1,18 @@
 .topBar {
   min-height: var(--topbar-height);
   box-sizing: border-box;
-  background-color: transparent;
-  border-bottom: none;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1.125rem 1.5rem;
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 30;
   gap: var(--space-3);
+  flex-shrink: 0;
 }
 
 .leftGroup {
@@ -90,6 +92,8 @@
   min-height: 0;
   padding: 0;
   margin: 0;
+  background: transparent;
+  border-bottom: none;
 }
 
 @media (max-width: 900px) {

@@ -63,7 +63,8 @@ function Packages_getById(spreadsheet, identifier) {
         var sameClass = mem.classes_purchased !== undefined ? (Number(all[m].classes_purchased) === Number(mem.classes_purchased)) : true;
         var rowDateStr = all[m].start_date ? String(all[m].start_date).slice(0, 10) : '';
         var sameDate = (!memDateStr && !rowDateStr) || (memDateStr === rowDateStr);
-        if (sameClass && sameDate) {
+        var samePlan = !mem.plan_type || !all[m].plan_type || (String(mem.plan_type).trim().toLowerCase() === String(all[m].plan_type).trim().toLowerCase());
+        if (sameClass && sameDate && samePlan) {
           candidateMatches.push(all[m]);
         }
       }
