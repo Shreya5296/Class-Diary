@@ -749,31 +749,56 @@ function Classes_batchUpdate(spreadsheet, data, actor) {
 
     for (var j = 0; j < prepared.length; j++) {
       var prep = prepared[j];
-      var res = _clsRepo.Classes_update(spreadsheet, prep.record._rowIndex, prep.updates);
-      if (res) {
+      var res = null;
+      var writeError = null;
+
+      try {
+        res = _clsRepo.Classes_update(spreadsheet, prep.record._rowIndex, prep.updates);
+      } catch (err) {
+        writeError = err;
+      }
+
+      if (res && !writeError) {
         if (!res.class_session_id && !res.session_id) {
           res.class_session_id = prep.record.class_session_id || prep.record.session_id || prep.identifier;
           res.session_id = res.class_session_id;
         }
         succeeded.push(res);
       } else {
+        var errDetail = writeError ? (writeError.message || String(writeError)) : 'Repository update returned no record';
         failed.push({
           identifier: prep.identifier,
-          rowIndex: prep.record._rowIndex
+          rowIndex: prep.record._rowIndex,
+          error: errDetail
         });
         var successfulIds = succeeded.map(function(s) { return s.class_session_id || s.session_id; });
         var failedIds = failed.map(function(f) { return f.identifier; });
-        return {
-          success: false,
-          code: 'PARTIAL_BATCH_FAILURE',
-          message: 'Batch update partially failed: ' + succeeded.length + ' succeeded, ' + failed.length + ' failed. Partial changes occurred and were not rolled back.',
-          partialChangesOccurred: true,
-          successfulCount: succeeded.length,
-          failedCount: failed.length,
-          successfulSessions: successfulIds,
-          failedSessions: failedIds,
-          data: succeeded
-        };
+
+        if (succeeded.length > 0) {
+          return {
+            success: false,
+            code: 'PARTIAL_BATCH_FAILURE',
+            message: 'Batch update partially failed: ' + succeeded.length + ' succeeded, ' + failed.length + ' failed. Partial changes occurred and were not rolled back. Failed on ' + prep.identifier + ': ' + errDetail,
+            partialChangesOccurred: true,
+            successfulCount: succeeded.length,
+            failedCount: failed.length,
+            successfulSessions: successfulIds,
+            failedSessions: failedIds,
+            data: succeeded
+          };
+        } else {
+          return {
+            success: false,
+            code: 'BATCH_UPDATE_FAILED',
+            message: 'Batch update failed on session ' + prep.identifier + ': ' + errDetail + '. Zero changes occurred.',
+            partialChangesOccurred: false,
+            successfulCount: 0,
+            failedCount: 1,
+            successfulSessions: [],
+            failedSessions: failedIds,
+            data: []
+          };
+        }
       }
     }
 
