@@ -1,5 +1,7 @@
 .topBar {
+  height: var(--topbar-height);
   min-height: var(--topbar-height);
+  max-height: var(--topbar-height);
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px);
@@ -8,7 +10,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.125rem 1.5rem;
+  padding: 0 1.5rem;
   position: relative;
   z-index: 30;
   gap: var(--space-3);
@@ -44,17 +46,17 @@
 }
 
 .welcomeGreeting {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 500;
   color: var(--color-text-muted);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .welcomeName {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--color-text-main);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .rightGroup {
@@ -87,6 +89,15 @@
 
 .dateDot { color: var(--color-border-strong); }
 .timeValue { font-family: var(--font-mono); color: var(--color-primary); font-weight: 600; }
+.tzBadge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: rgba(37, 99, 235, 0.1);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+}
 
 .topBarDashboard {
   min-height: 0;
@@ -104,10 +115,12 @@
 
 @media (max-width: 640px) {
   .dateLabel, .dateDot { display: none; }
-  .welcomeContainer { max-width: 200px; }
+  .welcomeContainer { max-width: calc(100vw - 160px); }
+  .welcomeGreeting, .welcomeName { font-size: var(--font-size-sm); }
 }
 
 @media (max-width: 400px) {
-  .topBar { padding: 0.75rem 0.875rem; }
-  .welcomeContainer { max-width: 140px; }
+  .topBar { padding: 0.625rem 0.75rem; }
+  .welcomeContainer { max-width: calc(100vw - 140px); }
+  .welcomeGreeting { display: none; }
 }

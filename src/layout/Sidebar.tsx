@@ -1,7 +1,6 @@
 import React from 'react';
 import styles from './layout.module.css';
 import footerStyles from './sidebarFooter.module.css';
-import { APP_NAME } from '../config/publicConfig';
 import { useAuth } from '../auth/AuthProvider';
 import {
   DashboardIcon,
@@ -62,9 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
       <aside className={`${styles.sidebar} ${!isOpen ? styles.sidebarClosed : ''}`}>
         <div className={styles.sidebarHeader}>
-          <div className={styles.brandWrapper}>
-            <span className={styles.brandTitle}>{APP_NAME}</span>
-          </div>
+          <div className={styles.brandWrapper} />
           {onClose && (
             <button type="button" className={styles.menuToggle} onClick={onClose} aria-label="Close sidebar">
               <CloseIcon size={18} />

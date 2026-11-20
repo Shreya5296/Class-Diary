@@ -35,7 +35,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeSection, onToggleMenu }) =
         {!isDashboard && (
           <div className={styles.welcomeContainer}>
             <span className={styles.welcomeGreeting}>Welcome back,</span>
-            <span className={styles.welcomeName}>{displayName}</span>
+            <span className={styles.welcomeName}>{displayName}!</span>
           </div>
         )}
       </div>
@@ -46,6 +46,7 @@ export const TopBar: React.FC<TopBarProps> = ({ activeSection, onToggleMenu }) =
             <span className={styles.dateLabel}>{dateStr}</span>
             <span className={styles.dateDot}>•</span>
             <span className={styles.timeValue}>{timeStr}</span>
+            <span className={styles.tzBadge}>IST</span>
           </div>
         )}
       </div>

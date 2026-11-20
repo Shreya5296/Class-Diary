@@ -67,7 +67,8 @@ test.describe('Frontend UI/UX Redesign — Screen & Viewport Coverage', () => {
 
     // 6. Dedicated Calendar Page
     await navigate(page, 'Calendar');
-    await expect(page.locator('h1:has-text("Class Calendar")')).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('text=Class Calendar')).toHaveCount(0);
     await expect(page.locator('button[role="tab"]:has-text("week")')).toBeVisible();
     await expect(page.locator('text=9:00 AM').first()).toBeVisible();
   });

@@ -40,6 +40,8 @@
   transition: all var(--transition-fast);
 }
 .navArrowBtn:hover { background: rgba(238, 242, 255, 0.95); color: var(--color-primary); }
+.navArrowBtn:active { background: rgba(219, 234, 254, 0.95); transform: scale(0.97); }
+.navArrowBtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -1px; }
 .navTodayBtn {
   display: inline-flex; align-items: center; justify-content: center;
   height: 32px; padding: 0 12px; border: none; border-left: 1px solid rgba(220, 227, 240, 0.75);
@@ -48,9 +50,33 @@
   font-weight: 600; white-space: nowrap; transition: all var(--transition-fast);
 }
 .navTodayBtn:hover { background: rgba(238, 242, 255, 0.95); color: var(--color-primary); }
+.navTodayBtn:active { background: rgba(219, 234, 254, 0.95); transform: scale(0.97); }
+.navTodayBtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -1px; }
 .titleRow {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2);
 }
 .titleWrapper { display: flex; align-items: baseline; gap: var(--space-2); }
 .titleText { font-size: var(--font-size-md); font-weight: 700; color: var(--color-text-main); }
 .countLabel { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+@media (max-width: 640px) {
+  .topRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+  .segmentedControl {
+    display: flex;
+    justify-content: stretch;
+  }
+  .tabBtn {
+    flex: 1;
+    text-align: center;
+  }
+  .navGroup {
+    justify-content: space-between;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+}

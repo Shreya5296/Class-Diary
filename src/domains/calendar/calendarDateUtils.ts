@@ -30,6 +30,25 @@ export function formatMonthTitle(yearMonthStr: string): string {
 }
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_FULL = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+export function formatWeekHeading(startDateStr: string, endDateStr: string): string {
+  const [y1, m1, d1] = startDateStr.split('-').map(Number);
+  const [y2, m2, d2] = endDateStr.split('-').map(Number);
+  const fMo1 = MONTHS_FULL[m1 - 1] || '';
+  const fMo2 = MONTHS_FULL[m2 - 1] || '';
+
+  if (y1 === y2 && m1 === m2) {
+    return `${d1}–${d2} ${fMo1} ${y1}`;
+  }
+  if (y1 === y2) {
+    return `${d1} ${fMo1} – ${d2} ${fMo2} ${y1}`;
+  }
+  return `${d1} ${fMo1} ${y1} – ${d2} ${fMo2} ${y2}`;
+}
 
 export function formatWeekRangeTitle(startDateStr: string, endDateStr: string): string {
   const [y1, m1, d1] = startDateStr.split('-').map(Number);

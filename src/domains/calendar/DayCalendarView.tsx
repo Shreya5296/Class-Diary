@@ -9,7 +9,7 @@ export interface DayCalendarViewProps {
   isToday: boolean;
 }
 
-export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
+const DayCalendarViewComponent: React.FC<DayCalendarViewProps> = ({
   selectedDateStr,
   events,
   isToday,
@@ -36,9 +36,9 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
           const isCancelled = evt.category === 'CANCELLED' || evt.isCancelled;
           const isPastCompleted = evt.category === 'PAST_COMPLETED';
 
-          const cardBg = isCancelled ? 'rgba(254, 242, 242, 0.85)' : isPastCompleted ? 'rgba(236, 253, 245, 0.85)' : 'rgba(255, 255, 255, 0.82)';
-          const borderLeftColor = isCancelled ? '#dc2626' : isPastCompleted ? '#059669' : evt.isRecurring ? 'var(--color-secondary-accent, #0d9488)' : 'var(--color-primary)';
-          const borderStyle = evt.isRecurring && !isCancelled && !isPastCompleted ? 'dashed' : 'solid';
+          const cardBg = 'rgba(239, 246, 255, 0.92)';
+          const borderLeftColor = 'var(--color-primary, #2563eb)';
+          const borderStyle = evt.isRecurring ? 'dashed' : 'solid';
 
           return (
             <div
@@ -47,11 +47,12 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0.95rem 1.25rem', background: cardBg,
                 backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                border: `1px ${borderStyle} rgba(220, 227, 240, 0.9)`,
-                borderLeft: `4px solid ${borderLeftColor}`,
+                border: `1px ${borderStyle} rgba(191, 219, 254, 0.95)`,
+                borderLeft: `4px ${borderStyle} ${borderLeftColor}`,
                 borderRadius: 'var(--radius-lg)',
-                boxShadow: '0 2px 8px rgba(23, 37, 84, 0.04)',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.06)',
                 gap: 'var(--space-4)', flexWrap: 'wrap',
+                transition: 'all var(--transition-fast, 120ms ease)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
@@ -65,10 +66,10 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, color: '#1e3a8a' }}>
                     {evt.studentName}
                   </span>
-                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', fontWeight: 500 }}>
                     {evt.subject}
                   </span>
                 </div>
@@ -87,9 +88,9 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
                       fontWeight: 600,
                       borderRadius: 'var(--radius-md)',
                       boxSizing: 'border-box',
-                      backgroundColor: isPastCompleted ? '#dcfce7' : '#eff6ff',
-                      color: isPastCompleted ? '#166534' : '#1d4ed8',
-                      border: `1px solid ${isPastCompleted ? '#86efac' : '#bfdbfe'}`,
+                      backgroundColor: '#eff6ff',
+                      color: '#1d4ed8',
+                      border: '1px solid #bfdbfe',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -132,3 +133,5 @@ export const DayCalendarView: React.FC<DayCalendarViewProps> = ({
     </div>
   );
 };
+
+export const DayCalendarView = React.memo(DayCalendarViewComponent);

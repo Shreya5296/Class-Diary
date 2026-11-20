@@ -35,7 +35,8 @@ test.describe('Calendar Page Refinement & Responsive Verification', () => {
     // 1. Verify TopBar stability and clean single welcome message
     await expect(page.locator('header span:has-text("Welcome back,")')).toBeVisible();
     await expect(page.locator('header span:has-text("Authorized Administrator")')).toBeVisible();
-    await expect(page.locator('h1:has-text("Class Calendar")')).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('text=Class Calendar')).toHaveCount(0);
 
     // 2. Verify legend is removed
     await expect(page.locator('text=Dated Session')).toHaveCount(0);
@@ -65,7 +66,8 @@ test.describe('Calendar Page Refinement & Responsive Verification', () => {
   test('verifies Calendar at 1280px desktop: no horizontal overflow and content scrolling', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await navigate(page, 'Calendar');
-    await expect(page.locator('h1:has-text("Class Calendar")')).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('text=Class Calendar')).toHaveCount(0);
 
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
@@ -94,7 +96,8 @@ test.describe('Calendar Page Refinement & Responsive Verification', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await navigate(page, 'Calendar');
-    await expect(page.locator('h1:has-text("Class Calendar")')).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
+    await expect(page.locator('text=Class Calendar')).toHaveCount(0);
     await expect(page.locator('button:has-text("+ Schedule Extra Class")')).toBeVisible();
   });
 

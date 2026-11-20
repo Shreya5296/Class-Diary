@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { fetchClasses } from '../classes/classApi';
@@ -12,7 +12,7 @@ import { getSavedTimezone } from '../../lib/userPreferences';
 import { toInputDateFormat } from '../../lib/dateFormat';
 import { getMondayForDateStr, shiftMondayStr, getWeekDates, generateCalendarEvents } from '../dashboard/calendarEventGenerator';
 import { CalendarViewMode } from './calendarTypes';
-import { shiftDateStr, shiftMonthStr, formatMonthTitle, formatDayTitle, formatWeekRangeTitle, getMonthGridDates } from './calendarDateUtils';
+import { shiftDateStr, shiftMonthStr, formatMonthTitle, formatDayTitle, formatWeekHeading, getMonthGridDates } from './calendarDateUtils';
 import { buildDayColumns } from './calendarGridBuilder';
 import { WeeklyTimeGrid } from './WeeklyTimeGrid';
 import { DayCalendarView } from './DayCalendarView';
@@ -20,12 +20,10 @@ import { MonthCalendarView } from './MonthCalendarView';
 import { CalendarControlsBar } from './CalendarControlsBar';
 import { ScheduleExtraClassModal } from './ScheduleExtraClassModal';
 import { PageHeader } from '../../layout/PageHeader';
-import { Button } from '../../components/buttons/Button';
 import { LoadingState } from '../../components/feedback/LoadingState';
 import { ErrorState } from '../../components/feedback/ErrorState';
 
 export const CalendarPage: React.FC = () => {
-  usePageTitle('Class Calendar');
   const { token } = useAuth();
   const activeTz = getSavedTimezone() || 'Asia/Kolkata';
 
@@ -42,7 +40,7 @@ export const CalendarPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isExtraModalOpen, setIsExtraModalOpen] = useState(false);
 
-  const loadCalendarData = async () => {
+  const loadCalendarData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -58,20 +56,36 @@ export const CalendarPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
-  useEffect(() => { loadCalendarData(); }, [token]);
+  useEffect(() => { loadCalendarData(); }, [loadCalendarData]);
 
-  const weekDates = getWeekDates(mondayStr);
+  const weekDates = useMemo(() => getWeekDates(mondayStr), [mondayStr]);
   const sundayStr = weekDates[6];
-  const dayColumns = buildDayColumns({ datedSessions: classes, recurringSchedules: schedules, students, weekDates, activeTz, packages });
-  const totalWeekEvents = dayColumns.reduce((acc, col) => acc + col.events.length, 0);
 
-  const dayCol = viewMode === 'day' ? buildDayColumns({
-    datedSessions: classes, recurringSchedules: schedules, students, weekDates: [selectedDateStr], activeTz, packages,
-  })[0] : null;
+  const dayColumns = useMemo(() => {
+    return buildDayColumns({ datedSessions: classes, recurringSchedules: schedules, students, weekDates, activeTz, packages });
+  }, [classes, schedules, students, weekDates, activeTz, packages]);
+
+  const totalWeekEvents = useMemo(() => dayColumns.reduce((acc, col) => acc + col.events.length, 0), [dayColumns]);
+
+  const dayCol = useMemo(() => {
+    if (viewMode !== 'day') return null;
+    return buildDayColumns({ datedSessions: classes, recurringSchedules: schedules, students, weekDates: [selectedDateStr], activeTz, packages })[0];
+  }, [viewMode, classes, schedules, students, selectedDateStr, activeTz, packages]);
+
   const dayEvents = dayCol ? dayCol.events : [];
   const isDayToday = selectedDateStr === toInputDateFormat(new Date(), activeTz);
+
+  const monthGridDates = useMemo(() => {
+    if (viewMode !== 'month') return [];
+    return getMonthGridDates(parseInt(yearMonthStr.slice(0, 4), 10), parseInt(yearMonthStr.slice(5, 7), 10));
+  }, [viewMode, yearMonthStr]);
+
+  const monthSessions = useMemo(() => {
+    if (viewMode !== 'month') return [];
+    return generateCalendarEvents({ datedSessions: classes, recurringSchedules: schedules, students, weekDates: monthGridDates, activeTz, packages });
+  }, [viewMode, classes, schedules, students, monthGridDates, activeTz, packages]);
 
   const handlePrev = () => {
     if (viewMode === 'day') setSelectedDateStr((d) => shiftDateStr(d, -1));
@@ -88,24 +102,17 @@ export const CalendarPage: React.FC = () => {
     setSelectedDateStr(today); setMondayStr(getMondayForDateStr(today)); setYearMonthStr(today.slice(0, 7));
   };
 
-  let titleText = formatWeekRangeTitle(mondayStr, sundayStr);
-  let countLabel: string | undefined = `${totalWeekEvents} ${totalWeekEvents === 1 ? 'class slot' : 'class slots'}`;
-  if (viewMode === 'day') { titleText = formatDayTitle(selectedDateStr, activeTz); countLabel = undefined; }
-  else if (viewMode === 'month') { titleText = formatMonthTitle(yearMonthStr); countLabel = undefined; }
+  const titleText = viewMode === 'day' ? formatDayTitle(selectedDateStr, activeTz) : viewMode === 'month' ? formatMonthTitle(yearMonthStr) : formatWeekHeading(mondayStr, sundayStr);
+  const countLabel = viewMode === 'week' ? `${totalWeekEvents} ${totalWeekEvents === 1 ? 'class slot' : 'class slots'}` : undefined;
+  usePageTitle(titleText);
 
   return (
     <div>
-      <PageHeader
-        title="Class Calendar"
-        actions={
-          <Button variant="primary" size="sm" onClick={() => setIsExtraModalOpen(true)}>
-            + Schedule Extra Class
-          </Button>
-        }
-      />
+      <PageHeader title={titleText} subtitle={countLabel} />
       <CalendarControlsBar
-        viewMode={viewMode} onChangeViewMode={setViewMode} titleText={titleText}
-        countLabel={countLabel} onPrev={handlePrev} onNext={handleNext} onToday={handleToday} onRefresh={loadCalendarData}
+        viewMode={viewMode} onChangeViewMode={setViewMode} showTitle={false}
+        onPrev={handlePrev} onNext={handleNext} onToday={handleToday}
+        onScheduleExtraClass={() => setIsExtraModalOpen(true)}
       />
       {loading && <LoadingState message="Loading calendar…" />}
       {error && !loading && <ErrorState message={error} onRetry={loadCalendarData} />}
@@ -113,25 +120,13 @@ export const CalendarPage: React.FC = () => {
       {!loading && !error && viewMode === 'week' && <WeeklyTimeGrid dayColumns={dayColumns} />}
       {!loading && !error && viewMode === 'month' && (
         <MonthCalendarView
-          yearMonthStr={yearMonthStr}
-          sessions={generateCalendarEvents({
-            datedSessions: classes, recurringSchedules: schedules, students,
-            weekDates: getMonthGridDates(parseInt(yearMonthStr.slice(0, 4), 10), parseInt(yearMonthStr.slice(5, 7), 10)),
-            activeTz, packages,
-          })}
-          students={students} activeTz={activeTz} onSelectDate={(d) => { setSelectedDateStr(d); setViewMode('day'); }}
+          yearMonthStr={yearMonthStr} sessions={monthSessions} students={students}
+          activeTz={activeTz} onSelectDate={(d) => { setSelectedDateStr(d); setViewMode('day'); }}
         />
       )}
       <ScheduleExtraClassModal
-        isOpen={isExtraModalOpen}
-        onClose={() => setIsExtraModalOpen(false)}
-        onScheduled={loadCalendarData}
-        students={students}
-        packages={packages}
-        classes={classes}
-        initialDate={selectedDateStr}
-        token={token}
-        activeTz={activeTz}
+        isOpen={isExtraModalOpen} onClose={() => setIsExtraModalOpen(false)} onScheduled={loadCalendarData}
+        students={students} packages={packages} classes={classes} initialDate={selectedDateStr} token={token} activeTz={activeTz}
       />
     </div>
   );

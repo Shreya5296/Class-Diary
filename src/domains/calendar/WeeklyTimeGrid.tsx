@@ -29,7 +29,7 @@ function getEventCardClass(evt: CalendarEventItem): string {
   return evt.isRecurring ? styles.recurringCard : styles.sessionCard;
 }
 
-export const WeeklyTimeGrid: React.FC<WeeklyTimeGridProps> = ({ dayColumns, startHour: propStartHour }) => {
+const WeeklyTimeGridComponent: React.FC<WeeklyTimeGridProps> = ({ dayColumns, startHour: propStartHour }) => {
   let computedStart = DEFAULT_START_HOUR;
   for (const col of dayColumns) {
     for (const evt of col.events) {
@@ -116,3 +116,5 @@ export const WeeklyTimeGrid: React.FC<WeeklyTimeGridProps> = ({ dayColumns, star
     </div>
   );
 };
+
+export const WeeklyTimeGrid = React.memo(WeeklyTimeGridComponent);

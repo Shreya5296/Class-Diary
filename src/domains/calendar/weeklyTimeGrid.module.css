@@ -43,8 +43,21 @@
   margin: 0; padding: 4px 6px; border-radius: var(--radius-md); font-size: 11px;
   display: flex; flex-direction: column; gap: 2px; cursor: pointer;
   transition: all var(--transition-fast); position: relative; box-sizing: border-box;
+  background: rgba(239, 246, 255, 0.92); border: 1px solid rgba(191, 219, 254, 0.95);
+  border-left: 3px solid var(--color-primary); color: var(--color-text-main);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
 }
-.eventCard:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(23, 37, 84, 0.1); }
+.eventCard:hover {
+  background: rgba(219, 234, 254, 0.95);
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.14);
+}
+.eventCard:active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  transform: scale(0.99);
+}
 .sessionCard {
   background: rgba(239, 246, 255, 0.92); border: 1px solid rgba(191, 219, 254, 0.95);
   border-left: 3px solid var(--color-primary); color: var(--color-text-main);
@@ -54,27 +67,20 @@
 .sessionCard .eventSubject { color: #2563eb; font-weight: 500; }
 .sessionCard .eventTime { color: #1d4ed8; }
 .recurringCard {
-  background: rgba(240, 253, 250, 0.92); border: 1px dashed rgba(153, 246, 228, 0.95);
-  border-left: 3px solid var(--color-secondary-accent, #0d9488); color: var(--color-text-main);
-  box-shadow: 0 1px 3px rgba(13, 148, 136, 0.08);
+  background: rgba(239, 246, 255, 0.92); border: 1px dashed rgba(191, 219, 254, 0.95);
+  border-left: 3px dashed var(--color-primary); color: var(--color-text-main);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
 }
-.recurringCard .eventStudent { color: #115e59; font-weight: 700; }
-.recurringCard .eventSubject { color: #0d9488; font-weight: 500; }
-.recurringCard .eventTime { color: #0f766e; }
-.cardAttended {
-  background: rgba(236, 253, 245, 0.92); border: 1px solid rgba(167, 243, 208, 0.95);
-  border-left: 3px solid #059669; color: #065f46;
+.recurringCard .eventStudent { color: #1e3a8a; font-weight: 700; }
+.recurringCard .eventSubject { color: #2563eb; font-weight: 500; }
+.recurringCard .eventTime { color: #1d4ed8; }
+.cardAttended, .cardCancelled, .cardAbsent {
+  background: rgba(239, 246, 255, 0.92); border: 1px solid rgba(191, 219, 254, 0.95);
+  border-left: 3px solid var(--color-primary); color: var(--color-text-main);
 }
-.cardAttended .eventStudent { color: #065f46; font-weight: 700; }
-.cardAttended .eventSubject { color: #059669; }
-.cardAttended .eventTime { color: #047857; }
-.cardCancelled, .cardAbsent {
-  background: rgba(254, 242, 242, 0.92); border: 1px solid rgba(254, 202, 202, 0.95);
-  border-left: 3px solid #dc2626; color: #991b1b;
-}
-.cardCancelled .eventStudent, .cardAbsent .eventStudent { color: #991b1b; font-weight: 700; }
-.cardCancelled .eventSubject, .cardAbsent .eventSubject { color: #dc2626; }
-.cardCancelled .eventTime, .cardAbsent .eventTime { color: #b91c1c; }
+.cardAttended .eventStudent, .cardCancelled .eventStudent, .cardAbsent .eventStudent { color: #1e3a8a; font-weight: 700; }
+.cardAttended .eventSubject, .cardCancelled .eventSubject, .cardAbsent .eventSubject { color: #2563eb; }
+.cardAttended .eventTime, .cardCancelled .eventTime, .cardAbsent .eventTime { color: #1d4ed8; }
 .eventHeader { display: flex; justify-content: space-between; align-items: center; gap: 2px; min-height: 14px; }
 .eventStudent { font-weight: 700; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .eventSubject { font-size: 10px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
