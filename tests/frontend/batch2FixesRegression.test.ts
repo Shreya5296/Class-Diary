@@ -245,7 +245,7 @@ describe('Fix Batch 2 Comprehensive Verification', () => {
 
       expect(content).toContain('Lifetime Package Value');
       expect(content).toContain('Lifetime Payments Received');
-      expect(content).toContain('Total Recorded INR Equivalent');
+      expect(content).toContain('Recorded INR Value');
       expect(content).not.toContain('Total Outstanding');
       expect(content).not.toContain('Collection Performance');
       expect(content).not.toContain('collectionRate');

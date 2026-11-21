@@ -87,14 +87,14 @@ export const StudentList: React.FC<StudentListProps> = ({
         />
       ) : (
         <div className={styles.tableWrapper}>
-          <table className={styles.table} style={{ display: 'block', width: '100%' }}>
+          <table className={styles.table} style={{ display: 'block', width: '100%', minWidth: '820px' }}>
             <thead style={{ display: 'block', width: '100%' }}>
-              <tr style={{ display: 'grid', gridTemplateColumns: STUDENT_TABLE_GRID_TEMPLATE, width: '100%' }}>
-                <th style={STUDENT_TABLE_COLUMNS.student}>Student Name</th>
-                <th style={STUDENT_TABLE_COLUMNS.subject}>Subject</th>
-                <th style={STUDENT_TABLE_COLUMNS.schedule}>Class Schedule</th>
-                <th style={STUDENT_TABLE_COLUMNS.classes}>Classes</th>
-                <th style={STUDENT_TABLE_COLUMNS.meetingLink}>Meeting Link</th>
+              <tr style={{ display: 'grid', gridTemplateColumns: STUDENT_TABLE_GRID_TEMPLATE, width: '100%', borderBottom: '1px solid var(--color-border-subtle)', alignItems: 'stretch' }}>
+                <th style={{ ...STUDENT_TABLE_COLUMNS.student, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Student Name</th>
+                <th style={{ ...STUDENT_TABLE_COLUMNS.subject, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Subject</th>
+                <th style={{ ...STUDENT_TABLE_COLUMNS.schedule, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Class Schedule</th>
+                <th style={{ ...STUDENT_TABLE_COLUMNS.classes, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Classes</th>
+                <th style={{ ...STUDENT_TABLE_COLUMNS.meetingLink, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Meeting Link</th>
               </tr>
             </thead>
             <tbody style={{ display: 'block', width: '100%' }}>

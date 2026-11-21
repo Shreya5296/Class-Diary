@@ -17,7 +17,6 @@ export const STUDENT_TABLE_COLUMNS = {
   },
   schedule: {
     minWidth: '170px',
-    maxWidth: '240px',
     whiteSpace: 'nowrap' as const,
   },
   classes: {
@@ -27,7 +26,6 @@ export const STUDENT_TABLE_COLUMNS = {
   },
   meetingLink: {
     minWidth: '190px',
-    maxWidth: '280px',
     whiteSpace: 'nowrap' as const,
   },
 } as const;

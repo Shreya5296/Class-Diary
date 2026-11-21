@@ -41,19 +41,29 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   const gridRowStyle: React.CSSProperties = {
     display: 'grid',
     gridTemplateColumns: STUDENT_TABLE_GRID_TEMPLATE,
+    alignItems: 'stretch',
+    width: '100%',
+    borderBottom: '1px solid var(--color-border-subtle)',
+  };
+
+  const cellBaseStyle: React.CSSProperties = {
+    display: 'flex',
     alignItems: 'center',
     width: '100%',
+    height: '100%',
+    borderBottom: 'none',
+    boxSizing: 'border-box',
   };
 
   return (
     <>
       <tr onClick={() => onToggleExpand(student.student_id)} className={rowClass} style={gridRowStyle} data-status={effectiveActive ? 'active' : 'inactive'} aria-expanded={isExpanded}>
-        <td style={STUDENT_TABLE_COLUMNS.student}>
+        <td style={{ ...STUDENT_TABLE_COLUMNS.student, ...cellBaseStyle }}>
           <StudentCell student={student} onSelect={onSelectStudent} />
         </td>
 
-        <td style={STUDENT_TABLE_COLUMNS.subject}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '4px', maxWidth: '100%', alignItems: 'start' }}>
+        <td style={{ ...STUDENT_TABLE_COLUMNS.subject, ...cellBaseStyle }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '4px', width: '100%', alignItems: 'start' }}>
             {(student.subject ? student.subject.split(',') : ['General']).map((subj, i) => (
               <span key={i} title={subj.trim()} style={{ fontSize: 'var(--font-size-xs)', fontWeight: 500, padding: '2px 6px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border-subtle)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'left', display: 'block' }}>
                 {subj.trim()}
@@ -62,7 +72,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
           </div>
         </td>
 
-        <td style={STUDENT_TABLE_COLUMNS.schedule}>
+        <td style={{ ...STUDENT_TABLE_COLUMNS.schedule, ...cellBaseStyle }}>
           {scheduleLines.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
               {scheduleLines.map((line, idx) => (
@@ -78,8 +88,8 @@ export const StudentRow: React.FC<StudentRowProps> = ({
           )}
         </td>
 
-        <td style={STUDENT_TABLE_COLUMNS.classes}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <td style={{ ...STUDENT_TABLE_COLUMNS.classes, ...cellBaseStyle }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
             <span style={{ fontFamily: 'monospace', fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-main)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }} title={`${balance.totalConsumed} of ${balance.totalPurchased} classes consumed (${remainingCount} remaining)`}>
               {classBalanceText}
             </span>
@@ -89,7 +99,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
           </div>
         </td>
 
-        <td style={STUDENT_TABLE_COLUMNS.meetingLink}>
+        <td style={{ ...STUDENT_TABLE_COLUMNS.meetingLink, ...cellBaseStyle }}>
           {primaryLink ? (
             <MeetingLinkButton url={primaryLink} compact />
           ) : (
@@ -101,8 +111,8 @@ export const StudentRow: React.FC<StudentRowProps> = ({
       </tr>
 
       {isExpanded && (
-        <tr style={{ display: 'block', width: '100%' }}>
-          <td colSpan={5} style={{ display: 'block', width: '100%', padding: 0 }}>
+        <tr style={{ display: 'block', width: '100%', borderBottom: '1px solid var(--color-border-subtle)' }}>
+          <td colSpan={5} style={{ display: 'block', width: '100%', padding: 0, borderBottom: 'none' }}>
             <StudentExpandedDetails
               student={student} meetingLink={meetingLink} balance={balance}
               financials={financials} schedule={schedule} onEditStudent={onEditStudent}

@@ -5,7 +5,7 @@ import { handleSuccessfulSignIn } from './signIn';
 import { handleSignOut } from './signOut';
 import { saveDisplayName } from './userProfileStorage';
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({

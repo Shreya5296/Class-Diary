@@ -176,12 +176,13 @@ describe('Fix Batch 3 — Attendance, Rescheduling, Student Details & Global Tab
     const widths = cols.map((c) => parseInt(c.width || '0', 10));
     const totalWidth = widths.reduce((sum, w) => sum + w, 0);
     expect(totalWidth).toBe(100);
-    expect(cols.find((c) => c.key === 'student')?.width).toBe('16%');
+    expect(cols).toHaveLength(5);
+    expect(cols.find((c) => c.key === 'student')?.width).toBe('20%');
     expect(cols.find((c) => c.key === 'date')?.width).toBe('15%');
-    expect(cols.find((c) => c.key === 'start_time')?.width).toBe('13%');
     expect(cols.find((c) => c.key === 'consumed')?.width).toBe('13%');
-    expect(cols.find((c) => c.key === 'join')?.width).toBe('11%');
-    expect(cols.find((c) => c.key === 'notes')?.width).toBe('15%');
-    expect(cols.find((c) => c.key === 'attendance')?.width).toBe('17%');
+    expect(cols.find((c) => c.key === 'notes')?.width).toBe('28%');
+    expect(cols.find((c) => c.key === 'attendance')?.width).toBe('24%');
+    expect(cols.find((c) => c.key === 'start_time')).toBeUndefined();
+    expect(cols.find((c) => c.key === 'join')).toBeUndefined();
   });
 });

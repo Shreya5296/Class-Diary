@@ -107,7 +107,7 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({ studentId }) => {
           description={activeTab === 'upcoming' ? 'No classes scheduled for now or in the future.' : 'No past scheduled classes recorded.'}
         />
       ) : (
-        <DataTable fixedLayout minWidth="920px" columns={columns} data={displayedSessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />
+        <DataTable fixedLayout minWidth="800px" columns={columns} data={displayedSessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />
       )}
 
       {notesSession && (

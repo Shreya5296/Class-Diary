@@ -83,13 +83,17 @@ export function splitAndSortSessions(
   // Nearest upcoming class first (ascending chronological order)
   upcomingWithTs.sort((a, b) => {
     if (a.ts !== b.ts) return a.ts - b.ts;
-    return (a.session.session_id || '').localeCompare(b.session.session_id || '');
+    const idA = a.session.session_id || a.session.student_id || '';
+    const idB = b.session.session_id || b.session.student_id || '';
+    return idA.localeCompare(idB);
   });
 
   // Most recently scheduled class first (descending chronological order)
   pastWithTs.sort((a, b) => {
     if (a.ts !== b.ts) return b.ts - a.ts;
-    return (a.session.session_id || '').localeCompare(b.session.session_id || '');
+    const idA = a.session.session_id || a.session.student_id || '';
+    const idB = b.session.session_id || b.session.student_id || '';
+    return idA.localeCompare(idB);
   });
 
   return {

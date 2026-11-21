@@ -41,39 +41,31 @@ export const ClassesPage: React.FC = () => {
 
   return (
     <div>
-      <PageHeader
-        title="Class Schedule & Attendance"
-        actions={
-          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-            <Button variant="secondary" onClick={() => setRefreshKey((k) => k + 1)} aria-label="Refresh classes">
-              ↻ Refresh
-            </Button>
-            <Button variant="primary" onClick={() => setIsScheduling(!isScheduling)}>
-              {isScheduling ? 'Cancel' : '+ Schedule Class'}
-            </Button>
-          </div>
-        }
-      />
+      <PageHeader title="Class Schedule & Attendance" />
 
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
         flexWrap: 'wrap',
         gap: 'var(--space-3)',
         marginBottom: 'var(--space-4)',
-        backgroundColor: 'var(--color-bg-surface)',
-        padding: '0.75rem 1rem',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border-subtle)',
+        width: '100%',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flex: '1 1 300px' }}>
-          <label style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, color: 'var(--color-text-main)', whiteSpace: 'nowrap' }}>
-            Filter by Student:
-          </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
           <select
+            id="filter-schedule-student"
             className={formStyles.select}
-            style={{ maxWidth: '320px', paddingRight: '2.5rem' }}
+            style={{
+              width: 'auto',
+              minWidth: '220px',
+              maxWidth: '340px',
+              height: '38px',
+              padding: '0 2rem 0 0.75rem',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--font-size-sm)',
+              boxSizing: 'border-box',
+            }}
             value={selectedStudentId}
             onChange={(e) => setSelectedStudentId(e.target.value)}
             aria-label="Filter schedule by student"
@@ -85,13 +77,25 @@ export const ClassesPage: React.FC = () => {
               </option>
             ))}
           </select>
-        </div>
-
-        {selectedStudentId && (
-          <Button variant="ghost" size="sm" onClick={() => setSelectedStudentId('')}>
-            ✕ Clear Filter
+          {selectedStudentId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedStudentId('')}
+              style={{ height: '38px', whiteSpace: 'nowrap' }}
+            >
+              ✕ Clear
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setIsScheduling(!isScheduling)}
+            style={{ height: '38px', whiteSpace: 'nowrap' }}
+          >
+            {isScheduling ? 'Cancel' : '+ Schedule Class'}
           </Button>
-        )}
+        </div>
       </div>
 
       {isScheduling && (
