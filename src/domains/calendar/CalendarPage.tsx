@@ -67,8 +67,6 @@ export const CalendarPage: React.FC = () => {
     return buildDayColumns({ datedSessions: classes, recurringSchedules: schedules, students, weekDates, activeTz, packages });
   }, [classes, schedules, students, weekDates, activeTz, packages]);
 
-  const totalWeekEvents = useMemo(() => dayColumns.reduce((acc, col) => acc + col.events.length, 0), [dayColumns]);
-
   const dayCol = useMemo(() => {
     if (viewMode !== 'day') return null;
     return buildDayColumns({ datedSessions: classes, recurringSchedules: schedules, students, weekDates: [selectedDateStr], activeTz, packages })[0];
@@ -103,12 +101,13 @@ export const CalendarPage: React.FC = () => {
   };
 
   const titleText = viewMode === 'day' ? formatDayTitle(selectedDateStr, activeTz) : viewMode === 'month' ? formatMonthTitle(yearMonthStr) : formatWeekHeading(mondayStr, sundayStr);
-  const countLabel = viewMode === 'week' ? `${totalWeekEvents} ${totalWeekEvents === 1 ? 'class slot' : 'class slots'}` : undefined;
   usePageTitle(titleText);
 
   return (
-    <div>
-      <PageHeader title={titleText} subtitle={countLabel} />
+    <div style={{ paddingBottom: 'var(--space-2)' }}>
+      <div style={{ marginBottom: 'var(--space-2)' }}>
+        <PageHeader title={titleText} />
+      </div>
       <CalendarControlsBar
         viewMode={viewMode} onChangeViewMode={setViewMode} showTitle={false}
         onPrev={handlePrev} onNext={handleNext} onToday={handleToday}

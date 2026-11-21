@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getStoredProfileImage, PROFILE_IMAGE_EVENT } from './profileImageStorage';
+import { getStoredProfileImage, getMemoryFallbackImage, PROFILE_IMAGE_EVENT } from './profileImageStorage';
 
 export function useProfileImage(): string | null {
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(getMemoryFallbackImage());
 
   useEffect(() => {
     let mounted = true;

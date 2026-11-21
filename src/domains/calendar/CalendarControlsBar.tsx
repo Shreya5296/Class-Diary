@@ -56,6 +56,7 @@ export const CalendarControlsBar: React.FC<CalendarControlsBarProps> = ({
               size="sm"
               onClick={onScheduleExtraClass}
               aria-label="Schedule Extra Class"
+              className={styles.scheduleExtraBtn}
             >
               + Schedule Extra Class
             </Button>

@@ -83,3 +83,26 @@ export function formatWeeklySchedule(entries?: WeeklyScheduleEntry[] | null): st
   byTime.forEach((days, timeRange) => parts.push(`${days.join(', ')} ${timeRange}`));
   return parts.join('; ');
 }
+
+export function formatScheduleLines(entries?: WeeklyScheduleEntry[] | null): string[] {
+  if (!entries || !Array.isArray(entries) || entries.length === 0) return [];
+  const valid = entries.filter((e) => e && e.day_of_week && e.start_time);
+  if (valid.length === 0) return [];
+
+  const sorted = [...valid].sort((a, b) => {
+    return DAY_ORDER.indexOf(a.day_of_week.toUpperCase()) - DAY_ORDER.indexOf(b.day_of_week.toUpperCase());
+  });
+
+  return sorted.map((e) => {
+    const day = DAY_ABBR[e.day_of_week.toUpperCase()] || e.day_of_week;
+    const s12 = formatTimeTo12Hour(e.start_time);
+    if (!e.end_time) return `${day} - ${s12}`;
+    const e12 = formatTimeTo12Hour(e.end_time);
+    const sParts = s12.split(' ');
+    const eParts = e12.split(' ');
+    if (sParts.length === 2 && eParts.length === 2 && sParts[1] === eParts[1]) {
+      return `${day} - ${sParts[0]} - ${e12}`;
+    }
+    return `${day} - ${s12} - ${e12}`;
+  });
+}

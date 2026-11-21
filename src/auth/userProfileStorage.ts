@@ -63,20 +63,31 @@ export function clearSavedDisplayName(): void {
 
 export function resolveDisplayName(candidateName?: string | null, email?: string | null): string {
   const saved = getSavedDisplayName();
-  if (saved) {
-    return saved;
-  }
-
+  if (saved) return saved;
   if (candidateName && candidateName.trim() && candidateName.trim().toLowerCase() !== 'administrator') {
     return candidateName.trim();
   }
-
   if (email && email.includes('@')) {
     const localPart = email.split('@')[0].trim();
-    if (localPart) {
-      return localPart;
-    }
+    if (localPart) return localPart;
   }
-
   return 'Admin';
+}
+
+export function extractInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  if (parts.length === 1 && parts[0].length >= 1) return parts[0].slice(0, 2).toUpperCase();
+  return 'AD';
+}
+
+export interface UserProfileIdentity {
+  displayName: string;
+  initials: string;
+}
+
+export function getUserProfileIdentity(candidateName?: string | null, email?: string | null): UserProfileIdentity {
+  const displayName = resolveDisplayName(candidateName, email);
+  const initials = extractInitials(displayName);
+  return { displayName, initials };
 }

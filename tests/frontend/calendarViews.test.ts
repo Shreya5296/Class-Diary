@@ -5,6 +5,7 @@ import {
   shiftMonthStr,
   formatMonthTitle,
   formatDayTitle,
+  formatWeekHeading,
   getMonthGridDates,
 } from '../../src/domains/calendar/calendarDateUtils';
 
@@ -39,6 +40,13 @@ describe('Fix 4 — Calendar Views & Navigation', () => {
     expect(dayTitle).toContain('26');
     expect(dayTitle).toContain('October');
     expect(dayTitle).toContain('2026');
+  });
+
+  it('formats week view date ranges following MMM D -D, YYYY pattern', () => {
+    expect(formatWeekHeading('2026-11-16', '2026-11-22')).toBe('Nov 16 -22, 2026');
+    expect(formatWeekHeading('2026-11-23', '2026-11-29')).toBe('Nov 23 -29, 2026');
+    expect(formatWeekHeading('2026-11-30', '2026-12-06')).toBe('Nov 30 - Dec 6, 2026');
+    expect(formatWeekHeading('2026-12-28', '2027-01-03')).toBe('Dec 28, 2026 - Jan 3, 2027');
   });
 
   it('generates Monday-to-Sunday month grids of 35 or 42 days', () => {

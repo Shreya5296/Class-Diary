@@ -3,6 +3,9 @@ import styles from './layout.module.css';
 import { Sidebar, NavSection } from './Sidebar';
 import { TopBar } from './TopBar';
 import { SchedulingProgressToast } from '../components/feedback/SchedulingProgressToast';
+import { useAuth } from '../auth/AuthProvider';
+import { getUserProfileIdentity } from '../auth/userProfileStorage';
+import { useProfileImage } from '../domains/dashboard/useProfileImage';
 
 export interface AppShellProps {
   activeSection: NavSection;
@@ -15,6 +18,9 @@ export const AppShell: React.FC<AppShellProps> = ({
   onNavigate,
   children,
 }) => {
+  const { user } = useAuth();
+  const profileImage = useProfileImage();
+  const { displayName, initials } = getUserProfileIdentity(user?.name, user?.email);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -24,12 +30,18 @@ export const AppShell: React.FC<AppShellProps> = ({
         onNavigate={onNavigate}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        profileImage={profileImage}
+        initials={initials}
+        displayName={displayName}
       />
       <div className={styles.mainArea}>
         <TopBar
           activeSection={activeSection}
           onToggleMenu={() => setMobileMenuOpen((open) => !open)}
           onNavigate={onNavigate}
+          profileImage={profileImage}
+          initials={initials}
+          displayName={displayName}
         />
         <main className={styles.content}>{children}</main>
         <SchedulingProgressToast />

@@ -28,7 +28,6 @@ export const StudentsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebouncedValue(searchQuery, 300);
   const [activeTab, setActiveTab] = useState<StudentStatusTab>('ACTIVE');
-  const [displayedCount, setDisplayedCount] = useState<number | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [renewingStudent, setRenewingStudent] = useState<Student | null>(null);
@@ -102,27 +101,22 @@ export const StudentsPage: React.FC = () => {
     );
   }
 
-  const resultCount = displayedCount !== null ? displayedCount : students.length;
   const statusDropdownVal = activeTab === 'ACTIVE' ? 'ACTIVE' : activeTab === 'INACTIVE' ? 'INACTIVE' : '';
 
   return (
     <div>
-      <PageHeader
-        title="Students Directory"
-        subtitle="Manage registered learners, curriculum details, parent contacts, and fee profiles."
-        actions={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Button variant="secondary" onClick={() => { setRenewingStudent(null); setIsRenewing(true); }}>Renew Package</Button>
-            <Button variant="primary" onClick={() => setIsCreating(true)}>+ Add Student</Button>
-          </div>
-        }
-      />
+      <PageHeader title="Students Directory" />
       {banner}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)', flexWrap: 'wrap', width: '100%' }}>
         <StudentSearch query={searchQuery} statusFilter={statusDropdownVal} onQueryChange={setSearchQuery} onStatusFilterChange={handleStatusFilterChange} />
-        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-          {resultCount} student{resultCount === 1 ? '' : 's'} found
-        </span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+          <Button variant="secondary" onClick={() => { setRenewingStudent(null); setIsRenewing(true); }} style={{ height: '38px', whiteSpace: 'nowrap' }}>
+            Renew Package
+          </Button>
+          <Button variant="primary" onClick={() => setIsCreating(true)} style={{ height: '38px', whiteSpace: 'nowrap' }}>
+            + Add Student
+          </Button>
+        </div>
       </div>
 
       {isCreating && <AddStudentModal onSuccess={handleRegistrationSuccess} onClose={() => setIsCreating(false)} />}
@@ -137,7 +131,6 @@ export const StudentsPage: React.FC = () => {
           students={students}
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          onDisplayedCountChange={setDisplayedCount}
           onSelectStudent={setSelectedStudent}
           onEditStudent={setEditingStudent}
           onRenewStudent={(s) => { setRenewingStudent(s); setIsRenewing(true); }}

@@ -1,5 +1,5 @@
 .controlsWrapper {
-  display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-2);
 }
 .topRow {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3);
@@ -29,8 +29,21 @@
   border-color: rgba(255, 255, 255, 0.25);
 }
 .navGroup { display: flex; align-items: center; gap: var(--space-2); }
+.scheduleExtraBtn {
+  height: 32px !important;
+  max-height: 32px !important;
+  padding: 0 12px !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-md) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+}
 .navButtonGroup {
-  display: inline-flex; align-items: center;
+  display: inline-flex; align-items: center; height: 32px; box-sizing: border-box;
   border: 1px solid rgba(220, 227, 240, 0.85);
   border-radius: var(--radius-md); overflow: hidden;
   background: rgba(255, 255, 255, 0.85);

@@ -7,19 +7,14 @@ export interface MeetingLinkButtonProps {
   onDelete?: () => void | Promise<void>;
   isCopied?: boolean;
   disabled?: boolean;
+  compact?: boolean;
 }
 
 export const MeetingLinkButton: React.FC<MeetingLinkButtonProps> = ({
-  url,
-  onCopy,
-  onDelete,
-  isCopied: parentCopied,
-  disabled = false,
+  url, onCopy, onDelete, isCopied: parentCopied, disabled = false, compact = false,
 }) => {
   const [localCopied, setLocalCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [touchOpen, setTouchOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const cleanUrl = (url || '').trim();
@@ -36,8 +31,7 @@ export const MeetingLinkButton: React.FC<MeetingLinkButtonProps> = ({
   }[platform];
 
   const handleCopyClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     if (navigator?.clipboard?.writeText) navigator.clipboard.writeText(cleanUrl).catch(() => {});
     setLocalCopied(true);
     setTimeout(() => setLocalCopied(false), 2000);
@@ -45,76 +39,80 @@ export const MeetingLinkButton: React.FC<MeetingLinkButtonProps> = ({
   };
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     if (disabled || isDeleting || !onDelete) return;
     setIsDeleting(true);
-    try {
-      await onDelete();
-    } finally {
-      setIsDeleting(false);
-    }
+    try { await onDelete(); } finally { setIsDeleting(false); }
   };
 
-  const showActions = isHovered || isFocused || touchOpen || isDeleting;
+  if (compact) {
+    return (
+      <div title={cleanUrl} role="group" aria-label={`Meeting link for ${platform}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
+        <a href={cleanUrl} target="_blank" rel="noopener noreferrer" title={cleanUrl} style={{ fontFamily: 'monospace', fontSize: '11px', color: stylesByPlatform.color, backgroundColor: stylesByPlatform.bg, border: `1px solid ${stylesByPlatform.border}`, padding: '2px 6px', borderRadius: 'var(--radius-sm)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px', display: 'inline-block', fontWeight: 600 }}>
+          {cleanUrl.replace(/^https?:\/\//i, '')}
+        </a>
+        <a href={cleanUrl} target="_blank" rel="noopener noreferrer" aria-label="Open meeting link" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-primary, #2563eb)', padding: '2px 4px', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          Open ↗
+        </a>
+        <button type="button" onClick={handleCopyClick} aria-label="Copy meeting link" style={{ fontSize: '10px', fontWeight: 700, color: isCopied ? 'var(--color-success, #059669)' : 'var(--color-text-muted, #64748b)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {isCopied ? '✓ Copied' : 'Copy'}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onFocus={() => setIsFocused(true)}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-          setIsFocused(false);
-          setTouchOpen(false);
-        }
-      }}
-      onClick={() => setTouchOpen((prev) => !prev)}
-      title={cleanUrl}
-      tabIndex={0}
-      role="group"
-      aria-label={`Meeting link for ${platform}`}
+      onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}
+      title={cleanUrl} tabIndex={0} role="group" aria-label={`Meeting link for ${platform}`}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '6px',
-        fontSize: 'var(--font-size-xs)',
-        fontWeight: 600,
-        fontFamily: 'monospace',
-        backgroundColor: stylesByPlatform.bg,
-        color: stylesByPlatform.color,
-        border: `1px solid ${stylesByPlatform.border}`,
-        padding: '4px 8px',
-        borderRadius: 'var(--radius-md)',
-        maxWidth: '100%',
-        minWidth: 0,
-        boxSizing: 'border-box',
-        transition: 'background-color 140ms ease, border-color 140ms ease',
-        cursor: 'default',
-        position: 'relative',
+        display: 'flex', flexDirection: 'column', gap: '6px', fontSize: 'var(--font-size-xs)',
+        fontWeight: 600, fontFamily: 'monospace', backgroundColor: stylesByPlatform.bg,
+        color: stylesByPlatform.color, border: `1px solid ${stylesByPlatform.border}`,
+        padding: '6px 10px', borderRadius: 'var(--radius-md)', maxWidth: '100%', minWidth: 0,
+        boxSizing: 'border-box', transition: 'background-color 140ms ease, border-color 140ms ease',
+        cursor: 'default', position: 'relative',
       }}
     >
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: '1 1 auto' }}>
+      <a
+        href={cleanUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+        style={{ wordBreak: 'break-all', overflowWrap: 'anywhere', whiteSpace: 'normal', color: stylesByPlatform.color, textDecoration: 'none', lineHeight: '1.4' }}
+      >
         {isCopied ? '✓ Copied!' : cleanUrl}
-      </span>
+      </a>
 
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0, opacity: showActions ? 1 : 0, pointerEvents: showActions ? 'auto' : 'none', transition: 'opacity 120ms ease' }}>
-        <button
-          type="button"
-          onClick={handleCopyClick}
-          aria-label="Copy meeting link"
-          style={{ border: '1px solid currentColor', background: 'rgba(255, 255, 255, 0.8)', color: stylesByPlatform.color, borderRadius: 'var(--radius-sm)', padding: '2px 6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', lineHeight: 1.2 }}
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <a
+          href={cleanUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+          aria-label="Open meeting link in new tab"
+          style={{
+            border: `1px solid ${stylesByPlatform.border}`, background: 'rgba(255, 255, 255, 0.85)',
+            color: stylesByPlatform.color, borderRadius: 'var(--radius-sm)', padding: '2px 7px',
+            fontSize: '11px', fontWeight: 700, cursor: 'pointer', lineHeight: 1.2,
+            textDecoration: 'none', display: 'inline-flex', alignItems: 'center',
+          }}
         >
-          Copy
+          Open ↗
+        </a>
+        <button
+          type="button" onClick={handleCopyClick} aria-label="Copy meeting link"
+          style={{
+            border: `1px solid ${stylesByPlatform.border}`, background: 'rgba(255, 255, 255, 0.85)',
+            color: stylesByPlatform.color, borderRadius: 'var(--radius-sm)', padding: '2px 7px',
+            fontSize: '11px', fontWeight: 700, cursor: 'pointer', lineHeight: 1.2,
+          }}
+        >
+          {isCopied ? 'Copied!' : 'Copy'}
         </button>
         {onDelete && (
           <button
-            type="button"
-            onClick={handleDeleteClick}
-            disabled={disabled || isDeleting}
+            type="button" onClick={handleDeleteClick} disabled={disabled || isDeleting}
             aria-label="Delete meeting link"
-            style={{ border: '1px solid #f87171', background: 'rgba(254, 242, 242, 0.9)', color: '#dc2626', borderRadius: 'var(--radius-sm)', padding: '2px 6px', fontSize: '10px', fontWeight: 700, cursor: disabled || isDeleting ? 'not-allowed' : 'pointer', lineHeight: 1.2, opacity: disabled || isDeleting ? 0.6 : 1 }}
+            style={{
+              border: '1px solid #f87171', background: 'rgba(254, 242, 242, 0.9)', color: '#dc2626',
+              borderRadius: 'var(--radius-sm)', padding: '2px 7px', fontSize: '11px', fontWeight: 700,
+              cursor: disabled || isDeleting ? 'not-allowed' : 'pointer', lineHeight: 1.2, opacity: disabled || isDeleting ? 0.6 : 1,
+            }}
           >
             {isDeleting ? 'Deleting…' : 'Delete'}
           </button>

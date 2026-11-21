@@ -98,16 +98,27 @@ const MonthCalendarViewComponent: React.FC<MonthCalendarViewProps> = ({
                       const sTime = cleanTime(sess.schedule_time || sess.start_time);
                       const time12 = sTime ? formatTimeTo12Hour(sTime) : (sess.scheduled_start ? formatIsoTo12Hour(sess.scheduled_start, activeTz) : '');
                       const isPast = isEventPast(dateStr, sess.scheduled_end || sTime, activeTz);
-                      const isCancelled = sess.session_status === 'CANCELLED' || sess.status === 'CANCELLED';
+                      const attStatus = ((sess as unknown as { attendance_status?: string }).attendance_status || '').toUpperCase();
+                      const sessStat = (sess.session_status || sess.status || '').toUpperCase();
+                      const isCancelled = sessStat === 'CANCELLED' || attStatus === 'CANCELLED' || attStatus === 'ABSENT' || attStatus === 'NO_SHOW';
+                      const isCompleted = sessStat === 'COMPLETED' || attStatus === 'PRESENT' || attStatus === 'ATTENDED';
+
+                      let cardBg = '#eff6ff', cardBorder = '1px solid #bfdbfe', cardLeft = '3px solid #2563eb', cardColor = '#1e40af';
+                      if (isCancelled) {
+                        cardBg = '#fef2f2'; cardBorder = '1px solid #fecaca'; cardLeft = '3px solid #dc2626'; cardColor = '#991b1b';
+                      } else if (isCompleted) {
+                        cardBg = '#ecfdf5'; cardBorder = '1px solid #a7f3d0'; cardLeft = '3px solid #059669'; cardColor = '#065f46';
+                      } else if (isPast) {
+                        cardBg = '#fffbeb'; cardBorder = '1px solid #fde68a'; cardLeft = '3px solid #d97706'; cardColor = '#92400e';
+                      }
 
                       return (
                         <div
                           key={sess.session_id || idx}
                           style={{
                             fontSize: '10px', padding: '2px 5px', borderRadius: 'var(--radius-sm)',
-                            background: '#eff6ff', border: '1px solid #bfdbfe',
-                            borderLeft: '3px solid var(--color-primary, #2563eb)',
-                            color: '#1e40af', opacity: isPast && !isCancelled ? 0.85 : 1,
+                            background: cardBg, border: cardBorder, borderLeft: cardLeft,
+                            color: cardColor, opacity: isPast && !isCancelled ? 0.88 : 1,
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600,
                           }}
                         >

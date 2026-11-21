@@ -1,24 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import styles from './dashboardWelcomePanel.module.css';
 import { useAuth } from '../../auth/AuthProvider';
-import { resolveDisplayName } from '../../auth/userProfileStorage';
+import { getUserProfileIdentity } from '../../auth/userProfileStorage';
 import { saveStoredProfileImage, deleteStoredProfileImage } from './profileImageStorage';
 import { useProfileImage } from './useProfileImage';
 import { ProfilePictureModal } from './ProfilePictureModal';
 import { DashboardLiveClock } from './DashboardLiveClock';
 
-function extractInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-  if (parts.length === 1 && parts[0].length >= 1) return parts[0].slice(0, 2).toUpperCase();
-  return 'AD';
-}
-
 export const DashboardWelcomePanel: React.FC = () => {
   const { user } = useAuth();
-  const displayName = resolveDisplayName(user?.name, user?.email);
-  const initials = extractInitials(displayName);
-
+  const { displayName, initials } = getUserProfileIdentity(user?.name, user?.email);
   const profileImage = useProfileImage();
   const [isModalOpen, setIsModalOpen] = useState(false);
 

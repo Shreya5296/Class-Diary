@@ -1,5 +1,5 @@
 export type CalendarViewMode = 'day' | 'week' | 'month';
-export type CalendarDisplayCategory = 'PAST_COMPLETED' | 'CANCELLED' | 'UPCOMING';
+export type CalendarDisplayCategory = 'PAST_COMPLETED' | 'CANCELLED' | 'UPCOMING' | 'PAST_UNATTENDED';
 
 export interface CalendarEventItem {
   id: string;

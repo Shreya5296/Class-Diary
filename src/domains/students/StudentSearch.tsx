@@ -21,12 +21,11 @@ export const StudentSearch: React.FC<StudentSearchProps> = ({
         display: 'flex',
         gap: 'var(--space-2)',
         alignItems: 'center',
-        flexWrap: 'wrap',
-        flex: 1,
-        maxWidth: '520px',
+        flex: '1 1 280px',
+        minWidth: '240px',
       }}
     >
-      <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+      <div style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
         <div
           style={{
             position: 'absolute',
@@ -49,9 +48,11 @@ export const StudentSearch: React.FC<StudentSearchProps> = ({
           className={formStyles.input}
           style={{
             width: '100%',
-            padding: '0.4375rem 0.75rem 0.4375rem 2.25rem',
+            height: '38px',
+            padding: '0 0.75rem 0 2.25rem',
             borderRadius: 'var(--radius-md)',
             fontSize: 'var(--font-size-sm)',
+            boxSizing: 'border-box',
           }}
         />
       </div>
@@ -64,9 +65,12 @@ export const StudentSearch: React.FC<StudentSearchProps> = ({
         style={{
           width: 'auto',
           minWidth: '140px',
-          padding: '0.4375rem 2.25rem 0.4375rem 0.75rem',
+          height: '38px',
+          padding: '0 2rem 0 0.75rem',
           borderRadius: 'var(--radius-md)',
           fontSize: 'var(--font-size-sm)',
+          boxSizing: 'border-box',
+          flexShrink: 0,
         }}
       >
         <option value="">All Statuses</option>

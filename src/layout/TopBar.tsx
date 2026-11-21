@@ -3,30 +3,34 @@ import styles from './topBar.module.css';
 import { useAuth } from '../auth/AuthProvider';
 import { MenuIcon } from '../components/icons/ActionIcons';
 import { NavSection } from './Sidebar';
-import { resolveDisplayName } from '../auth/userProfileStorage';
+import { getUserProfileIdentity } from '../auth/userProfileStorage';
 import { useProfileImage } from '../domains/dashboard/useProfileImage';
 import { saveStoredProfileImage, deleteStoredProfileImage } from '../domains/dashboard/profileImageStorage';
 import { ProfilePictureModal } from '../domains/dashboard/ProfilePictureModal';
 import { DashboardLiveClock } from '../domains/dashboard/DashboardLiveClock';
 
-function extractInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-  if (parts.length === 1 && parts[0].length >= 1) return parts[0].slice(0, 2).toUpperCase();
-  return 'AD';
-}
-
 export interface TopBarProps {
   activeSection?: NavSection;
   onToggleMenu?: () => void;
   onNavigate?: (section: NavSection) => void;
+  profileImage?: string | null;
+  initials?: string;
+  displayName?: string;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ activeSection, onToggleMenu }) => {
+export const TopBar: React.FC<TopBarProps> = ({
+  activeSection,
+  onToggleMenu,
+  profileImage: propProfileImage,
+  initials: propInitials,
+  displayName: propDisplayName,
+}) => {
   const { user } = useAuth();
-  const displayName = resolveDisplayName(user?.name, user?.email);
-  const initials = extractInitials(displayName);
-  const profileImage = useProfileImage();
+  const fallbackIdentity = getUserProfileIdentity(user?.name, user?.email);
+  const displayName = propDisplayName ?? fallbackIdentity.displayName;
+  const initials = propInitials ?? fallbackIdentity.initials;
+  const hookImage = useProfileImage();
+  const profileImage = propProfileImage !== undefined ? propProfileImage : hookImage;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isDashboard = activeSection === 'dashboard';
 

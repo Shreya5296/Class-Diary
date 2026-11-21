@@ -9,6 +9,35 @@ export interface DayCalendarViewProps {
   isToday: boolean;
 }
 
+function getDayEventStyles(evt: CalendarEventItem) {
+  const isCancelled = evt.category === 'CANCELLED' || evt.isCancelled;
+  const isPastCompleted = evt.category === 'PAST_COMPLETED';
+  const isPastUnattended = evt.category === 'PAST_UNATTENDED';
+
+  if (isCancelled) {
+    return {
+      cardBg: 'rgba(254, 242, 242, 0.92)', borderColor: 'rgba(254, 202, 202, 0.95)', borderLeftColor: '#dc2626',
+      badgeLabel: 'Cancelled', badgeBg: '#fef2f2', badgeBorder: '#fecaca', badgeColor: '#b91c1c', isCancelled: true
+    };
+  }
+  if (isPastCompleted) {
+    return {
+      cardBg: 'rgba(236, 253, 245, 0.92)', borderColor: 'rgba(167, 243, 208, 0.95)', borderLeftColor: '#059669',
+      badgeLabel: 'Present', badgeBg: '#ecfdf5', badgeBorder: '#a7f3d0', badgeColor: '#065f46', isCancelled: false
+    };
+  }
+  if (isPastUnattended) {
+    return {
+      cardBg: 'rgba(255, 251, 235, 0.92)', borderColor: 'rgba(253, 230, 138, 0.95)', borderLeftColor: '#d97706',
+      badgeLabel: 'Unrecorded', badgeBg: '#fffbeb', badgeBorder: '#fde68a', badgeColor: '#92400e', isCancelled: false
+    };
+  }
+  return {
+    cardBg: 'rgba(239, 246, 255, 0.92)', borderColor: 'rgba(191, 219, 254, 0.95)', borderLeftColor: 'var(--color-primary, #2563eb)',
+    badgeLabel: 'Upcoming', badgeBg: '#eff6ff', badgeBorder: '#bfdbfe', badgeColor: '#1d4ed8', isCancelled: false
+  };
+}
+
 const DayCalendarViewComponent: React.FC<DayCalendarViewProps> = ({
   selectedDateStr,
   events,
@@ -33,11 +62,7 @@ const DayCalendarViewComponent: React.FC<DayCalendarViewProps> = ({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         {events.map((evt) => {
-          const isCancelled = evt.category === 'CANCELLED' || evt.isCancelled;
-          const isPastCompleted = evt.category === 'PAST_COMPLETED';
-
-          const cardBg = 'rgba(239, 246, 255, 0.92)';
-          const borderLeftColor = 'var(--color-primary, #2563eb)';
+          const s = getDayEventStyles(evt);
           const borderStyle = evt.isRecurring ? 'dashed' : 'solid';
 
           return (
@@ -45,10 +70,10 @@ const DayCalendarViewComponent: React.FC<DayCalendarViewProps> = ({
               key={evt.id}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0.95rem 1.25rem', background: cardBg,
+                padding: '0.95rem 1.25rem', background: s.cardBg,
                 backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                border: `1px ${borderStyle} rgba(191, 219, 254, 0.95)`,
-                borderLeft: `4px ${borderStyle} ${borderLeftColor}`,
+                border: `1px ${borderStyle} ${s.borderColor}`,
+                borderLeft: `4px ${borderStyle} ${s.borderLeftColor}`,
                 borderRadius: 'var(--radius-lg)',
                 boxShadow: '0 2px 8px rgba(37, 99, 235, 0.06)',
                 gap: 'var(--space-4)', flexWrap: 'wrap',
@@ -76,25 +101,17 @@ const DayCalendarViewComponent: React.FC<DayCalendarViewProps> = ({
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                {!isCancelled && (
+                {!s.isCancelled && (
                   <span
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '32px',
-                      padding: '0 12px',
-                      fontSize: 'var(--font-size-xs)',
-                      fontWeight: 600,
-                      borderRadius: 'var(--radius-md)',
-                      boxSizing: 'border-box',
-                      backgroundColor: '#eff6ff',
-                      color: '#1d4ed8',
-                      border: '1px solid #bfdbfe',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      height: '32px', padding: '0 12px', fontSize: 'var(--font-size-xs)', fontWeight: 600,
+                      borderRadius: 'var(--radius-md)', boxSizing: 'border-box',
+                      backgroundColor: s.badgeBg, color: s.badgeColor, border: `1px solid ${s.badgeBorder}`,
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {isPastCompleted ? 'Completed' : 'Upcoming'}
+                    {s.badgeLabel}
                   </span>
                 )}
 
@@ -104,22 +121,11 @@ const DayCalendarViewComponent: React.FC<DayCalendarViewProps> = ({
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '32px',
-                      padding: '0 12px',
-                      fontSize: 'var(--font-size-xs)',
-                      fontWeight: 600,
-                      borderRadius: 'var(--radius-md)',
-                      backgroundColor: 'var(--color-primary)',
-                      color: '#ffffff',
-                      border: '1px solid var(--color-primary)',
-                      textDecoration: 'none',
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 1px 3px rgba(37, 99, 235, 0.25)',
-                      transition: 'all var(--transition-fast)',
-                      cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      height: '32px', padding: '0 12px', fontSize: 'var(--font-size-xs)', fontWeight: 600,
+                      borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary)', color: '#ffffff',
+                      border: '1px solid var(--color-primary)', textDecoration: 'none', whiteSpace: 'nowrap',
+                      boxShadow: '0 1px 3px rgba(37, 99, 235, 0.25)', transition: 'all var(--transition-fast)', cursor: 'pointer',
                     }}
                   >
                     Join Class ↗

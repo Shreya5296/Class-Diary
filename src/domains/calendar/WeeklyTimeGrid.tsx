@@ -10,6 +10,7 @@ export interface WeeklyTimeGridProps {
 
 export const DEFAULT_START_HOUR = 9;
 export const END_HOUR = 22;
+export const HOUR_ROW_HEIGHT = 56;
 
 export function getCalendarHours(startHour = DEFAULT_START_HOUR): string[] {
   const hours: string[] = [];
@@ -22,9 +23,13 @@ export function getCalendarHours(startHour = DEFAULT_START_HOUR): string[] {
 function getEventCardClass(evt: CalendarEventItem): string {
   if (evt.category === 'CANCELLED' || evt.isCancelled) return styles.cardCancelled;
   if (evt.category === 'PAST_COMPLETED') return styles.cardAttended;
+  if (evt.category === 'PAST_UNATTENDED') return styles.cardUnattended;
   if (evt.isPast) {
     const isComp = evt.status === 'COMPLETED' || evt.attendanceStatus === 'PRESENT' || evt.attendanceStatus === 'ATTENDED';
-    return isComp ? styles.cardAttended : styles.cardCancelled;
+    if (isComp) return styles.cardAttended;
+    const isAbsent = evt.status === 'CANCELLED' || evt.attendanceStatus === 'ABSENT' || evt.attendanceStatus === 'NO_SHOW' || evt.attendanceStatus === 'CANCELLED';
+    if (isAbsent) return styles.cardCancelled;
+    return styles.cardUnattended;
   }
   return evt.isRecurring ? styles.recurringCard : styles.sessionCard;
 }
@@ -68,10 +73,10 @@ const WeeklyTimeGridComponent: React.FC<WeeklyTimeGridProps> = ({ dayColumns, st
                     const cardClass = getEventCardClass(evt);
                     const evtMin = evt.startHour * 60 + evt.startMinute;
                     const diffMin = Math.max(0, evtMin - baseMin);
-                    const topPx = Math.round((diffMin / 60) * 56);
+                    const topPx = Math.round((diffMin / 60) * HOUR_ROW_HEIGHT);
                     const duration = evt.durationMinutes || 60;
                     const isCompact = duration <= 30;
-                    const slotHeight = Math.round((duration / 60) * 56);
+                    const slotHeight = Math.round((duration / 60) * HOUR_ROW_HEIGHT);
                     const heightPx = Math.max(isCompact ? 24 : 52, slotHeight - 2);
 
                     return (

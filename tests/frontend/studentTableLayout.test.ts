@@ -8,16 +8,17 @@ describe('Fix 1 — Students Table Layout, Alignment and Sizing', () => {
     expect(styles.tableFixed).toContain('tableFixed');
   });
 
-  it('uses balanced column widths with 23% student and 29% schedule', () => {
-    expect(STUDENT_TABLE_COLUMNS.student).toBe('23%');
-    expect(STUDENT_TABLE_COLUMNS.subject).toBe('18%');
-    expect(STUDENT_TABLE_COLUMNS.schedule).toBe('29%');
-    expect(STUDENT_TABLE_COLUMNS.classes).toBe('13%');
-    expect(STUDENT_TABLE_COLUMNS.actions).toBe('12%');
+  it('uses content-aware column definitions with sensible min and max bounds', () => {
+    expect(STUDENT_TABLE_COLUMNS.student.minWidth).toBe('180px');
+    expect(STUDENT_TABLE_COLUMNS.student.maxWidth).toBe('220px');
+    expect(STUDENT_TABLE_COLUMNS.subject.minWidth).toBe('150px');
+    expect(STUDENT_TABLE_COLUMNS.schedule.minWidth).toBe('170px');
+    expect(STUDENT_TABLE_COLUMNS.classes.minWidth).toBe('85px');
+    expect(STUDENT_TABLE_COLUMNS.meetingLink.minWidth).toBe('190px');
   });
 
-  it('reserves sufficient width for multi-subject tags and actions buttons', () => {
-    const actionsMinWidthPx = 100;
-    expect(actionsMinWidthPx).toBeGreaterThanOrEqual(90);
+  it('reserves sufficient width for multi-subject tags and meeting link', () => {
+    const meetingLinkMin = parseInt(STUDENT_TABLE_COLUMNS.meetingLink.minWidth, 10);
+    expect(meetingLinkMin).toBeGreaterThanOrEqual(180);
   });
 });

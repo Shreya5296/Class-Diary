@@ -6,7 +6,7 @@ import { StudentRow } from './StudentRow';
 import { StudentTabs } from './StudentTabs';
 import { StudentStatusTab, filterStudentsByTab } from './studentStatusClassifier';
 import { EmptyState } from '../../components/feedback/EmptyState';
-import { STUDENT_TABLE_COLUMNS } from './studentTableLayout';
+import { STUDENT_TABLE_COLUMNS, STUDENT_TABLE_GRID_TEMPLATE } from './studentTableLayout';
 import styles from '../../components/tables/tables.module.css';
 
 export interface StudentListProps {
@@ -87,24 +87,17 @@ export const StudentList: React.FC<StudentListProps> = ({
         />
       ) : (
         <div className={styles.tableWrapper}>
-          <table className={`${styles.table} ${styles.tableFixed}`}>
-            <colgroup>
-              <col style={{ width: STUDENT_TABLE_COLUMNS.student }} />
-              <col style={{ width: STUDENT_TABLE_COLUMNS.subject }} />
-              <col style={{ width: STUDENT_TABLE_COLUMNS.schedule }} />
-              <col style={{ width: STUDENT_TABLE_COLUMNS.classes }} />
-              <col style={{ width: STUDENT_TABLE_COLUMNS.actions }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th style={{ width: STUDENT_TABLE_COLUMNS.student }}>Student</th>
-                <th style={{ width: STUDENT_TABLE_COLUMNS.subject }}>Subject</th>
-                <th style={{ width: STUDENT_TABLE_COLUMNS.schedule }}>Class Schedule</th>
-                <th style={{ width: STUDENT_TABLE_COLUMNS.classes }}>Classes</th>
-                <th style={{ width: STUDENT_TABLE_COLUMNS.actions, textAlign: 'right' }}>Actions</th>
+          <table className={styles.table} style={{ display: 'block', width: '100%' }}>
+            <thead style={{ display: 'block', width: '100%' }}>
+              <tr style={{ display: 'grid', gridTemplateColumns: STUDENT_TABLE_GRID_TEMPLATE, width: '100%' }}>
+                <th style={STUDENT_TABLE_COLUMNS.student}>Student Name</th>
+                <th style={STUDENT_TABLE_COLUMNS.subject}>Subject</th>
+                <th style={STUDENT_TABLE_COLUMNS.schedule}>Class Schedule</th>
+                <th style={STUDENT_TABLE_COLUMNS.classes}>Classes</th>
+                <th style={STUDENT_TABLE_COLUMNS.meetingLink}>Meeting Link</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody style={{ display: 'block', width: '100%' }}>
               {displayedStudents.map((student) => {
                 const bal = getStudentBalance(student.student_id);
                 const isAct = (student.status || '').trim().toUpperCase() === 'ACTIVE';

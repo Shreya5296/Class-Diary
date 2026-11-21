@@ -15,6 +15,10 @@ export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'ima
 
 let memoryFallback: string | null = null;
 
+export function getMemoryFallbackImage(): string | null {
+  return memoryFallback;
+}
+
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined' || !window.indexedDB) {
@@ -40,7 +44,11 @@ export async function getStoredProfileImage(): Promise<string | null> {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
       const req = store.get(AVATAR_KEY);
-      req.onsuccess = () => resolve(req.result || null);
+      req.onsuccess = () => {
+        const res = req.result || null;
+        memoryFallback = res;
+        resolve(res);
+      };
       req.onerror = () => resolve(memoryFallback);
     });
   } catch {

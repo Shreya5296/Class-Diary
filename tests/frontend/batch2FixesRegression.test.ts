@@ -11,18 +11,16 @@ import { isStudentActive } from '../../src/domains/students/studentStatusClassif
 describe('Fix Batch 2 Comprehensive Verification', () => {
   describe('Fix 1: Students Table Column Widths & Layout', () => {
     it('uses shared consistent column definitions with target proportions', () => {
-      expect(STUDENT_TABLE_COLUMNS.student).toBe('23%');
-      expect(STUDENT_TABLE_COLUMNS.subject).toBe('18%');
-      expect(STUDENT_TABLE_COLUMNS.schedule).toBe('29%');
-      expect(STUDENT_TABLE_COLUMNS.classes).toBe('13%');
-      expect(STUDENT_TABLE_COLUMNS.actions).toBe('12%');
+      expect(STUDENT_TABLE_COLUMNS.student.minWidth).toBe('180px');
+      expect(STUDENT_TABLE_COLUMNS.subject.minWidth).toBe('150px');
+      expect(STUDENT_TABLE_COLUMNS.schedule.minWidth).toBe('170px');
+      expect(STUDENT_TABLE_COLUMNS.classes.minWidth).toBe('85px');
+      expect(STUDENT_TABLE_COLUMNS.meetingLink.minWidth).toBe('190px');
     });
 
-    it('ensures Actions is the last column and student column is narrower than 25%', () => {
-      const studentPct = parseFloat(STUDENT_TABLE_COLUMNS.student);
-      const actionsPct = parseFloat(STUDENT_TABLE_COLUMNS.actions);
-      expect(studentPct).toBeLessThan(25);
-      expect(actionsPct).toBe(12);
+    it('ensures Meeting Link has minWidth and student column is fluid', () => {
+      expect(STUDENT_TABLE_COLUMNS.student.maxWidth).toBe('220px');
+      expect(STUDENT_TABLE_COLUMNS.meetingLink.minWidth).toBe('190px');
     });
   });
 

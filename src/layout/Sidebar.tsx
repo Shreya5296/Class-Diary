@@ -12,6 +12,7 @@ import {
 } from '../components/icons/NavIcons';
 import { CloseIcon, LogOutIcon } from '../components/icons/ActionIcons';
 import { useProfileImage } from '../domains/dashboard/useProfileImage';
+import { getUserProfileIdentity } from '../auth/userProfileStorage';
 
 export type NavSection =
   | 'dashboard'
@@ -28,6 +29,9 @@ export interface SidebarProps {
   onNavigate: (section: NavSection) => void;
   isOpen?: boolean;
   onClose?: () => void;
+  profileImage?: string | null;
+  initials?: string;
+  displayName?: string;
 }
 
 const navItems = [
@@ -43,11 +47,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNavigate,
   isOpen = true,
   onClose,
+  profileImage: propProfileImage,
+  initials: propInitials,
+  displayName: propDisplayName,
 }) => {
   const { user, signOut } = useAuth();
-  const profileImage = useProfileImage();
-  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'Admin');
-  const initial = (displayName[0] || 'A').toUpperCase();
+  const fallbackIdentity = getUserProfileIdentity(user?.name, user?.email);
+  const displayName = propDisplayName ?? fallbackIdentity.displayName;
+  const initials = propInitials ?? fallbackIdentity.initials;
+  const hookImage = useProfileImage();
+  const profileImage = propProfileImage !== undefined ? propProfileImage : hookImage;
 
   const handleNav = (section: NavSection) => {
     onNavigate(section);
@@ -93,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {profileImage ? (
                   <img src={profileImage} alt={displayName} className={footerStyles.userAvatarImg} />
                 ) : (
-                  initial
+                  initials
                 )}
               </div>
               <div className={footerStyles.userInfo}>

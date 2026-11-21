@@ -2,7 +2,7 @@ import { toInputDateFormat } from '../../lib/dateFormat';
 import { cleanTime } from '../classes/scheduleApi';
 import { makeIsoInTz } from '../dashboard/calendarEventGenerator';
 
-export type CalendarDisplayCategory = 'PAST_COMPLETED' | 'CANCELLED' | 'UPCOMING';
+export type CalendarDisplayCategory = 'PAST_COMPLETED' | 'CANCELLED' | 'UPCOMING' | 'PAST_UNATTENDED';
 
 export interface CalendarClassificationParams {
   status?: string | null;
@@ -67,7 +67,7 @@ export function classifyCalendarEvent(params: CalendarClassificationParams): Cal
   }
 
   if (params.isPast) {
-    return 'CANCELLED';
+    return 'PAST_UNATTENDED';
   }
 
   return 'UPCOMING';
