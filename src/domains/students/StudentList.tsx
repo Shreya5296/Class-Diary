@@ -3,7 +3,6 @@ import { Student } from './studentTypes';
 import { useAuth } from '../../auth/AuthProvider';
 import { useStudentAggregates } from './useStudentAggregates';
 import { StudentRow } from './StudentRow';
-import { StudentTabs } from './StudentTabs';
 import { StudentStatusTab, filterStudentsByTab } from './studentStatusClassifier';
 import { EmptyState } from '../../components/feedback/EmptyState';
 import { STUDENT_TABLE_COLUMNS, STUDENT_TABLE_GRID_TEMPLATE } from './studentTableLayout';
@@ -17,6 +16,7 @@ export interface StudentListProps {
   activeTab?: StudentStatusTab;
   onTabChange?: (tab: StudentStatusTab) => void;
   onDisplayedCountChange?: (count: number) => void;
+  aggregates?: ReturnType<typeof useStudentAggregates>;
 }
 
 export const StudentList: React.FC<StudentListProps> = ({
@@ -27,22 +27,23 @@ export const StudentList: React.FC<StudentListProps> = ({
   activeTab: controlledTab,
   onTabChange,
   onDisplayedCountChange,
+  aggregates,
 }) => {
   const { token } = useAuth();
   const [internalTab, setInternalTab] = useState<StudentStatusTab>('ACTIVE');
   const activeTab = controlledTab ?? internalTab;
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+  void setInternalTab;
+  void onTabChange;
 
   const studentIds = students.map((s) => s.student_id);
+  const internalAggregates = useStudentAggregates(aggregates ? [] : studentIds, token);
   const {
     getStudentBalance,
     getStudentLastCompletedDate,
     getStudentSchedule,
     getStudentFinancials,
-  } = useStudentAggregates(studentIds, token);
-
-  const activeCount = filterStudentsByTab(students, 'ACTIVE', getStudentBalance).length;
-  const inactiveCount = students.length - activeCount;
+  } = aggregates || internalAggregates;
 
   const displayedStudents = filterStudentsByTab(
     students,
@@ -55,73 +56,60 @@ export const StudentList: React.FC<StudentListProps> = ({
     onDisplayedCountChange?.(displayedStudents.length);
   }, [displayedStudents.length, onDisplayedCountChange]);
 
-  const handleTabSelect = (tab: StudentStatusTab) => {
-    setInternalTab(tab);
-    onTabChange?.(tab);
-  };
-
   const handleToggleExpand = (sid: string) => {
     setExpandedStudentId((prev) => (prev === sid ? null : sid));
   };
 
-  return (
-    <div>
-      <StudentTabs
-        activeTab={activeTab}
-        allCount={students.length}
-        activeCount={activeCount}
-        inactiveCount={inactiveCount}
-        onTabChange={handleTabSelect}
+  if (displayedStudents.length === 0) {
+    return (
+      <EmptyState
+        title={activeTab === 'ACTIVE' ? 'No active students' : activeTab === 'INACTIVE' ? 'No inactive students' : 'No students found'}
+        description={
+          activeTab === 'ACTIVE'
+            ? 'No registered students have remaining classes available.'
+            : activeTab === 'INACTIVE'
+            ? 'No students currently have exhausted or inactive packages.'
+            : 'No records match your search or filters.'
+        }
       />
+    );
+  }
 
-      {displayedStudents.length === 0 ? (
-        <EmptyState
-          title={activeTab === 'ACTIVE' ? 'No active students' : activeTab === 'INACTIVE' ? 'No inactive students' : 'No students found'}
-          description={
-            activeTab === 'ACTIVE'
-              ? 'No registered students have remaining classes available.'
-              : activeTab === 'INACTIVE'
-              ? 'No students currently have exhausted or inactive packages.'
-              : 'No records match your search or filters.'
-          }
-        />
-      ) : (
-        <div className={styles.tableWrapper}>
-          <table className={styles.table} style={{ display: 'block', width: '100%', minWidth: '820px' }}>
-            <thead style={{ display: 'block', width: '100%' }}>
-              <tr style={{ display: 'grid', gridTemplateColumns: STUDENT_TABLE_GRID_TEMPLATE, width: '100%', borderBottom: '1px solid var(--color-border-subtle)', alignItems: 'stretch' }}>
-                <th style={{ ...STUDENT_TABLE_COLUMNS.student, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Student Name</th>
-                <th style={{ ...STUDENT_TABLE_COLUMNS.subject, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Subject</th>
-                <th style={{ ...STUDENT_TABLE_COLUMNS.schedule, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Class Schedule</th>
-                <th style={{ ...STUDENT_TABLE_COLUMNS.classes, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Classes</th>
-                <th style={{ ...STUDENT_TABLE_COLUMNS.meetingLink, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Meeting Link</th>
-              </tr>
-            </thead>
-            <tbody style={{ display: 'block', width: '100%' }}>
-              {displayedStudents.map((student) => {
-                const bal = getStudentBalance(student.student_id);
-                const isAct = (student.status || '').trim().toUpperCase() === 'ACTIVE';
-                return (
-                  <StudentRow
-                    key={student.student_id}
-                    student={student}
-                    isActive={isAct}
-                    isExpanded={expandedStudentId === student.student_id}
-                    onToggleExpand={handleToggleExpand}
-                    onSelectStudent={onSelectStudent}
-                    onEditStudent={onEditStudent}
-                    onRenewStudent={onRenewStudent}
-                    schedule={getStudentSchedule(student.student_id)}
-                    balance={bal}
-                    financials={getStudentFinancials(student.student_id)}
-                    meetingLink={{ meeting_link_1: student.primary_meeting_link }}
-                  />
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+  return (
+    <div className={styles.tableWrapper}>
+      <table className={styles.table} style={{ display: 'block', width: '100%', minWidth: '820px' }}>
+        <thead style={{ display: 'block', width: '100%' }}>
+          <tr style={{ display: 'grid', gridTemplateColumns: STUDENT_TABLE_GRID_TEMPLATE, width: '100%', borderBottom: '1px solid var(--color-border-subtle)', alignItems: 'stretch' }}>
+            <th style={{ ...STUDENT_TABLE_COLUMNS.student, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Student Name</th>
+            <th style={{ ...STUDENT_TABLE_COLUMNS.subject, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Subject</th>
+            <th style={{ ...STUDENT_TABLE_COLUMNS.schedule, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Class Schedule</th>
+            <th style={{ ...STUDENT_TABLE_COLUMNS.classes, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Classes</th>
+            <th style={{ ...STUDENT_TABLE_COLUMNS.meetingLink, borderBottom: 'none', display: 'flex', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>Meeting Link</th>
+          </tr>
+        </thead>
+        <tbody style={{ display: 'block', width: '100%' }}>
+          {displayedStudents.map((student) => {
+            const bal = getStudentBalance(student.student_id);
+            const isAct = (student.status || '').trim().toUpperCase() === 'ACTIVE';
+            return (
+              <StudentRow
+                key={student.student_id}
+                student={student}
+                isActive={isAct}
+                isExpanded={expandedStudentId === student.student_id}
+                onToggleExpand={handleToggleExpand}
+                onSelectStudent={onSelectStudent}
+                onEditStudent={onEditStudent}
+                onRenewStudent={onRenewStudent}
+                schedule={getStudentSchedule(student.student_id)}
+                balance={bal}
+                financials={getStudentFinancials(student.student_id)}
+                meetingLink={{ meeting_link_1: student.primary_meeting_link }}
+              />
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 };

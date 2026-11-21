@@ -62,14 +62,14 @@ test.describe('E2E — Account Dropdown, Branding, Preferences & Calendar', () =
     await expect(page.getByRole('heading', { name: 'Regional Defaults & Preferences' })).toBeVisible();
 
     // Email is read-only
-    await expect(page.locator('text=Account Email (Read-only)')).toBeVisible();
-    await expect(page.locator('strong:has-text("ashreya0502@gmail.com")')).toBeVisible();
+    await expect(page.locator('text=Email')).toBeVisible();
+    await expect(page.locator('text=ashreya0502@gmail.com')).toBeVisible();
 
     // Edit display name
     const nameInput = page.locator('#displayNameInput');
     await nameInput.fill('Ashreya Persisted Admin');
-    await page.locator('button:has-text("Save Display Name")').click();
-    await expect(page.locator('text=Display name saved successfully.')).toBeVisible();
+    await page.locator('button:has-text("Save Changes")').click();
+    await expect(page.locator('text=Settings saved successfully.')).toBeVisible();
 
     // Edit timezone and currency dropdowns
     const tzSelect = page.locator('#timezoneSelect');

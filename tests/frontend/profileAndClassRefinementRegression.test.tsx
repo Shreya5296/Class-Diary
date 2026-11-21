@@ -12,7 +12,7 @@ import { AuthProvider } from '../../src/auth/AuthProvider';
 describe('Class Schedule & Profile Refinement Regression Suite', () => {
   it('verifies exact 5 column labels, order, and content-aware widths', () => {
     const keys = Object.keys(CLASS_TABLE_COLUMNS);
-    expect(keys).toEqual(['student', 'date', 'consumed', 'notes', 'attendance']);
+    expect(keys).toEqual(['student', 'date', 'consumed', 'attendance', 'notes']);
     expect(CLASS_TABLE_COLUMNS.student.header).toBe('Student Name');
     expect(CLASS_TABLE_COLUMNS.date.header).toBe('Date');
     expect(CLASS_TABLE_COLUMNS.consumed.header).toBe('Balance');
@@ -41,14 +41,14 @@ describe('Class Schedule & Profile Refinement Regression Suite', () => {
 
   it('renders Profile & Preferences with refined horizontal layout, removed elements, and single save button', () => {
     const html = renderToString(React.createElement(AuthProvider, null, React.createElement(SettingsPage)));
-    // Left card contains display name, input, email
-    expect(html).toContain('Administrator Display Name');
+    // Left card contains heading, display name, input, email
+    expect(html).toContain('Administrator Profile');
+    expect(html).toContain('Display Name');
     expect(html).toContain('displayNameInput');
-    expect(html).toContain('Account Email (Read-only)');
+    expect(html).toContain('Email');
     expect(html).toContain('Change profile picture');
 
     // Removed elements
-    expect(html).not.toContain('Administrator Profile');
     expect(html).not.toContain('Primary Authorized Admin');
     expect(html).not.toContain('Upload Photo');
     expect(html).not.toContain('Displayed in the navigation header');
@@ -56,14 +56,15 @@ describe('Class Schedule & Profile Refinement Regression Suite', () => {
     expect(html).not.toContain('Original payment currencies are preserved');
 
     // Right card
-    expect(html).toContain('Regional Defaults');
+    expect(html).toContain('Regional Defaults &amp; Preferences');
     expect(html).toContain('Application Timezone');
     expect(html).toContain('timezoneSelect');
     expect(html).toContain('Display Currency Preference');
     expect(html).toContain('currencySelect');
 
-    // Exactly one Save Changes button
+    // Exactly one Save Changes button in right-aligned footer row
     expect(html).toContain('Save Changes');
+    expect(html).toContain('justify-content:flex-end');
     const saveCount = (html.match(/Save Changes/g) || []).length;
     expect(saveCount).toBe(1);
     expect(html).not.toContain('Save Display Name');

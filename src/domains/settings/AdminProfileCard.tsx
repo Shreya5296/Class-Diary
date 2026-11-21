@@ -11,6 +11,20 @@ export interface AdminProfileCardProps {
   onRemovePhoto?: () => Promise<void>;
 }
 
+const labelStyle: React.CSSProperties = {
+  marginBottom: 0,
+  whiteSpace: 'nowrap',
+  minWidth: '105px',
+  flexShrink: 0,
+};
+
+const rowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--space-3)',
+  flexWrap: 'wrap',
+};
+
 export const AdminProfileCard: React.FC<AdminProfileCardProps> = ({
   name,
   onNameChange,
@@ -31,31 +45,27 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = ({
       display: 'flex',
       flexDirection: 'column',
       gap: 'var(--space-4)',
+      height: '100%',
+      boxSizing: 'border-box',
     }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1.25rem',
-        flexWrap: 'wrap',
-      }}>
-        {/* Left: Avatar with subtle hover edit overlay */}
+      <h3 style={{ margin: 0, fontSize: 'var(--font-size-base)', fontWeight: 600, color: 'var(--color-text-main)' }}>
+        Administrator Profile
+      </h3>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap', flex: 1 }}>
+        {/* Left: Avatar with subtle hover edit overlay (~30% bigger: 110px) */}
         <div
           role="button"
           tabIndex={0}
           onClick={onOpenPhotoModal}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onOpenPhotoModal();
-            }
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenPhotoModal(); } }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           aria-label="Change profile picture"
           style={{
             position: 'relative',
-            width: '84px',
-            height: '84px',
+            width: '110px',
+            height: '110px',
             borderRadius: '50%',
             overflow: 'hidden',
             flexShrink: 0,
@@ -71,18 +81,13 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = ({
           }}
         >
           {profileImage ? (
-            <img
-              src={profileImage}
-              alt="Profile photo"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            />
+            <img src={profileImage} alt="Profile photo" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           ) : (
-            <span style={{ fontSize: '1.75rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.02em', userSelect: 'none' }}>
+            <span style={{ fontSize: '2.25rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.02em', userSelect: 'none' }}>
               {initials}
             </span>
           )}
 
-          {/* Hover edit overlay */}
           <div style={{
             position: 'absolute',
             inset: 0,
@@ -94,21 +99,22 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = ({
             opacity: isHovered ? 1 : 0,
             transition: 'opacity 160ms ease',
             color: '#ffffff',
-            gap: '2px',
+            gap: '3px',
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
-            <span style={{ fontSize: '10px', fontWeight: 600 }}>Edit</span>
+            <span style={{ fontSize: '11px', fontWeight: 600 }}>Edit</span>
           </div>
         </div>
 
-        {/* Right: Administrator display name and email underneath */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', flex: 1, minWidth: '200px' }}>
-          <div className={formStyles.field} style={{ marginBottom: 0 }}>
-            <label htmlFor="displayNameInput" className={formStyles.label} style={{ marginBottom: '4px' }}>
-              Administrator Display Name
+        {/* Right: Administrator display name and email rows */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', flex: 1, minWidth: '240px' }}>
+          {/* Row 1: Name Label & Input */}
+          <div style={rowStyle}>
+            <label htmlFor="displayNameInput" className={formStyles.label} style={labelStyle}>
+              Display Name
             </label>
             <input
               id="displayNameInput"
@@ -117,11 +123,18 @@ export const AdminProfileCard: React.FC<AdminProfileCardProps> = ({
               onChange={(e) => onNameChange(e.target.value)}
               placeholder="e.g. Ashreya"
               className={formStyles.input}
-              style={{ height: '38px', borderRadius: 'var(--radius-md)', width: '100%', boxSizing: 'border-box' }}
+              style={{ height: '38px', borderRadius: 'var(--radius-md)', flex: 1, minWidth: '160px', boxSizing: 'border-box' }}
             />
           </div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-            Account Email (Read-only): <strong style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{email}</strong>
+
+          {/* Row 2: Email Label & Value */}
+          <div style={{ ...rowStyle, minHeight: '38px', fontSize: 'var(--font-size-sm)' }}>
+            <span style={{ ...labelStyle, fontWeight: 500, color: 'var(--color-text-muted)' }}>
+              Email
+            </span>
+            <span style={{ color: 'var(--color-text-main)', fontWeight: 600, wordBreak: 'break-all' }}>
+              {email}
+            </span>
           </div>
         </div>
       </div>

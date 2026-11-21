@@ -17,9 +17,15 @@ import styles from './classSchedule.module.css';
 export interface ClassScheduleProps {
   studentId?: string;
   onRefreshTrigger?: number;
+  toolbarRight?: React.ReactNode;
+  scheduleForm?: React.ReactNode;
 }
 
-export const ClassSchedule: React.FC<ClassScheduleProps> = ({ studentId }) => {
+export const ClassSchedule: React.FC<ClassScheduleProps> = ({
+  studentId,
+  toolbarRight,
+  scheduleForm,
+}) => {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [notesSession, setNotesSession] = useState<ClassSession | null>(null);
@@ -61,8 +67,6 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({ studentId }) => {
     onEditNotes: (s) => setNotesSession(s),
   });
 
-  if (loading) return <LoadingState message="Loading class schedule…" />;
-
   const displayedSessions = activeTab === 'upcoming' ? upcoming : past;
 
   const rowStyle = (session: ClassSession) => {
@@ -72,41 +76,57 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({ studentId }) => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.tabBar} role="tablist" aria-label="Class schedule views">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'upcoming'}
-          className={`${styles.tabButton} ${activeTab === 'upcoming' ? styles.tabButtonActive : ''}`}
-          onClick={() => setActiveTab('upcoming')}
-        >
-          <span>Upcoming Classes</span>
-          <span className={styles.badge}>{upcoming.length}</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'past'}
-          className={`${styles.tabButton} ${activeTab === 'past' ? styles.tabButtonActive : ''}`}
-          onClick={() => setActiveTab('past')}
-        >
-          <span>Past Classes</span>
-          <span className={styles.badge}>{past.length}</span>
-        </button>
+      <div className={styles.singleToolbar}>
+        <div className={styles.tabBar} role="tablist" aria-label="Class schedule views">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'upcoming'}
+            className={`${styles.tabButton} ${activeTab === 'upcoming' ? styles.tabButtonActive : ''}`}
+            onClick={() => setActiveTab('upcoming')}
+          >
+            <span>Upcoming Classes</span>
+            <span className={styles.badge}>{loading ? '-' : upcoming.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'past'}
+            className={`${styles.tabButton} ${activeTab === 'past' ? styles.tabButtonActive : ''}`}
+            onClick={() => setActiveTab('past')}
+          >
+            <span>Past Classes</span>
+            <span className={styles.badge}>{loading ? '-' : past.length}</span>
+          </button>
+        </div>
+
+        <div className={styles.flexibleSpacer} />
+
+        {toolbarRight && (
+          <div className={styles.toolbarControls}>
+            {toolbarRight}
+          </div>
+        )}
       </div>
 
-      {invalid.length > 0 && (
+      {scheduleForm}
+
+      {loading && <LoadingState message="Loading class schedule…" />}
+
+      {!loading && invalid.length > 0 && (
         <div className={styles.invalidNotice} role="status">
           ⚠️ {invalid.length} session{invalid.length > 1 ? 's have' : ' has'} invalid or missing scheduled dates and {invalid.length > 1 ? 'are' : 'is'} excluded from the schedule view.
         </div>
       )}
 
-      {displayedSessions.length === 0 ? (
+      {!loading && displayedSessions.length === 0 && (
         <EmptyState
           title={activeTab === 'upcoming' ? 'No upcoming classes' : 'No past classes'}
           description={activeTab === 'upcoming' ? 'No classes scheduled for now or in the future.' : 'No past scheduled classes recorded.'}
         />
-      ) : (
+      )}
+
+      {!loading && displayedSessions.length > 0 && (
         <DataTable fixedLayout minWidth="800px" columns={columns} data={displayedSessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />
       )}
 

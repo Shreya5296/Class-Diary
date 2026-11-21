@@ -20,17 +20,17 @@ export const CLASS_TABLE_COLUMNS = {
     minWidth: '100px',
     maxWidth: '130px',
   },
-  notes: {
-    key: 'notes',
-    header: 'Notes',
-    width: '28%',
-    minWidth: '170px',
-  },
   attendance: {
     key: 'attendance',
     header: 'Status',
     width: '24%',
     minWidth: '220px',
+  },
+  notes: {
+    key: 'notes',
+    header: 'Notes',
+    width: '28%',
+    minWidth: '170px',
   },
 } as const;
 

@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import { STUDENT_TABLE_COLUMNS, STUDENT_TABLE_GRID_TEMPLATE } from '../../src/domains/students/studentTableLayout';
 import { StudentRow } from '../../src/domains/students/StudentRow';
 import { StudentList } from '../../src/domains/students/StudentList';
+import { StudentToolbar } from '../../src/domains/students/StudentToolbar';
 import { ClassesPage } from '../../src/domains/classes/ClassesPage';
 import { buildClassScheduleColumns } from '../../src/domains/classes/classScheduleColumns';
 import { ClassSession } from '../../src/domains/classes/classTypes';
@@ -159,10 +160,10 @@ describe('Student Directory Alignment & Class Schedule Refinement Suite', () => 
     // Exactly 5 columns
     expect(cols).toHaveLength(5);
     const keys = cols.map((c) => c.key);
-    expect(keys).toEqual(['student', 'date', 'consumed', 'notes', 'attendance']);
+    expect(keys).toEqual(['student', 'date', 'consumed', 'attendance', 'notes']);
 
     // Exact headers
-    expect(cols.map((c) => c.header)).toEqual(['Student Name', 'Date', 'Balance', 'Notes', 'Status']);
+    expect(cols.map((c) => c.header)).toEqual(['Student Name', 'Date', 'Balance', 'Status', 'Notes']);
 
     // Content-aware column widths
     expect(cols.find((c) => c.key === 'student')?.width).toBe('20%');
@@ -210,5 +211,41 @@ describe('Student Directory Alignment & Class Schedule Refinement Suite', () => 
     const renderedNotes = renderToString(notesCol.render!(testSession) as React.ReactElement);
     expect(renderedNotes).toContain('Great class');
     expect(renderedNotes).toContain('✎');
+  });
+
+  it('13. verifies Students Directory toolbar left-to-right element order: Active -> Inactive -> All Students -> Search -> Status Filter -> Renew Package -> Add Student', () => {
+    const html = renderToString(
+      React.createElement(StudentToolbar, {
+        searchQuery: '',
+        onSearchChange: () => {},
+        activeTab: 'ACTIVE',
+        onTabChange: () => {},
+        activeCount: 3,
+        inactiveCount: 1,
+        allCount: 4,
+        statusFilter: '',
+        onStatusFilterChange: () => {},
+        onRenew: () => {},
+        onAddStudent: () => {},
+      })
+    );
+
+    const activeIdx = html.indexOf('student-tab-active');
+    const inactiveIdx = html.indexOf('student-tab-inactive');
+    const allIdx = html.indexOf('student-tab-all');
+    const searchIdx = html.indexOf('Search students by name');
+    const filterIdx = html.indexOf('Filter students by status');
+    const renewIdx = html.indexOf('Renew Package');
+    const addIdx = html.indexOf('+ Add Student');
+
+    expect(html).toContain('leftGroup');
+    expect(html).toContain('rightGroup');
+    expect(activeIdx).toBeGreaterThan(-1);
+    expect(inactiveIdx).toBeGreaterThan(activeIdx);
+    expect(allIdx).toBeGreaterThan(inactiveIdx);
+    expect(searchIdx).toBeGreaterThan(allIdx);
+    expect(filterIdx).toBeGreaterThan(searchIdx);
+    expect(renewIdx).toBeGreaterThan(filterIdx);
+    expect(addIdx).toBeGreaterThan(renewIdx);
   });
 });

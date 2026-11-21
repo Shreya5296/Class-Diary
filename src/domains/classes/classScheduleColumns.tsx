@@ -72,6 +72,17 @@ export function buildClassScheduleColumns(params: {
       },
     },
     {
+      key: 'attendance', header: CLASS_TABLE_COLUMNS.attendance.header, width: CLASS_TABLE_COLUMNS.attendance.width,
+      render: (c) => (
+        <AttendanceControl
+          status={c.status}
+          creditEffect={c.class_credit_effect || 'PENDING'}
+          onUpdateStatus={(outcome, reason) => handleUpdateStatus(c.session_id, outcome, reason)}
+          onRestoreCredit={() => handleRestore(c.session_id)}
+        />
+      ),
+    },
+    {
       key: 'notes', header: CLASS_TABLE_COLUMNS.notes.header, width: CLASS_TABLE_COLUMNS.notes.width,
       render: (c) => {
         const text = c.session_notes || c.notes || '';
@@ -92,17 +103,6 @@ export function buildClassScheduleColumns(params: {
           </div>
         );
       },
-    },
-    {
-      key: 'attendance', header: CLASS_TABLE_COLUMNS.attendance.header, width: CLASS_TABLE_COLUMNS.attendance.width,
-      render: (c) => (
-        <AttendanceControl
-          status={c.status}
-          creditEffect={c.class_credit_effect || 'PENDING'}
-          onUpdateStatus={(outcome, reason) => handleUpdateStatus(c.session_id, outcome, reason)}
-          onRestoreCredit={() => handleRestore(c.session_id)}
-        />
-      ),
     },
   ];
 }

@@ -89,8 +89,11 @@ export const SettingsPage: React.FC = () => {
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', width: '100%' }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 'var(--space-5)', alignItems: 'start', width: '100%',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+          gap: 'var(--space-6)',
+          alignItems: 'stretch',
+          width: '100%',
         }}>
           <AdminProfileCard
             name={nameInput}
@@ -109,7 +112,7 @@ export const SettingsPage: React.FC = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-start', paddingTop: 'var(--space-2)' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 'var(--space-2)', width: '100%' }}>
           <Button type="submit" variant="primary" disabled={isUnchanged || !nameInput.trim()} style={{ height: '38px', minWidth: '140px' }}>
             Save Changes
           </Button>

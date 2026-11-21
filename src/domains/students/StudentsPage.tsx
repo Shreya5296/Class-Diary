@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { Student } from './studentTypes';
 import { fetchStudents } from './studentApi';
-import { StudentSearch } from './StudentSearch';
+import { StudentToolbar } from './StudentToolbar';
 import { StudentList } from './StudentList';
 import { EditStudentModal } from './EditStudentModal';
 import { AddStudentModal } from './AddStudentModal';
@@ -13,9 +13,9 @@ import { StudentRenewalModal } from '../packages/StudentRenewalModal';
 import { RenewalResult } from '../packages/packageRenewalTypes';
 import { LoadingState } from '../../components/feedback/LoadingState';
 import { ErrorState } from '../../components/feedback/ErrorState';
-import { Button } from '../../components/buttons/Button';
 import { PageHeader } from '../../layout/PageHeader';
-import { StudentStatusTab } from './studentStatusClassifier';
+import { StudentStatusTab, filterStudentsByTab } from './studentStatusClassifier';
+import { useStudentAggregates } from './useStudentAggregates';
 
 export const StudentsPage: React.FC = () => {
   usePageTitle('Students Directory');
@@ -34,6 +34,9 @@ export const StudentsPage: React.FC = () => {
   const [isRenewing, setIsRenewing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
+  const studentIds = useMemo(() => students.map((s) => s.student_id), [students]);
+  const aggregates = useStudentAggregates(studentIds, token);
+
   const loadStudents = async () => {
     setLoading(true);
     setError(null);
@@ -48,34 +51,35 @@ export const StudentsPage: React.FC = () => {
 
   useEffect(() => { loadStudents(); }, [debouncedQuery, token]);
 
+  const activeCount = useMemo(() => filterStudentsByTab(students, 'ACTIVE', aggregates.getStudentBalance).length, [students, aggregates.getStudentBalance]);
+  const inactiveCount = students.length - activeCount;
+
   const handleStatusFilterChange = (val: string) => {
     setActiveTab(val === 'ACTIVE' ? 'ACTIVE' : val === 'INACTIVE' ? 'INACTIVE' : 'ALL');
+  };
+
+  const handleFeedback = (msg: string) => {
+    setFeedback(msg);
+    setRefreshKey((k) => k + 1);
+    setTimeout(() => setFeedback(null), 4000);
+    loadStudents();
   };
 
   const handleEditSuccess = async (updated: Student, msg: string) => {
     if (selectedStudent) setSelectedStudent(updated);
     setEditingStudent(null);
-    setFeedback(msg || 'Student details saved successfully');
-    setRefreshKey((k) => k + 1);
-    setTimeout(() => setFeedback(null), 4000);
-    await loadStudents();
+    handleFeedback(msg || 'Student details saved successfully');
   };
 
   const handleRegistrationSuccess = async (_s: Student, msg: string) => {
     setIsCreating(false);
-    setFeedback(msg);
-    setRefreshKey((k) => k + 1);
-    setTimeout(() => setFeedback(null), 4000);
-    await loadStudents();
+    handleFeedback(msg);
   };
 
   const handleRenewalSuccess = async (_res: RenewalResult, msg: string) => {
     setIsRenewing(false);
     setRenewingStudent(null);
-    setFeedback(msg);
-    setRefreshKey((k) => k + 1);
-    setTimeout(() => setFeedback(null), 4000);
-    await loadStudents();
+    handleFeedback(msg);
     if (selectedStudent) {
       const refreshed = await fetchStudents({ query: selectedStudent.student_id }, token);
       if (refreshed.length > 0) setSelectedStudent(refreshed[0]);
@@ -107,22 +111,22 @@ export const StudentsPage: React.FC = () => {
     <div>
       <PageHeader title="Students Directory" />
       {banner}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)', flexWrap: 'wrap', width: '100%' }}>
-        <StudentSearch query={searchQuery} statusFilter={statusDropdownVal} onQueryChange={setSearchQuery} onStatusFilterChange={handleStatusFilterChange} />
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-          <Button variant="secondary" onClick={() => { setRenewingStudent(null); setIsRenewing(true); }} style={{ height: '38px', whiteSpace: 'nowrap' }}>
-            Renew Package
-          </Button>
-          <Button variant="primary" onClick={() => setIsCreating(true)} style={{ height: '38px', whiteSpace: 'nowrap' }}>
-            + Add Student
-          </Button>
-        </div>
-      </div>
-
+      <StudentToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        activeCount={activeCount}
+        inactiveCount={inactiveCount}
+        allCount={students.length}
+        statusFilter={statusDropdownVal}
+        onStatusFilterChange={handleStatusFilterChange}
+        onRenew={() => { setRenewingStudent(null); setIsRenewing(true); }}
+        onAddStudent={() => setIsCreating(true)}
+      />
       {isCreating && <AddStudentModal onSuccess={handleRegistrationSuccess} onClose={() => setIsCreating(false)} />}
       {editingStudent && <EditStudentModal student={editingStudent} onSuccess={handleEditSuccess} onClose={() => setEditingStudent(null)} />}
       {isRenewing && <StudentRenewalModal initialStudent={renewingStudent} onSuccess={handleRenewalSuccess} onClose={closeRenewal} />}
-
       {loading && <LoadingState message="Loading students…" />}
       {error && !loading && <ErrorState message={error} onRetry={loadStudents} />}
       {!loading && !error && (
@@ -134,6 +138,7 @@ export const StudentsPage: React.FC = () => {
           onSelectStudent={setSelectedStudent}
           onEditStudent={setEditingStudent}
           onRenewStudent={(s) => { setRenewingStudent(s); setIsRenewing(true); }}
+          aggregates={aggregates}
         />
       )}
     </div>

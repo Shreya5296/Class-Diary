@@ -7,17 +7,18 @@ export interface StudentTabsProps {
   activeCount: number;
   inactiveCount: number;
   onTabChange: (tab: StudentStatusTab) => void;
+  style?: React.CSSProperties;
 }
 
 const tabContainerStyle: React.CSSProperties = {
   display: 'flex',
-  gap: 'var(--space-2)',
-  borderBottom: '1px solid var(--color-border)',
-  marginBottom: 'var(--space-4)',
+  gap: 'var(--space-1)',
+  alignItems: 'center',
 };
 
 const getTabStyle = (isSelected: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
+  height: '38px',
+  padding: '0 12px',
   background: 'none',
   border: 'none',
   borderBottom: isSelected ? '2px solid var(--color-primary)' : '2px solid transparent',
@@ -31,6 +32,8 @@ const getTabStyle = (isSelected: boolean): React.CSSProperties => ({
   alignItems: 'center',
   gap: '6px',
   borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
+  whiteSpace: 'nowrap',
+  boxSizing: 'border-box',
 });
 
 const countBadgeStyle: React.CSSProperties = {
@@ -48,9 +51,10 @@ export const StudentTabs: React.FC<StudentTabsProps> = ({
   activeCount,
   inactiveCount,
   onTabChange,
+  style,
 }) => {
   return (
-    <div role="tablist" aria-label="Student directory tabs" style={tabContainerStyle}>
+    <div role="tablist" aria-label="Student directory tabs" style={{ ...tabContainerStyle, ...style }}>
       <button
         type="button"
         role="tab"
