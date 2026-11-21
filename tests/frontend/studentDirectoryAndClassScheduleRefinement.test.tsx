@@ -233,13 +233,16 @@ describe('Student Directory Alignment & Class Schedule Refinement Suite', () => 
     const activeIdx = html.indexOf('student-tab-active');
     const inactiveIdx = html.indexOf('student-tab-inactive');
     const allIdx = html.indexOf('student-tab-all');
-    const searchIdx = html.indexOf('Search students by name');
+    const searchIdx = html.indexOf('Search by student name');
     const filterIdx = html.indexOf('Filter students by status');
     const renewIdx = html.indexOf('Renew Package');
     const addIdx = html.indexOf('+ Add Student');
 
     expect(html).toContain('leftGroup');
     expect(html).toContain('rightGroup');
+    expect(html).toContain('Search by student name');
+    expect(html).toContain('padding:0 0.75rem');
+    expect(html).toContain('text-align:left');
     expect(activeIdx).toBeGreaterThan(-1);
     expect(inactiveIdx).toBeGreaterThan(activeIdx);
     expect(allIdx).toBeGreaterThan(inactiveIdx);

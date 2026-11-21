@@ -1,5 +1,4 @@
 import React from 'react';
-import { SearchIcon } from '../../components/icons/ActionIcons';
 import { Button } from '../../components/buttons/Button';
 import { StudentTabs } from './StudentTabs';
 import { StudentStatusTab } from './studentStatusClassifier';
@@ -48,22 +47,20 @@ export const StudentToolbar: React.FC<StudentToolbarProps> = ({
 
       <div className={styles.rightGroup}>
         <div className={styles.searchWrapper}>
-          <div className={styles.searchIcon}>
-            <SearchIcon size={16} />
-          </div>
           <input
             type="text"
-            placeholder="Search students by name, email, or phone…"
+            placeholder="Search by student name"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className={formStyles.input}
+            className={`${formStyles.input} ${styles.searchInput}`}
             style={{
               width: '100%',
               height: '38px',
-              padding: '0 0.75rem 0 2.25rem',
+              padding: '0 0.75rem',
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--font-size-sm)',
               boxSizing: 'border-box',
+              textAlign: 'left',
             }}
           />
         </div>

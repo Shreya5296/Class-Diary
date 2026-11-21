@@ -30,15 +30,18 @@
   flex: 0 1 260px;
 }
 
-.searchIcon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-text-subtle);
-  display: flex;
-  align-items: center;
-  pointer-events: none;
+.searchInput {
+  width: 100%;
+  height: 38px;
+  padding: 0 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.searchInput::placeholder {
+  text-align: left;
 }
 
 .actions {

@@ -42,7 +42,7 @@ export const StudentSearch: React.FC<StudentSearchProps> = ({
         </div>
         <input
           type="text"
-          placeholder="Search students by name, email, or phone…"
+          placeholder="Search by student name"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           className={formStyles.input}
