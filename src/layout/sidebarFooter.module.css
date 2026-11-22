@@ -4,24 +4,24 @@
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%);
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.75rem;
 }
 
 .userProfileRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.625rem;
   min-width: 0;
 }
 
 .userAvatar {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, #1d4ed8, #2563eb);
   color: #ffffff;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -29,6 +29,7 @@
   border: 1.5px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  margin-top: 2px;
 }
 
 .userAvatarImg {
@@ -46,22 +47,24 @@
 }
 
 .userName {
-  font-size: 12px;
-  font-weight: 600;
-  color: #f1f5f9;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
 }
 
 .userEmail {
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 400;
   color: #94a3b8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.25;
+  line-height: 1.35;
 }
 
 .sidebarActions {

@@ -56,7 +56,7 @@ describe('Sidebar Icons & Accessibility', () => {
     expect(inactiveHtml).not.toContain('settingsActionActive');
   });
 
-  it('renders user details and navigation correctly alongside action icons', () => {
+  it('renders user details and navigation correctly alongside action icons, Class Diary branding, and live clock', () => {
     const html = renderToString(
       React.createElement(Sidebar, {
         activeSection: 'students',
@@ -66,6 +66,8 @@ describe('Sidebar Icons & Accessibility', () => {
 
     expect(html).toContain('Shreya Admin');
     expect(html).toContain('admin@infineo.io');
+    expect(html).toContain('Class Diary');
+    expect(html).toContain('aria-label="Current date, time, and timezone"');
     expect(html).toContain('Students');
     expect(html).toContain('Calendar');
   });

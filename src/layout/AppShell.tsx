@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styles from './layout.module.css';
 import { Sidebar, NavSection } from './Sidebar';
-import { TopBar } from './TopBar';
+import { MenuIcon } from '../components/icons/ActionIcons';
 import { SchedulingProgressToast } from '../components/feedback/SchedulingProgressToast';
 import { useAuth } from '../auth/AuthProvider';
 import { getUserProfileIdentity } from '../auth/userProfileStorage';
@@ -35,14 +35,14 @@ export const AppShell: React.FC<AppShellProps> = ({
         displayName={displayName}
       />
       <div className={styles.mainArea}>
-        <TopBar
-          activeSection={activeSection}
-          onToggleMenu={() => setMobileMenuOpen((open) => !open)}
-          onNavigate={onNavigate}
-          profileImage={profileImage}
-          initials={initials}
-          displayName={displayName}
-        />
+        <button
+          type="button"
+          className={styles.mobileMenuToggle}
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Toggle navigation menu"
+        >
+          <MenuIcon size={20} />
+        </button>
         <main className={styles.content}>{children}</main>
         <SchedulingProgressToast />
       </div>

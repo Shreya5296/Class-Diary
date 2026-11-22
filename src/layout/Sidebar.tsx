@@ -13,6 +13,7 @@ import {
 import { CloseIcon, LogOutIcon } from '../components/icons/ActionIcons';
 import { useProfileImage } from '../domains/dashboard/useProfileImage';
 import { getUserProfileIdentity } from '../auth/userProfileStorage';
+import { DashboardLiveClock } from '../domains/dashboard/DashboardLiveClock';
 
 export type NavSection =
   | 'dashboard'
@@ -70,7 +71,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
       <aside className={`${styles.sidebar} ${!isOpen ? styles.sidebarClosed : ''}`}>
         <div className={styles.sidebarHeader}>
-          <div className={styles.brandWrapper} />
+          <div className={styles.brandWrapper}>
+            <span className={styles.brandAccent} aria-hidden="true" />
+            <span className={styles.brandTitle}>Class Diary</span>
+          </div>
           {onClose && (
             <button type="button" className={styles.menuToggle} onClick={onClose} aria-label="Close sidebar">
               <CloseIcon size={18} />
@@ -108,6 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className={footerStyles.userInfo}>
                 <span className={footerStyles.userName} title={displayName}>{displayName}</span>
                 <span className={footerStyles.userEmail}>{user.email || 'Administrator'}</span>
+                <DashboardLiveClock variant="sidebar" />
               </div>
             </div>
             <div className={footerStyles.sidebarActions}>
