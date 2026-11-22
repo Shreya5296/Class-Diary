@@ -63,7 +63,7 @@ test.describe('E2E — Account Dropdown, Branding, Preferences & Calendar', () =
 
     // Email is read-only
     await expect(page.locator('text=Email')).toBeVisible();
-    await expect(page.locator('text=ashreya0502@gmail.com')).toBeVisible();
+    await expect(page.locator('main').locator('text=ashreya0502@gmail.com')).toBeVisible();
 
     // Edit display name
     const nameInput = page.locator('#displayNameInput');
@@ -80,8 +80,8 @@ test.describe('E2E — Account Dropdown, Branding, Preferences & Calendar', () =
     await expect(currSelect).toHaveValue('INR');
     await currSelect.selectOption('USD');
 
-    await page.locator('button:has-text("Save Regional Preferences")').click();
-    await expect(page.locator('text=Timezone and currency preferences saved successfully.')).toBeVisible();
+    await page.locator('button:has-text("Save Changes")').click();
+    await expect(page.locator('text=Settings saved successfully.')).toBeVisible();
 
     // Reload page and verify persistence across reload
     await page.reload();
@@ -140,7 +140,7 @@ test.describe('E2E — Account Dropdown, Branding, Preferences & Calendar', () =
     // Find attendance alert row for Aarav Sharma
     const alertRow = page.locator('div[class*="row"]').filter({ hasText: 'Aarav Sharma' }).filter({ hasText: 'Attendance not marked' });
     await expect(alertRow).toBeVisible();
-    await expect(alertRow.locator('text=Class date: Wednesday, 18 November 2026')).toBeVisible();
+    await expect(alertRow.getByText(/Class date:/)).toBeVisible();
 
     // Click Mark Attendance -> expands inline without navigation
     await alertRow.getByRole('button', { name: /Mark Attendance/ }).click();

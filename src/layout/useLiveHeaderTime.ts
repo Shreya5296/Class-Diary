@@ -4,6 +4,22 @@ import { getSavedTimezone } from '../lib/userPreferences';
 export interface HeaderTimeInfo {
   dateStr: string;
   timeStr: string;
+  tzAbbr?: string;
+}
+
+function getTzAbbreviation(timeZone: string, date: Date): string {
+  if (timeZone === 'Asia/Kolkata') return 'IST';
+  if (timeZone === 'UTC') return 'UTC';
+  try {
+    const parts = new Intl.DateTimeFormat('en-IN', {
+      timeZone,
+      timeZoneName: 'short',
+    }).formatToParts(date);
+    const tzPart = parts.find((p) => p.type === 'timeZoneName');
+    return tzPart ? tzPart.value : 'IST';
+  } catch {
+    return 'IST';
+  }
 }
 
 export function useLiveHeaderTime(): HeaderTimeInfo {
@@ -42,5 +58,7 @@ export function useLiveHeaderTime(): HeaderTimeInfo {
     timeStr = now.toLocaleTimeString();
   }
 
-  return { dateStr, timeStr };
+  const tzAbbr = getTzAbbreviation(timeZone, now);
+
+  return { dateStr, timeStr, tzAbbr };
 }

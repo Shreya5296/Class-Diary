@@ -85,7 +85,7 @@ describe('Profile Identity Synchronization & Content-Aware Table Sizing', () => 
     expect(sidebarHtml).toContain(`alt="${displayName}"`);
   });
 
-  it('3. verifies AppShell coordinates identical avatar state to both TopBar and Sidebar', () => {
+  it('3. verifies AppShell renders Sidebar with avatar, Class Diary branding, and live clock without global top bar', () => {
     const shellHtml = renderToString(
       React.createElement(AppShell, {
         activeSection: 'students',
@@ -93,9 +93,14 @@ describe('Profile Identity Synchronization & Content-Aware Table Sizing', () => 
       }, React.createElement('div', null, 'Content'))
     );
 
-    // Shell renders both topbar and sidebar with identical initials
-    expect(shellHtml).toContain('>AS</span>');
+    // Sidebar renders user initials and branding
     expect(shellHtml).toContain('AS</div>');
+    expect(shellHtml).toContain('Class Diary');
+    // Sidebar footer renders live clock directly in account section
+    expect(shellHtml).toContain('aria-label="Current date, time, and timezone"');
+    // Global top bar is removed
+    expect(shellHtml).not.toContain('topBarDashboard');
+    expect(shellHtml).not.toContain('Welcome back,');
   });
 
   it('4. verifies Student Directory table uses content-aware column styles', () => {

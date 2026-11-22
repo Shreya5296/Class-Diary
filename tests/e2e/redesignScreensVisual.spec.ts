@@ -44,7 +44,7 @@ test.describe('Frontend UI/UX Redesign — Screen & Viewport Coverage', () => {
     await navigate(page, 'Students');
     await expect(page.locator('h1:has-text("Students Directory")')).toBeVisible();
     await expect(page.locator('button:has-text("+ Add Student")')).toBeVisible();
-    await expect(page.locator('input[placeholder*="Search students"]')).toBeVisible();
+    await expect(page.locator('input[placeholder*="Search by student name"]')).toBeVisible();
     await expect(page.locator('table tbody tr').first()).toBeVisible();
 
     // 3. Finances

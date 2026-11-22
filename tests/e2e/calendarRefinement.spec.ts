@@ -32,9 +32,10 @@ test.describe('Calendar Page Refinement & Responsive Verification', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await navigate(page, 'Calendar');
 
-    // 1. Verify TopBar stability and clean single welcome message
-    await expect(page.locator('header span:has-text("Welcome back,")')).toBeVisible();
-    await expect(page.locator('header span:has-text("Authorized Administrator")')).toBeVisible();
+    // 1. Verify global TopBar is removed, and branding & live clock are in the sidebar
+    await expect(page.locator('header span:has-text("Welcome back,")')).toHaveCount(0);
+    await expect(page.locator('aside span:has-text("Class Diary")')).toBeVisible();
+    await expect(page.locator('aside [aria-label="Current date, time, and timezone"]')).toBeVisible();
     await expect(page.locator('h1')).toBeVisible();
     await expect(page.locator('text=Class Calendar')).toHaveCount(0);
 
@@ -73,10 +74,11 @@ test.describe('Calendar Page Refinement & Responsive Verification', () => {
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 2);
 
-    // Scroll content area and ensure top-bar stays visible
+    // Scroll content area
     const content = page.locator('main');
     await content.evaluate((el) => { el.scrollTop = 200; });
-    await expect(page.locator('header span:has-text("Welcome back,")')).toBeVisible();
+    await expect(page.locator('header span:has-text("Welcome back,")')).toHaveCount(0);
+    await expect(page.locator('aside span:has-text("Class Diary")')).toBeVisible();
   });
 
   test('verifies Calendar at 768px tablet: Month view and Day view action styling', async ({ page }) => {
