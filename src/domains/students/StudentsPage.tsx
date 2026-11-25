@@ -11,7 +11,7 @@ import { AddStudentModal } from './AddStudentModal';
 import { StudentProfilePage } from './StudentProfilePage';
 import { StudentRenewalModal } from '../packages/StudentRenewalModal';
 import { RenewalResult } from '../packages/packageRenewalTypes';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { StudentsTableSkeleton } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { PageHeader } from '../../layout/PageHeader';
 import { StudentStatusTab, filterStudentsByTab } from './studentStatusClassifier';
@@ -127,7 +127,7 @@ export const StudentsPage: React.FC = () => {
       {isCreating && <AddStudentModal onSuccess={handleRegistrationSuccess} onClose={() => setIsCreating(false)} />}
       {editingStudent && <EditStudentModal student={editingStudent} onSuccess={handleEditSuccess} onClose={() => setEditingStudent(null)} />}
       {isRenewing && <StudentRenewalModal initialStudent={renewingStudent} onSuccess={handleRenewalSuccess} onClose={closeRenewal} />}
-      {loading && <LoadingState message="Loading students…" />}
+      {loading && <StudentsTableSkeleton />}
       {error && !loading && <ErrorState message={error} onRetry={loadStudents} />}
       {!loading && !error && (
         <StudentList

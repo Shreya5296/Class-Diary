@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { FinancialSummary, FinanceFilter, StudentFinancialRecord, CurrencyTotals } from './financeTypes';
+import { calculateStudentPerClassRate } from './packageRateCalculator';
 import { Payment } from '../payments/paymentTypes';
 import { Package } from '../packages/packageTypes';
 import { fetchFinancialSummary } from '../reports/reportApi';
@@ -111,6 +112,10 @@ export function useFinancesData(token?: string | null) {
         existing.lastPaymentDate = p.payment_date;
       }
       map.set(sid, existing);
+    }
+
+    for (const [sid, record] of map.entries()) {
+      record.perClassRate = calculateStudentPerClassRate(sid, packages, payments);
     }
 
     const q = (filter.search || '').trim().toLowerCase();

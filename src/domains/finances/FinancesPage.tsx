@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { PageHeader } from '../../layout/PageHeader';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { FinancesSkeleton } from '../../components/feedback/Skeleton';
 import { FinanceTab } from './financeTypes';
 import { FinanceSummaryCards } from './FinanceSummaryCards';
 import { FinanceToolbar } from './FinanceToolbar';
@@ -38,7 +38,7 @@ export const FinancesPage: React.FC = () => {
   }, [adminId]);
 
   if (loading && !summary && filteredPayments.length === 0) {
-    return <LoadingState message="Loading financial records…" />;
+    return <FinancesSkeleton />;
   }
 
   const handlePaymentSuccess = async (msg: string) => {

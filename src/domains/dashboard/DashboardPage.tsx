@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useDashboardData } from './useDashboardData';
@@ -8,8 +8,9 @@ import { TodayClassesSection } from './TodayClassesSection';
 import { ThingsThatNeedAttention } from './ThingsThatNeedAttention';
 import { DashboardMiniCalendar } from './DashboardMiniCalendar';
 import { toInputDateFormat } from '../../lib/dateFormat';
+import { generateCalendarEvents } from './calendarEventGenerator';
 import styles from './dashboardPage.module.css';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { DashboardSkeleton } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { NavSection } from '../../layout/Sidebar';
 
@@ -37,8 +38,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const todayKey = toInputDateFormat(new Date(), activeTz);
   const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey);
 
+  const selectedDateEvents = useMemo(() => {
+    if (schedules.length > 0 || packages.length > 0) {
+      return generateCalendarEvents({
+        datedSessions: classes,
+        recurringSchedules: schedules,
+        students,
+        packages,
+        weekDates: [selectedDateKey],
+        activeTz,
+      });
+    }
+    return classes;
+  }, [classes, schedules, students, packages, selectedDateKey, activeTz]);
+
   if (loading && !overview) {
-    return <LoadingState message="Loading dashboard metrics…" />;
+    return <DashboardSkeleton />;
   }
 
   if (error && !overview) {
@@ -74,7 +89,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
       <div className={styles.mainGrid}>
         <div className={styles.scheduleArea}>
           <TodayClassesSection
-            classes={classes}
+            classes={selectedDateEvents}
             students={students}
             packages={packages}
             meetingLinks={meetingLinks}
@@ -96,6 +111,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         <div className={styles.calendarArea}>
           <DashboardMiniCalendar
             classes={classes}
+            schedules={schedules}
+            students={students}
+            packages={packages}
             selectedDateKey={selectedDateKey}
             onSelectDateKey={setSelectedDateKey}
             activeTz={activeTz}

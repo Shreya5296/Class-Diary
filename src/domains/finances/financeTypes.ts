@@ -1,4 +1,5 @@
 import { Payment } from '../payments/paymentTypes';
+import { StudentPerClassRateResult } from './packageRateCalculator';
 
 export interface CurrencyTotals {
   [currency: string]: number;
@@ -34,6 +35,7 @@ export interface StudentFinancialRecord {
   paymentCount: number;
   lastPaymentDate?: string;
   recordedInrEquivalent?: number;
+  perClassRate?: StudentPerClassRateResult;
 }
 
 export type StudentBalanceRecord = StudentFinancialRecord;

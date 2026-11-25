@@ -20,7 +20,7 @@ import { MonthCalendarView } from './MonthCalendarView';
 import { CalendarControlsBar } from './CalendarControlsBar';
 import { ScheduleExtraClassModal } from './ScheduleExtraClassModal';
 import { PageHeader } from '../../layout/PageHeader';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { CalendarSkeleton } from '../../components/feedback/Skeleton';
 import { ErrorState } from '../../components/feedback/ErrorState';
 
 export const CalendarPage: React.FC = () => {
@@ -113,7 +113,7 @@ export const CalendarPage: React.FC = () => {
         onPrev={handlePrev} onNext={handleNext} onToday={handleToday}
         onScheduleExtraClass={() => setIsExtraModalOpen(true)}
       />
-      {loading && <LoadingState message="Loading calendar…" />}
+      {loading && <CalendarSkeleton />}
       {error && !loading && <ErrorState message={error} onRetry={loadCalendarData} />}
       {!loading && !error && viewMode === 'day' && <DayCalendarView selectedDateStr={selectedDateStr} events={dayEvents} isToday={isDayToday} />}
       {!loading && !error && viewMode === 'week' && <WeeklyTimeGrid dayColumns={dayColumns} />}
