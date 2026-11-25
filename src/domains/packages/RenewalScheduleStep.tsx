@@ -2,6 +2,7 @@ import React from 'react';
 import { WeeklyScheduleEntry } from '../classes/scheduleApi';
 import { calculateEndTime } from '../classes/scheduleDurationCalculator';
 import { Button } from '../../components/buttons/Button';
+import { formatTimeTo12Hour } from '../../lib/time12Format';
 
 export interface RenewalScheduleStepProps {
   schedules: WeeklyScheduleEntry[];
@@ -89,7 +90,7 @@ export const RenewalScheduleStep: React.FC<RenewalScheduleStepProps> = ({
                   onChange={(e) => handleSlotChange(idx, 'start_time', e.target.value)}
                   style={{ padding: '4px 6px', borderRadius: '4px', border: '1px solid var(--color-border)', fontSize: '12px' }}
                 />
-                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>– {slot.end_time || calculateEndTime(slot.start_time, dur)}</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>– {formatTimeTo12Hour(slot.end_time || calculateEndTime(slot.start_time, dur))}</span>
               </div>
 
               <button

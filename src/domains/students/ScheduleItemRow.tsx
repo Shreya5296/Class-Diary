@@ -2,6 +2,7 @@ import React from 'react';
 import { ScheduleItem } from './registrationTypes';
 import { Button } from '../../components/buttons/Button';
 import formStyles from '../../components/forms/forms.module.css';
+import { formatTimeTo12Hour } from '../../lib/time12Format';
 
 const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
@@ -84,7 +85,7 @@ export const ScheduleItemRow: React.FC<ScheduleItemRowProps> = ({
           }}
           title="End time is automatically calculated from duration"
         >
-          {entry.end_time ? `End: ${entry.end_time}` : 'End: --:--'}
+          {entry.end_time ? `End: ${formatTimeTo12Hour(entry.end_time)}` : 'End: --:--'}
         </div>
         {endErr && <span style={{ fontSize: '11px', color: 'var(--color-danger)' }}>{endErr}</span>}
       </div>

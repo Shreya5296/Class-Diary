@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './layout.module.css';
-import footerStyles from './sidebarFooter.module.css';
 import { useAuth } from '../auth/AuthProvider';
 import {
   DashboardIcon,
@@ -8,12 +7,11 @@ import {
   StudentsIcon,
   FeesIcon,
   ClassesIcon,
-  SettingsIcon,
 } from '../components/icons/NavIcons';
-import { CloseIcon, LogOutIcon } from '../components/icons/ActionIcons';
+import { CloseIcon, ChevronLeftIcon, ChevronRightIcon } from '../components/icons/ActionIcons';
 import { useProfileImage } from '../domains/dashboard/useProfileImage';
 import { getUserProfileIdentity } from '../auth/userProfileStorage';
-import { DashboardLiveClock } from '../domains/dashboard/DashboardLiveClock';
+import { SidebarFooter } from './SidebarFooter';
 
 export type NavSection =
   | 'dashboard'
@@ -33,6 +31,8 @@ export interface SidebarProps {
   profileImage?: string | null;
   initials?: string;
   displayName?: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 const navItems = [
@@ -51,6 +51,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   profileImage: propProfileImage,
   initials: propInitials,
   displayName: propDisplayName,
+  isCollapsed: propIsCollapsed,
+  onToggleCollapse,
 }) => {
   const { user, signOut } = useAuth();
   const fallbackIdentity = getUserProfileIdentity(user?.name, user?.email);
@@ -58,6 +60,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const initials = propInitials ?? fallbackIdentity.initials;
   const hookImage = useProfileImage();
   const profileImage = propProfileImage !== undefined ? propProfileImage : hookImage;
+
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const isCollapsed = propIsCollapsed !== undefined ? propIsCollapsed : internalCollapsed;
+
+  const handleToggle = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed((prev) => !prev);
+    }
+  };
 
   const handleNav = (section: NavSection) => {
     onNavigate(section);
@@ -69,12 +82,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {isOpen && onClose && (
         <div className={styles.sidebarBackdrop} onClick={onClose} aria-hidden="true" />
       )}
-      <aside className={`${styles.sidebar} ${!isOpen ? styles.sidebarClosed : ''}`}>
+      <aside className={`${styles.sidebar} ${!isOpen ? styles.sidebarClosed : ''} ${isCollapsed ? styles.sidebarCollapsed : ''}`}>
         <div className={styles.sidebarHeader}>
           <div className={styles.brandWrapper}>
             <span className={styles.brandAccent} aria-hidden="true" />
             <span className={styles.brandTitle}>Class Diary</span>
           </div>
+          <button
+            type="button"
+            className={styles.desktopCollapseToggle}
+            onClick={handleToggle}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
+          </button>
           {onClose && (
             <button type="button" className={styles.menuToggle} onClick={onClose} aria-label="Close sidebar">
               <CloseIcon size={18} />
@@ -91,51 +113,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 type="button"
                 className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
                 onClick={() => handleNav(id)}
+                title={label}
+                aria-label={label}
               >
                 <Icon size={18} />
-                <span>{label}</span>
+                <span className={styles.navLabel}>{label}</span>
               </button>
             );
           })}
         </nav>
 
         {user && (
-          <div className={footerStyles.sidebarFooter}>
-            <div className={footerStyles.userProfileRow}>
-              <div className={footerStyles.userAvatar} aria-hidden="true">
-                {profileImage ? (
-                  <img src={profileImage} alt={displayName} className={footerStyles.userAvatarImg} />
-                ) : (
-                  initials
-                )}
-              </div>
-              <div className={footerStyles.userInfo}>
-                <span className={footerStyles.userName} title={displayName}>{displayName}</span>
-                <span className={footerStyles.userEmail}>{user.email || 'Administrator'}</span>
-                <DashboardLiveClock variant="sidebar" />
-              </div>
-            </div>
-            <div className={footerStyles.sidebarActions}>
-              <button
-                type="button"
-                className={`${footerStyles.settingsAction} ${activeSection === 'settings' ? footerStyles.settingsActionActive : ''}`}
-                onClick={() => handleNav('settings')}
-                title="Settings & Regional Preferences"
-                aria-label="Settings & Regional Preferences"
-              >
-                <SettingsIcon size={16} />
-              </button>
-              <button
-                type="button"
-                className={footerStyles.logoutAction}
-                onClick={signOut}
-                title="Log out of session"
-                aria-label="Log out of session"
-              >
-                <LogOutIcon size={16} />
-              </button>
-            </div>
-          </div>
+          <SidebarFooter
+            user={user}
+            profileImage={profileImage}
+            displayName={displayName}
+            initials={initials}
+            activeSection={activeSection}
+            isCollapsed={isCollapsed}
+            onNavigate={handleNav}
+            onSignOut={signOut}
+          />
         )}
       </aside>
     </>

@@ -7,6 +7,8 @@ import { useAuth } from '../auth/AuthProvider';
 import { getUserProfileIdentity } from '../auth/userProfileStorage';
 import { useProfileImage } from '../domains/dashboard/useProfileImage';
 
+const SIDEBAR_COLLAPSED_KEY = 'classdiary_sidebar_collapsed';
+
 export interface AppShellProps {
   activeSection: NavSection;
   onNavigate: (section: NavSection) => void;
@@ -22,6 +24,25 @@ export const AppShell: React.FC<AppShellProps> = ({
   const profileImage = useProfileImage();
   const { displayName, initials } = getUserProfileIdentity(user?.name, user?.email);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      } catch {
+        // Safe fallback in restricted environments
+      }
+      return next;
+    });
+  };
 
   return (
     <div className={styles.shell}>
@@ -33,6 +54,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         profileImage={profileImage}
         initials={initials}
         displayName={displayName}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={toggleCollapse}
       />
       <div className={styles.mainArea}>
         <button
