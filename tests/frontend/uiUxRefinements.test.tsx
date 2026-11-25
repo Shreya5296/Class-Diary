@@ -60,6 +60,23 @@ describe('UI/UX Refinements (Time, Sidebar, Date, Dynamic Subjects & Mandatory A
       expect(html).toContain('Expand sidebar');
       expect(html).toContain('aria-label="Dashboard"');
     });
+
+    it('verifies all configured navigation items remain rendered in expanded state', () => {
+      const items = ['Dashboard', 'Calendar', 'Students', 'Class Schedule', 'Finances'];
+      const html = renderToString(
+        React.createElement(AuthProvider, null,
+          React.createElement(Sidebar, {
+            activeSection: 'students',
+            onNavigate: vi.fn(),
+            isCollapsed: false,
+          })
+        )
+      );
+      expect(html).toContain('Class Diary');
+      expect(html).toContain('Collapse sidebar');
+      items.forEach((item) => expect(html).toContain(item));
+      expect(html).toContain('navItemActive');
+    });
   });
 
   describe('Change 3: Standardize Date Format Everywhere (DD-MM-YYYY)', () => {

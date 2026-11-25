@@ -11,6 +11,10 @@
   padding: 0.75rem 0.5rem;
   align-items: center;
 }
+.userInfoCollapsed,
+.sidebarFooterCollapsed .userInfo {
+  display: none;
+}
 .sidebarFooterCollapsed .userProfileRow {
   justify-content: center;
 }

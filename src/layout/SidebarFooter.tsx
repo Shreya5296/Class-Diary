@@ -29,7 +29,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
 }) => {
   return (
     <div className={`${footerStyles.sidebarFooter} ${isCollapsed ? footerStyles.sidebarFooterCollapsed : ''}`}>
-      <div className={footerStyles.userProfileRow} title={isCollapsed ? displayName : undefined}>
+      <div className={footerStyles.userProfileRow} title={displayName}>
         <div className={footerStyles.userAvatar} aria-hidden="true">
           {profileImage ? (
             <img src={profileImage} alt={displayName} className={footerStyles.userAvatarImg} />
@@ -37,13 +37,11 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
             initials
           )}
         </div>
-        {!isCollapsed && (
-          <div className={footerStyles.userInfo}>
-            <span className={footerStyles.userName} title={displayName}>{displayName}</span>
-            <span className={footerStyles.userEmail}>{user.email || 'Administrator'}</span>
-            <DashboardLiveClock variant="sidebar" />
-          </div>
-        )}
+        <div className={`${footerStyles.userInfo} ${isCollapsed ? footerStyles.userInfoCollapsed : ''}`}>
+          <span className={footerStyles.userName} title={displayName}>{displayName}</span>
+          <span className={footerStyles.userEmail}>{user.email || 'Administrator'}</span>
+          <DashboardLiveClock variant="sidebar" />
+        </div>
       </div>
       <div className={`${footerStyles.sidebarActions} ${isCollapsed ? footerStyles.sidebarActionsCollapsed : ''}`}>
         <button

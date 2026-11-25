@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './layout.module.css';
 import { useAuth } from '../auth/AuthProvider';
 import {
@@ -51,7 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   profileImage: propProfileImage,
   initials: propInitials,
   displayName: propDisplayName,
-  isCollapsed = false,
+  isCollapsed: propIsCollapsed,
   onToggleCollapse,
 }) => {
   const { user, signOut } = useAuth();
@@ -60,6 +60,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const initials = propInitials ?? fallbackIdentity.initials;
   const hookImage = useProfileImage();
   const profileImage = propProfileImage !== undefined ? propProfileImage : hookImage;
+
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const isCollapsed = propIsCollapsed !== undefined ? propIsCollapsed : internalCollapsed;
+
+  const handleToggle = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed((prev) => !prev);
+    }
+  };
 
   const handleNav = (section: NavSection) => {
     onNavigate(section);
@@ -77,17 +88,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className={styles.brandAccent} aria-hidden="true" />
             <span className={styles.brandTitle}>Class Diary</span>
           </div>
-          {onToggleCollapse && (
-            <button
-              type="button"
-              className={styles.desktopCollapseToggle}
-              onClick={onToggleCollapse}
-              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              {isCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
-            </button>
-          )}
+          <button
+            type="button"
+            className={styles.desktopCollapseToggle}
+            onClick={handleToggle}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? <ChevronRightIcon size={16} /> : <ChevronLeftIcon size={16} />}
+          </button>
           {onClose && (
             <button type="button" className={styles.menuToggle} onClick={onClose} aria-label="Close sidebar">
               <CloseIcon size={18} />
@@ -104,11 +113,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 type="button"
                 className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
                 onClick={() => handleNav(id)}
-                title={isCollapsed ? label : undefined}
+                title={label}
                 aria-label={label}
               >
                 <Icon size={18} />
-                {!isCollapsed && <span>{label}</span>}
+                <span className={styles.navLabel}>{label}</span>
               </button>
             );
           })}
