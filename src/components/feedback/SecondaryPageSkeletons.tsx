@@ -4,10 +4,6 @@ import styles from './skeleton.module.css';
 
 export const ClassScheduleSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }} aria-busy="true">
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-      <SkeletonBone width={240} height={38} />
-      <SkeletonBone width={140} height={38} />
-    </div>
     <div className={styles.tableContainer}>
       <div className={styles.tableHeader}>
         <SkeletonText width="25%" />

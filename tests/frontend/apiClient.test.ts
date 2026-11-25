@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { sendApiRequest } from '../../src/api/apiClient';
+import { sendApiRequest, clearApiCache } from '../../src/api/apiClient';
 import { fetchStudents } from '../../src/domains/students/studentApi';
 import { ApiClientError, ApiNetworkError } from '../../src/api/apiErrors';
 import * as configModule from '../../src/config/runtimeConfig';
@@ -7,6 +7,7 @@ import * as configModule from '../../src/config/runtimeConfig';
 describe('Frontend API Client', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    clearApiCache();
   });
 
   it('fails with ApiClientError if appsScriptUrl is missing and url empty', async () => {
@@ -124,6 +125,7 @@ describe('Frontend API Client', () => {
     expect(res1[0].student_id).toBe('stu_1');
 
     // 2. Wrapped in data.students
+    clearApiCache();
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ ok: true, data: { students: mockStudents } }),
@@ -132,6 +134,7 @@ describe('Frontend API Client', () => {
     expect(res2).toHaveLength(1);
 
     // 3. Wrapped in data.items
+    clearApiCache();
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ ok: true, data: { items: mockStudents } }),
@@ -140,6 +143,7 @@ describe('Frontend API Client', () => {
     expect(res3).toHaveLength(1);
 
     // 4. Empty or missing data
+    clearApiCache();
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ ok: true, data: null }),

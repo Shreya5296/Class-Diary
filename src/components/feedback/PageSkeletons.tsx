@@ -3,7 +3,7 @@ import { SkeletonBone, SkeletonText, SkeletonTitle, SkeletonCircle, SkeletonCard
 import styles from './skeleton.module.css';
 
 export const DashboardSkeleton: React.FC = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }} aria-busy="true">
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingTop: '1.75rem' }} aria-busy="true">
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-6)' }}>
       <SkeletonCard height={118} style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
         <SkeletonCircle size={76} />
@@ -47,13 +47,6 @@ export const DashboardSkeleton: React.FC = () => (
 
 export const StudentsTableSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }} aria-busy="true">
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-      <SkeletonBone width={240} height={38} />
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <SkeletonBone width={100} height={38} />
-        <SkeletonBone width={110} height={38} />
-      </div>
-    </div>
     <div className={styles.tableContainer}>
       <div className={styles.tableHeader}>
         <SkeletonText width="22%" />
@@ -83,17 +76,6 @@ export const StudentsTableSkeleton: React.FC = () => (
 
 export const CalendarSkeleton: React.FC = () => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }} aria-busy="true">
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <SkeletonBone width={36} height={36} />
-        <SkeletonBone width={60} height={36} />
-        <SkeletonBone width={36} height={36} />
-      </div>
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <SkeletonBone width={160} height={36} />
-        <SkeletonBone width={140} height={36} />
-      </div>
-    </div>
     <div className={styles.tableContainer}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', padding: '10px', gap: '8px', borderBottom: '1px solid var(--color-border-subtle)' }}>
         {Array.from({ length: 7 }).map((_, i) => (

@@ -86,7 +86,7 @@ export const TodayClassesSection: React.FC<TodayClassesSectionProps> = ({
                 <Button variant="primary" size="md">Join Class ↗</Button>
               </a>
             ) : (
-              <Button variant="secondary" size="md" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>Join Class (Not eligible)</Button>
+              <Button variant="secondary" size="md" disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>Join Class</Button>
             )}
           </div>
 

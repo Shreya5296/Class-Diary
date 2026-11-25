@@ -111,7 +111,7 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
 
       {scheduleForm}
 
-      {loading && <ClassScheduleSkeleton />}
+      {loading && displayedSessions.length === 0 && <ClassScheduleSkeleton />}
 
       {!loading && invalid.length > 0 && (
         <div className={styles.invalidNotice} role="status">

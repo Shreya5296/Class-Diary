@@ -65,13 +65,6 @@ export function calculateStudentPerClassRate(
     );
     if (matchingPay) {
       exchangeRate = Number(matchingPay.in_inr) / Number(matchingPay.amount);
-    } else {
-      const anyMatchingPay = payments.find(
-        (p) => (p.currency || '').toUpperCase() === targetForeignCur && Number(p.in_inr) > 0 && Number(p.amount) > 0
-      );
-      if (anyMatchingPay) {
-        exchangeRate = Number(anyMatchingPay.in_inr) / Number(anyMatchingPay.amount);
-      }
     }
   }
 

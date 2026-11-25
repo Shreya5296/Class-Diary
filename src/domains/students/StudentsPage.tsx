@@ -127,9 +127,9 @@ export const StudentsPage: React.FC = () => {
       {isCreating && <AddStudentModal onSuccess={handleRegistrationSuccess} onClose={() => setIsCreating(false)} />}
       {editingStudent && <EditStudentModal student={editingStudent} onSuccess={handleEditSuccess} onClose={() => setEditingStudent(null)} />}
       {isRenewing && <StudentRenewalModal initialStudent={renewingStudent} onSuccess={handleRenewalSuccess} onClose={closeRenewal} />}
-      {loading && <StudentsTableSkeleton />}
-      {error && !loading && <ErrorState message={error} onRetry={loadStudents} />}
-      {!loading && !error && (
+      {loading && students.length === 0 && <StudentsTableSkeleton />}
+      {error && !loading && students.length === 0 && <ErrorState message={error} onRetry={loadStudents} />}
+      {(!loading || students.length > 0) && (
         <StudentList
           key={refreshKey}
           students={students}

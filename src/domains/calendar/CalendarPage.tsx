@@ -113,11 +113,11 @@ export const CalendarPage: React.FC = () => {
         onPrev={handlePrev} onNext={handleNext} onToday={handleToday}
         onScheduleExtraClass={() => setIsExtraModalOpen(true)}
       />
-      {loading && <CalendarSkeleton />}
-      {error && !loading && <ErrorState message={error} onRetry={loadCalendarData} />}
-      {!loading && !error && viewMode === 'day' && <DayCalendarView selectedDateStr={selectedDateStr} events={dayEvents} isToday={isDayToday} />}
-      {!loading && !error && viewMode === 'week' && <WeeklyTimeGrid dayColumns={dayColumns} />}
-      {!loading && !error && viewMode === 'month' && (
+      {loading && classes.length === 0 && schedules.length === 0 && <CalendarSkeleton />}
+      {error && !loading && classes.length === 0 && <ErrorState message={error} onRetry={loadCalendarData} />}
+      {(!loading || classes.length > 0 || schedules.length > 0) && viewMode === 'day' && <DayCalendarView selectedDateStr={selectedDateStr} events={dayEvents} isToday={isDayToday} />}
+      {(!loading || classes.length > 0 || schedules.length > 0) && viewMode === 'week' && <WeeklyTimeGrid dayColumns={dayColumns} />}
+      {(!loading || classes.length > 0 || schedules.length > 0) && viewMode === 'month' && (
         <MonthCalendarView
           yearMonthStr={yearMonthStr} sessions={monthSessions} students={students}
           activeTz={activeTz} onSelectDate={(d) => { setSelectedDateStr(d); setViewMode('day'); }}
