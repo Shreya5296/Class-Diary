@@ -8,17 +8,33 @@ function parseIsoDate(isoString: string | null | undefined): Date | null {
 }
 
 export function formatDate(isoString: string | null | undefined, timeZone?: string): string {
+  if (!isoString) return '—';
+  if (typeof isoString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(isoString.trim())) {
+    const [yStr, mStr, dStr] = isoString.trim().split('-');
+    const y = parseInt(yStr, 10);
+    const m = parseInt(mStr, 10);
+    const d = parseInt(dStr, 10);
+    if (m < 1 || m > 12 || d < 1 || d > 31) return '—';
+    const checkDate = new Date(Date.UTC(y, m - 1, d));
+    if (isNaN(checkDate.getTime()) || checkDate.getUTCDate() !== d || checkDate.getUTCMonth() !== m - 1) {
+      return '—';
+    }
+    return `${dStr}-${mStr}-${yStr}`;
+  }
   const date = parseIsoDate(isoString);
   if (!date) return '—';
   try {
-    return new Intl.DateTimeFormat('en-IN', {
-      timeZone: timeZone || getSavedTimezone(),
+    const tz = timeZone || getSavedTimezone();
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
       year: 'numeric',
-    }).format(date);
+    });
+    return formatter.format(date).replace(/\//g, '-');
   } catch {
-    return '—';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()}`;
   }
 }
 

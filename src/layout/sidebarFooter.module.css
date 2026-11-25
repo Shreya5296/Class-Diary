@@ -7,6 +7,23 @@
   gap: 0.75rem;
 }
 
+.sidebarFooterCollapsed {
+  padding: 0.75rem 0.5rem;
+  align-items: center;
+}
+.sidebarFooterCollapsed .userProfileRow {
+  justify-content: center;
+}
+.sidebarActionsCollapsed {
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+.sidebarActionsCollapsed .settingsAction,
+.sidebarActionsCollapsed .logoutAction {
+  width: 100%;
+}
+
 .userProfileRow {
   display: flex;
   align-items: flex-start;

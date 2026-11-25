@@ -47,11 +47,11 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
     return progressMap.get(s.session_id) || progressMap.get(`${s.student_id}__${s.schedule_date}__${s.schedule_time}`);
   };
 
-  const handleUpdateStatus = async (sessionId: string, outcome: string, cancellationReason?: string) => {
+  const handleUpdateStatus = async (sessionId: string, outcome: string, cancellationReason?: string, notes?: string) => {
     if (outcome === 'CANCELLED' && cancellationReason) {
       await cancelClass(sessionId, cancellationReason, token);
     } else {
-      await recordAttendance(sessionId, outcome as AttendanceStatus, token, cancellationReason);
+      await recordAttendance(sessionId, outcome as AttendanceStatus, token, cancellationReason, notes);
     }
     await refetch();
   };

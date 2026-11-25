@@ -3,12 +3,13 @@ import { AttendanceStatus } from './classTypes';
 import { Button } from '../../components/buttons/Button';
 import { ConfirmDialog } from '../../components/overlays/ConfirmDialog';
 import { CancelClassModal } from './CancelClassModal';
+import { AttendanceNotesModal } from './AttendanceNotesModal';
 import { getSessionStatusStyle } from './sessionStatusStyles';
 
 export interface AttendanceControlProps {
   status: string;
   creditEffect: string;
-  onUpdateStatus: (outcome: AttendanceStatus, cancellationReason?: string) => Promise<void>;
+  onUpdateStatus: (outcome: AttendanceStatus, cancellationReason?: string, notes?: string) => Promise<void>;
   onRestoreCredit: () => Promise<void>;
 }
 
@@ -21,11 +22,17 @@ export const AttendanceControl: React.FC<AttendanceControlProps> = ({
   const [loading, setLoading] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [notesTargetOutcome, setNotesTargetOutcome] = useState<AttendanceStatus | null>(null);
 
-  const handleAction = async (outcome: AttendanceStatus) => {
+  const handleOpenNotes = (outcome: AttendanceStatus) => {
+    setNotesTargetOutcome(outcome);
+  };
+
+  const handleConfirmNotes = async (outcome: AttendanceStatus, notes: string) => {
     setLoading(true);
     try {
-      await onUpdateStatus(outcome);
+      await onUpdateStatus(outcome, undefined, notes);
+      setNotesTargetOutcome(null);
     } finally {
       setLoading(false);
     }
@@ -54,15 +61,23 @@ export const AttendanceControl: React.FC<AttendanceControlProps> = ({
   if (status === 'SCHEDULED' || status === 'NOT_MARKED') {
     return (
       <div style={{ display: 'flex', gap: 'var(--space-1)', alignItems: 'center', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
-        <Button variant="primary" size="sm" onClick={() => handleAction('PRESENT')} disabled={loading}>
+        <Button variant="primary" size="sm" onClick={() => handleOpenNotes('PRESENT')} disabled={loading}>
           Attended
         </Button>
-        <Button variant="outline" size="sm" onClick={() => handleAction('NO_SHOW')} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => handleOpenNotes('NO_SHOW')} disabled={loading}>
           No-Show
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setShowCancelModal(true)} disabled={loading} data-testid="cancel-class-button">
           Cancel
         </Button>
+
+        <AttendanceNotesModal
+          isOpen={Boolean(notesTargetOutcome)}
+          outcome={notesTargetOutcome}
+          isLoading={loading}
+          onConfirm={handleConfirmNotes}
+          onCancel={() => setNotesTargetOutcome(null)}
+        />
 
         <CancelClassModal
           isOpen={showCancelModal}

@@ -1,15 +1,32 @@
 import React from 'react';
-import { AVAILABLE_SUBJECTS } from './subjectConstants';
 
 export interface SubjectDropdownMenuProps {
+  availableSubjects: string[];
   selectedSubjects: string[];
+  searchQuery: string;
   onToggle: (subject: string) => void;
+  onAddNewSubject: (subject: string) => void;
 }
 
 export const SubjectDropdownMenu: React.FC<SubjectDropdownMenuProps> = ({
+  availableSubjects,
   selectedSubjects,
+  searchQuery,
   onToggle,
+  onAddNewSubject,
 }) => {
+  const queryTrimmed = searchQuery.trim();
+  const lowerQuery = queryTrimmed.toLowerCase();
+
+  const filtered = availableSubjects.filter((subj) =>
+    subj.toLowerCase().includes(lowerQuery)
+  );
+
+  const exactMatchExists = availableSubjects.some(
+    (subj) => subj.toLowerCase() === lowerQuery
+  );
+  const showAddOption = queryTrimmed.length > 0 && !exactMatchExists;
+
   return (
     <div
       role="listbox"
@@ -29,8 +46,38 @@ export const SubjectDropdownMenu: React.FC<SubjectDropdownMenuProps> = ({
         padding: '4px 0',
       }}
     >
-      {AVAILABLE_SUBJECTS.map((subj) => {
-        const isSelected = selectedSubjects.includes(subj);
+      {showAddOption && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onAddNewSubject(queryTrimmed)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onAddNewSubject(queryTrimmed);
+            }
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '7px 12px',
+            fontSize: 'var(--font-size-sm)',
+            cursor: 'pointer',
+            backgroundColor: 'var(--color-bg-subtle)',
+            color: 'var(--color-primary)',
+            fontWeight: 600,
+            borderBottom: '1px solid var(--color-border)',
+          }}
+        >
+          <span>＋ Add &ldquo;{queryTrimmed}&rdquo;</span>
+        </div>
+      )}
+
+      {filtered.map((subj) => {
+        const isSelected = selectedSubjects.some(
+          (s) => s.toLowerCase() === subj.toLowerCase()
+        );
         return (
           <div
             key={subj}
@@ -72,6 +119,12 @@ export const SubjectDropdownMenu: React.FC<SubjectDropdownMenuProps> = ({
           </div>
         );
       })}
+
+      {filtered.length === 0 && !showAddOption && (
+        <div style={{ padding: '8px 12px', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', textAlign: 'center' }}>
+          No matching subjects
+        </div>
+      )}
     </div>
   );
 };

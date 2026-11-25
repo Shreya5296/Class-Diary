@@ -5,6 +5,7 @@ import { Button } from '../../components/buttons/Button';
 import { useAuth } from '../../auth/AuthProvider';
 import { useClassScheduling } from './useClassScheduling';
 import formStyles from '../../components/forms/forms.module.css';
+import { formatTimeTo12Hour } from '../../lib/time12Format';
 
 export interface ClassSessionFormProps {
   studentId?: string;
@@ -130,7 +131,7 @@ export const ClassSessionForm: React.FC<ClassSessionFormProps> = ({
 
       <div style={{ padding: '8px 12px', backgroundColor: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border-subtle)', fontSize: 'var(--font-size-xs)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div><span style={{ fontWeight: 600 }}>Class Duration: </span><span style={{ color: 'var(--color-text-muted)' }}>{durationMinutes} min ({hasPackageDuration ? 'from package' : 'standard'})</span></div>
-        <div><span style={{ fontWeight: 600 }}>End Time: </span><span style={{ color: endTime ? 'var(--color-text-muted)' : 'var(--color-danger)' }}>{endTime || 'Crosses midnight!'}</span></div>
+        <div><span style={{ fontWeight: 600 }}>End Time: </span><span style={{ color: endTime ? 'var(--color-text-muted)' : 'var(--color-danger)' }}>{endTime ? formatTimeTo12Hour(endTime) : 'Crosses midnight!'}</span></div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
