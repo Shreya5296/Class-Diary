@@ -65,18 +65,21 @@ export const AttendanceNotesModal: React.FC<AttendanceNotesModalProps> = ({
         if (e.target === e.currentTarget && !isLoading) onCancel();
       }}
     >
-      <div className={styles.dialog} style={{ maxWidth: '440px', width: '90%' }}>
-        <h2 id="attendance-notes-dialog-title" className={styles.title}>
+      <div
+        className={styles.dialog}
+        style={{ maxWidth: '600px', width: '92%', padding: '1.75rem 2rem', boxSizing: 'border-box', textAlign: 'left' }}
+      >
+        <h2 id="attendance-notes-dialog-title" className={styles.title} style={{ textAlign: 'left', margin: '0 0 var(--space-2)' }}>
           Mark Attendance: {actionLabel}
         </h2>
-        <p className={styles.body} style={{ marginBottom: 'var(--space-3)' }}>
+        <p className={styles.body} style={{ textAlign: 'left', margin: '0 0 var(--space-5)', lineHeight: 1.5 }}>
           Please enter attendance notes before marking the student as {actionLabel}.
         </p>
 
-        <div style={{ marginBottom: 'var(--space-4)' }}>
+        <div style={{ marginBottom: 'var(--space-6)', width: '100%', boxSizing: 'border-box', textAlign: 'left' }}>
           <label
             htmlFor="attendance-notes-input"
-            style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px', color: 'var(--color-text-main)' }}
+            style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text-main)', textAlign: 'left' }}
           >
             Notes <span style={{ color: 'var(--color-danger)' }}>*</span>
           </label>
@@ -84,7 +87,7 @@ export const AttendanceNotesModal: React.FC<AttendanceNotesModalProps> = ({
             id="attendance-notes-input"
             data-testid="attendance-notes-input"
             className={formStyles.textarea}
-            rows={3}
+            rows={4}
             value={notes}
             onChange={(e) => {
               setNotes(e.target.value);
@@ -93,15 +96,16 @@ export const AttendanceNotesModal: React.FC<AttendanceNotesModalProps> = ({
             placeholder={isAttended ? 'e.g. Covered Chapter 4 exercises; completed homework.' : 'e.g. Student absent without prior notice.'}
             disabled={isLoading}
             autoFocus
+            style={{ width: '100%', minHeight: '90px', boxSizing: 'border-box', display: 'block' }}
           />
           {error && (
-            <span role="alert" style={{ display: 'block', color: 'var(--color-danger)', fontSize: '11px', marginTop: '4px' }}>
+            <span role="alert" style={{ display: 'block', color: 'var(--color-danger)', fontSize: '11px', marginTop: '6px', textAlign: 'left' }}>
               {error}
             </span>
           )}
         </div>
 
-        <div className={styles.actions}>
+        <div className={styles.actions} style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', width: '100%' }}>
           <Button variant="secondary" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>

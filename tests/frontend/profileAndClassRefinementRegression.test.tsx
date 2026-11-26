@@ -101,7 +101,7 @@ describe('Class Schedule & Profile Refinement Regression Suite', () => {
       { value: mockAuthValue },
       React.createElement(RequireAdmin, { children: null })
     ));
-    expect(html).toContain('Personal Dashboard');
+    expect(html).toContain('Class Diary');
     expect(html).toContain('Sign In as Administrator');
     expect(html).toContain('radial-gradient');
   });

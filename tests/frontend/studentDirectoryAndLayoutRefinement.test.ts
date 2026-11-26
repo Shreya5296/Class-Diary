@@ -64,9 +64,9 @@ describe('Student Directory & Global Layout Refinement Suite', () => {
     const tdMatches = html.match(/<td\b/g);
     expect(tdMatches).toHaveLength(5);
 
-    // 5th td contains the meeting link
+    // 5th td contains the clickable meeting link and Copy button (without separate Open button)
     expect(html).toContain('meet.google.com/xyz-uvwx-rst');
-    expect(html).toContain('Open ↗');
+    expect(html).not.toContain('Open ↗');
     expect(html).toContain('Copy');
   });
 
@@ -122,7 +122,7 @@ describe('Student Directory & Global Layout Refinement Suite', () => {
     expect(html).toContain('No link configured');
   });
 
-  it('5. verifies compact MeetingLinkButton renders link affordance with Open ↗ and Copy action', () => {
+  it('5. verifies compact MeetingLinkButton renders clickable link and Copy action without separate Open button', () => {
     const html = renderToString(
       React.createElement(MeetingLinkButton, {
         url: 'https://zoom.us/j/987654321',
@@ -131,9 +131,11 @@ describe('Student Directory & Global Layout Refinement Suite', () => {
     );
 
     expect(html).toContain('zoom.us/j/987654321');
-    expect(html).toContain('Open ↗');
+    expect(html).not.toContain('Open ↗');
     expect(html).toContain('Copy');
     expect(html).toContain('title="https://zoom.us/j/987654321"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
   });
 
   it('6. verifies profile picture sync persistence functions', async () => {

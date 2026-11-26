@@ -11,7 +11,7 @@ import { RenewalScheduleStep } from './RenewalScheduleStep';
 import { RenewalPaymentStep } from './RenewalPaymentStep';
 import { RenewalConfirmationStep } from './RenewalConfirmationStep';
 import { Button } from '../../components/buttons/Button';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { FormSkeleton } from '../../components/feedback/Skeleton';
 import { backdropStyle, dialogStyle, headerStyle, closeButtonStyle } from '../finances/paymentModalStyles';
 
 export interface StudentRenewalModalProps {
@@ -96,7 +96,7 @@ export const StudentRenewalModal: React.FC<StudentRenewalModalProps> = ({ initia
         <div style={{ overflowY: 'auto', padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {serverError && <div style={{ padding: '0.625rem 0.875rem', backgroundColor: '#fee2e2', border: '1px solid #f87171', color: '#b91c1c', borderRadius: '4px', fontSize: '13px' }}>⚠️ {serverError}</div>}
           {step === 1 && <RenewalStudentSelectStep selectedStudent={student} onSelectStudent={(s) => { selectStudent(s); setIdempKey(getOrInitIdempKey(s.student_id)); }} token={token} />}
-          {loadingSummary && step > 1 && <LoadingState message="Loading student package & balance data…" />}
+          {loadingSummary && step > 1 && <FormSkeleton />}
           {!loadingSummary && summary && (
             <>
               {step === 2 && <RenewalCurrentSummaryStep summary={summary} />}

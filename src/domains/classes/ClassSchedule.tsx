@@ -3,7 +3,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { AttendanceStatus, ClassSession } from './classTypes';
 import { recordAttendance, restoreCredit, cancelClass } from './classApi';
 import { DataTable } from '../../components/tables/DataTable';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { ClassScheduleSkeleton } from '../../components/feedback/Skeleton';
 import { EmptyState } from '../../components/feedback/EmptyState';
 import { useClassScheduleData } from './useClassScheduleData';
 import { toInputDateFormat } from '../../lib/dateFormat';
@@ -111,7 +111,7 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
 
       {scheduleForm}
 
-      {loading && <LoadingState message="Loading class schedule…" />}
+      {loading && displayedSessions.length === 0 && <ClassScheduleSkeleton />}
 
       {!loading && invalid.length > 0 && (
         <div className={styles.invalidNotice} role="status">

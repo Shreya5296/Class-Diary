@@ -1,4 +1,4 @@
-export const APP_NAME = '';
+export const APP_NAME = 'Class Diary';
 export const APP_TIMEZONE = 'Asia/Kolkata';
 export const APP_CURRENCY = 'INR';
 export const CURRENCY_SYMBOL = '₹';

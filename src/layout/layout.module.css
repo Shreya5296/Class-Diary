@@ -25,7 +25,7 @@
 
 .sidebarHeader {
   height: 60px; min-height: 60px; max-height: 60px;
-  box-sizing: border-box; padding: 0 1.25rem;
+  box-sizing: border-box; padding: 0 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(15, 23, 42, 0.35);
   display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1;
@@ -90,11 +90,19 @@
 }
 .desktopCollapseToggle {
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--radius-sm); color: #cbd5e1; cursor: pointer;
-  padding: 0.35rem; transition: all 120ms ease;
+  width: 28px; height: 28px; border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1; cursor: pointer; padding: 0;
+  transition: all 140ms ease; flex-shrink: 0;
 }
-.desktopCollapseToggle:hover { background: rgba(255, 255, 255, 0.16); color: #ffffff; }
+.desktopCollapseToggle:hover {
+  background: rgba(255, 255, 255, 0.18); color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.desktopCollapseToggle:focus-visible {
+  outline: 2px solid #38bdf8; outline-offset: 2px;
+}
 .sidebarCollapsed .sidebarHeader { padding: 0 0.75rem; justify-content: center; }
 .sidebarCollapsed .brandWrapper { display: none; }
 .sidebarCollapsed .navItem { justify-content: center; padding: 0.625rem 0; }

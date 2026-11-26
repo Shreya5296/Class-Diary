@@ -10,7 +10,7 @@ import { ScheduleDetailsSection } from './ScheduleDetailsSection';
 import { useEditStudentInitialData } from './useEditStudentInitialData';
 import { submitEditStudent } from './editStudentSubmitter';
 import { Button } from '../../components/buttons/Button';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { FormSkeleton } from '../../components/feedback/Skeleton';
 
 export interface EditStudentFormProps {
   student: Student;
@@ -106,7 +106,7 @@ export const EditStudentForm: React.FC<EditStudentFormProps> = ({ student, onSuc
     }
   };
 
-  if (loadingInitial) return <LoadingState message="Loading student details, schedule, and packages…" />;
+  if (loadingInitial) return <FormSkeleton />;
 
   return (
     <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>

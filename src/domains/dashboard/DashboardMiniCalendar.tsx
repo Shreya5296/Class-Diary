@@ -1,11 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import styles from './dashboardMiniCalendar.module.css';
 import { ClassSession } from '../classes/classTypes';
+import { WeeklyScheduleEntry } from '../classes/scheduleApi';
+import { Student } from '../students/studentTypes';
+import { Package } from '../packages/packageTypes';
 import { getSessionDate } from '../classes/sessionTimeNormalizer';
 import { toInputDateFormat } from '../../lib/dateFormat';
+import { generateCalendarEvents } from './calendarEventGenerator';
 
 export interface DashboardMiniCalendarProps {
   classes: ClassSession[];
+  schedules?: WeeklyScheduleEntry[];
+  students?: Student[];
+  packages?: Package[];
   selectedDateKey: string;
   onSelectDateKey: (dateKey: string) => void;
   activeTz?: string;
@@ -15,6 +22,9 @@ const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
 export const DashboardMiniCalendar: React.FC<DashboardMiniCalendarProps> = ({
   classes,
+  schedules,
+  students = [],
+  packages = [],
   selectedDateKey,
   onSelectDateKey,
   activeTz = 'Asia/Kolkata',
@@ -23,14 +33,38 @@ export const DashboardMiniCalendar: React.FC<DashboardMiniCalendarProps> = ({
   const [viewYear, setViewYear] = useState(() => Number(selectedDateKey.slice(0, 4)) || new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => (Number(selectedDateKey.slice(5, 7)) || (new Date().getMonth() + 1)) - 1);
 
+  const monthDates = useMemo(() => {
+    const dates: string[] = [];
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      dates.push(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    }
+    return dates;
+  }, [viewYear, viewMonth]);
+
   const scheduledDates = useMemo(() => {
     const set = new Set<string>();
-    classes.forEach((c) => {
-      const d = getSessionDate(c, activeTz);
-      if (d) set.add(d);
-    });
+    if (schedules && schedules.length > 0) {
+      const events = generateCalendarEvents({
+        datedSessions: classes,
+        recurringSchedules: schedules,
+        students,
+        packages,
+        weekDates: monthDates,
+        activeTz,
+      });
+      events.forEach((sess) => {
+        const d = sess.schedule_date || sess.class_date || (sess.scheduled_start ? sess.scheduled_start.slice(0, 10) : getSessionDate(sess, activeTz));
+        if (d) set.add(d);
+      });
+    } else {
+      classes.forEach((c) => {
+        const d = getSessionDate(c, activeTz);
+        if (d) set.add(d);
+      });
+    }
     return set;
-  }, [classes, activeTz]);
+  }, [classes, schedules, students, packages, monthDates, activeTz]);
 
   const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(viewYear, viewMonth, 1));
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();

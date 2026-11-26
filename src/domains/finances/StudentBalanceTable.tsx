@@ -23,22 +23,39 @@ export const StudentBalanceTable: React.FC<StudentBalanceTableProps> = ({ record
     {
       key: 'student_name',
       header: 'Student',
-      width: '22%',
+      width: '20%',
       render: (r) => (
         <div>
-          <span style={{ fontWeight: 600, color: 'var(--color-text-main)', display: 'block' }}>
-            {r.student_name}
-          </span>
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-subtle)' }}>
-            {r.student_id}
-          </span>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-main)', display: 'block' }}>{r.student_name}</span>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-subtle)' }}>{r.student_id}</span>
         </div>
       ),
     },
     {
+      key: 'perClassRate',
+      header: 'Per Class Rate',
+      width: '18%',
+      render: (r) => {
+        const rate = r.perClassRate;
+        if (!rate || !rate.hasRate) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: 'var(--color-text-main)' }}>
+              {rate.inrDisplay || '—'}
+            </span>
+            {rate.localDisplay && (
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                {rate.localDisplay}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       key: 'packageTotalsByCurrency',
       header: 'Lifetime Package Value',
-      width: '20%',
+      width: '16%',
       render: (r) => {
         const entries = Object.entries(r.packageTotalsByCurrency);
         if (entries.length === 0) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
@@ -56,7 +73,7 @@ export const StudentBalanceTable: React.FC<StudentBalanceTableProps> = ({ record
     {
       key: 'paymentTotalsByCurrency',
       header: 'Lifetime Payments Received',
-      width: '20%',
+      width: '16%',
       render: (r) => {
         const entries = Object.entries(r.paymentTotalsByCurrency);
         if (entries.length === 0) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
@@ -74,38 +91,17 @@ export const StudentBalanceTable: React.FC<StudentBalanceTableProps> = ({ record
     {
       key: 'outstandingBalance',
       header: 'Outstanding Balance',
-      width: '18%',
+      width: '15%',
       render: (r) => {
-        const allCurrencies = Array.from(new Set([
-          ...Object.keys(r.packageTotalsByCurrency),
-          ...Object.keys(r.paymentTotalsByCurrency),
-        ]));
+        const allCurrencies = Array.from(new Set([...Object.keys(r.packageTotalsByCurrency), ...Object.keys(r.paymentTotalsByCurrency)]));
         if (allCurrencies.length === 0) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {allCurrencies.map((cur) => {
-              const billed = r.packageTotalsByCurrency[cur] || 0;
-              const paid = r.paymentTotalsByCurrency[cur] || 0;
-              const diff = billed - paid;
-              if (diff > 0) {
-                return (
-                  <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: '#dc2626' }}>
-                    {formatCurrency(diff, true, cur)} due
-                  </span>
-                );
-              }
-              if (diff === 0) {
-                return (
-                  <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#16a34a' }}>
-                    ✓ Settled
-                  </span>
-                );
-              }
-              return (
-                <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#2563eb' }}>
-                  {formatCurrency(Math.abs(diff), true, cur)} credit
-                </span>
-              );
+              const diff = (r.packageTotalsByCurrency[cur] || 0) - (r.paymentTotalsByCurrency[cur] || 0);
+              if (diff > 0) return <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: '#dc2626' }}>{formatCurrency(diff, true, cur)} due</span>;
+              if (diff === 0) return <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#16a34a' }}>✓ Settled</span>;
+              return <span key={cur} style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#2563eb' }}>{formatCurrency(Math.abs(diff), true, cur)} credit</span>;
             })}
           </div>
         );
@@ -114,7 +110,7 @@ export const StudentBalanceTable: React.FC<StudentBalanceTableProps> = ({ record
     {
       key: 'paymentCount',
       header: 'Payment Activity',
-      width: '20%',
+      width: '15%',
       render: (r) => (
         <div>
           <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', display: 'block' }}>

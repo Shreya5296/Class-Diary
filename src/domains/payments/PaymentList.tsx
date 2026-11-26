@@ -5,7 +5,7 @@ import { fetchPayments } from './paymentApi';
 import { DataTable, Column } from '../../components/tables/DataTable';
 import { formatCurrency } from '../../lib/currencyFormat';
 import { formatDate } from '../../lib/dateFormat';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { StudentsTableSkeleton } from '../../components/feedback/Skeleton';
 import { EmptyState } from '../../components/feedback/EmptyState';
 
 export const PaymentList: React.FC<{ studentId?: string }> = ({ studentId }) => {
@@ -64,7 +64,7 @@ export const PaymentList: React.FC<{ studentId?: string }> = ({ studentId }) => 
     },
   ];
 
-  if (loading) return <LoadingState message="Loading payment transactions…" />;
+  if (loading) return <StudentsTableSkeleton />;
   if (payments.length === 0) return <EmptyState title="No payments recorded" description="No transactions in the ledger." />;
 
   return (

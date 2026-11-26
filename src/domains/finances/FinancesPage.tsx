@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { PageHeader } from '../../layout/PageHeader';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { FinancesSkeleton } from '../../components/feedback/Skeleton';
 import { FinanceTab } from './financeTypes';
 import { FinanceSummaryCards } from './FinanceSummaryCards';
 import { FinanceToolbar } from './FinanceToolbar';
@@ -37,10 +37,6 @@ export const FinancesPage: React.FC = () => {
     return subscribePendingPayments(updateCounts);
   }, [adminId]);
 
-  if (loading && !summary && filteredPayments.length === 0) {
-    return <LoadingState message="Loading financial records…" />;
-  }
-
   const handlePaymentSuccess = async (msg: string) => {
     setIsAddPaymentOpen(false);
     setSuccessBanner(msg);
@@ -48,75 +44,79 @@ export const FinancesPage: React.FC = () => {
     await refresh();
   };
 
+  const isInitialLoading = loading && !summary && filteredPayments.length === 0;
+
   return (
     <div>
       <PageHeader title="Finances" subtitle="Unified ledger of agreed packages, received tuition, and student payment history." />
-      {successBanner && <div style={successBannerStyle}>✓ {successBanner}</div>}
-      {pendingCount > 0 && (
-        <div style={pendingBannerStyle}>
-          ⚠️ You have {pendingCount} unverified payment attempt{pendingCount > 1 ? 's' : ''} in progress.{' '}
-          <button type="button" onClick={() => setIsAddPaymentOpen(true)} style={bannerLinkStyle}>
-            Review &amp; Resolve Now →
-          </button>
-        </div>
-      )}
-      {otherAdminCount > 0 && (
-        <div style={otherAdminBannerStyle}>
-          ℹ️ {otherAdminCount} unverified payment attempt{otherAdminCount > 1 ? 's are' : ' is'} recorded by another administrator session on this device.
-        </div>
-      )}
-      <FinanceSummaryCards summary={summary} currencyTotals={currencyTotals} payments={payments} />
-      <FinanceToolbar
-        filter={filter} onFilterChange={setFilter}
-        onExportCsv={() => exportFinancesCsv(summary, filteredPayments, currencyTotals)}
-        onAddPayment={() => setIsAddPaymentOpen(true)}
-      />
-
-      <div role="tablist" aria-label="Finances ledger views" style={tabContainerStyle}>
-        <button
-          type="button" role="tab" id="tab-balances"
-          aria-selected={activeTab === 'balances'} aria-controls="panel-balances"
-          tabIndex={activeTab === 'balances' ? 0 : -1} onClick={() => setActiveTab('balances')}
-          style={getTabButtonStyle(activeTab === 'balances')}
-        >
-          <span>Student Balances</span>
-          <span style={countBadgeStyle}>{studentBalances.length}</span>
-        </button>
-        <button
-          type="button" role="tab" id="tab-history"
-          aria-selected={activeTab === 'history'} aria-controls="panel-history"
-          tabIndex={activeTab === 'history' ? 0 : -1} onClick={() => setActiveTab('history')}
-          style={getTabButtonStyle(activeTab === 'history')}
-        >
-          <span>Payment History</span>
-          <span style={countBadgeStyle}>{filteredPayments.length}</span>
-        </button>
-      </div>
-
-      {activeTab === 'balances' ? (
-        <div id="panel-balances" role="tabpanel" aria-labelledby="tab-balances">
-          <StudentBalanceTable records={studentBalances} />
-        </div>
+      {isInitialLoading ? (
+        <FinancesSkeleton />
       ) : (
-        <div id="panel-history" role="tabpanel" aria-labelledby="tab-history">
-          <FinancialHistoryTable payments={filteredPayments} />
-        </div>
-      )}
+        <>
+          {successBanner && <div style={successBannerStyle}>✓ {successBanner}</div>}
+          {pendingCount > 0 && (
+            <div style={pendingBannerStyle}>
+              ⚠️ You have {pendingCount} unverified payment attempt{pendingCount > 1 ? 's' : ''} in progress.{' '}
+              <button type="button" onClick={() => setIsAddPaymentOpen(true)} style={bannerLinkStyle}>
+                Review &amp; Resolve Now →
+              </button>
+            </div>
+          )}
+          {otherAdminCount > 0 && (
+            <div style={otherAdminBannerStyle}>
+              ℹ️ {otherAdminCount} unverified payment attempt{otherAdminCount > 1 ? 's are' : ' is'} recorded by another administrator session on this device.
+            </div>
+          )}
+          <FinanceSummaryCards summary={summary} currencyTotals={currencyTotals} payments={payments} />
+          <FinanceToolbar
+            filter={filter} onFilterChange={setFilter}
+            onExportCsv={() => exportFinancesCsv(summary, filteredPayments, currencyTotals)}
+            onAddPayment={() => setIsAddPaymentOpen(true)}
+          />
 
-      <AddPaymentModal
-        isOpen={isAddPaymentOpen} token={token} packages={packages}
-        onClose={() => setIsAddPaymentOpen(false)} onSuccess={handlePaymentSuccess}
-      />
+          <div role="tablist" aria-label="Finances ledger views" style={tabContainerStyle}>
+            <button
+              type="button" role="tab" id="tab-balances"
+              aria-selected={activeTab === 'balances'} aria-controls="panel-balances"
+              tabIndex={activeTab === 'balances' ? 0 : -1} onClick={() => setActiveTab('balances')}
+              style={getTabButtonStyle(activeTab === 'balances')}
+            >
+              <span>Student Balances</span>
+              <span style={countBadgeStyle}>{studentBalances.length}</span>
+            </button>
+            <button
+              type="button" role="tab" id="tab-history"
+              aria-selected={activeTab === 'history'} aria-controls="panel-history"
+              tabIndex={activeTab === 'history' ? 0 : -1} onClick={() => setActiveTab('history')}
+              style={getTabButtonStyle(activeTab === 'history')}
+            >
+              <span>Payment History</span>
+              <span style={countBadgeStyle}>{filteredPayments.length}</span>
+            </button>
+          </div>
+
+          {activeTab === 'balances' ? (
+            <div id="panel-balances" role="tabpanel" aria-labelledby="tab-balances">
+              <StudentBalanceTable records={studentBalances} />
+            </div>
+          ) : (
+            <div id="panel-history" role="tabpanel" aria-labelledby="tab-history">
+              <FinancialHistoryTable payments={filteredPayments} />
+            </div>
+          )}
+
+          <AddPaymentModal
+            isOpen={isAddPaymentOpen} token={token} packages={packages}
+            onClose={() => setIsAddPaymentOpen(false)} onSuccess={handlePaymentSuccess}
+          />
+        </>
+      )}
     </div>
   );
 };
 
-const tabContainerStyle: React.CSSProperties = {
-  display: 'flex', gap: 'var(--space-2)', borderBottom: '1px solid var(--color-border)', marginBottom: 'var(--space-4)',
-};
-const countBadgeStyle: React.CSSProperties = {
-  fontSize: '11px', padding: '1px 6px', borderRadius: '10px', backgroundColor: 'var(--color-bg-subtle)', color: 'inherit', fontWeight: 600,
-};
+const tabContainerStyle: React.CSSProperties = { display: 'flex', gap: 'var(--space-2)', borderBottom: '1px solid var(--color-border)', marginBottom: 'var(--space-4)' };
+const countBadgeStyle: React.CSSProperties = { fontSize: '11px', padding: '1px 6px', borderRadius: '10px', backgroundColor: 'var(--color-bg-subtle)', color: 'inherit', fontWeight: 600 };
 const successBannerStyle: React.CSSProperties = {
   padding: '10px 14px', backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0',
   borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)', fontSize: 'var(--font-size-sm)', fontWeight: 500,

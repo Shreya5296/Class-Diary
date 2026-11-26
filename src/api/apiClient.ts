@@ -9,13 +9,26 @@ export interface RequestOptions {
   requestId?: string;
   idempotencyKey?: string;
   timeoutMs?: number;
+  skipCache?: boolean;
 }
 
 const inFlightMap = new Map<string, Promise<ApiResponse<any>>>();
+const apiCache = new Map<string, { data: ApiResponse<any>; timestamp: number }>();
+const CACHE_TTL_MS = 30000;
+
+export function clearApiCache(): void {
+  apiCache.clear();
+}
 
 function isReadOnlyOp(op: string, idempKey?: string): boolean {
   if (idempKey) return false;
-  return op.endsWith('.list') || op.endsWith('.get') || op.endsWith('.overview') || op.endsWith('.getBalance');
+  return (
+    op.endsWith('.list') ||
+    op.endsWith('.get') ||
+    op.endsWith('.overview') ||
+    op.endsWith('.getBalance') ||
+    op.endsWith('.financialSummary')
+  );
 }
 
 export async function sendApiRequest<T = unknown>(
@@ -27,15 +40,27 @@ export async function sendApiRequest<T = unknown>(
   const url = config.appsScriptUrl;
   const requestId = options.requestId || generateRequestId();
   const idempKey = options.idempotencyKey || (payload.idempotency_key as string | undefined) || undefined;
+  const isReadOnly = isReadOnlyOp(operation, idempKey);
+  const cacheKey = isReadOnly ? `${operation}:${JSON.stringify(payload)}:${options.token || ''}` : '';
 
-  if (config.useMockData) {
-    return handleMockApiRequest<T>(operation, payload, requestId);
+  if (!isReadOnly) {
+    apiCache.clear();
+  } else if (!options.skipCache) {
+    const cached = apiCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data as ApiResponse<T>;
+    }
   }
 
-  const isDedupe = isReadOnlyOp(operation, idempKey);
-  const cacheKey = isDedupe ? `${operation}:${JSON.stringify(payload)}:${options.token || ''}` : '';
+  if (config.useMockData) {
+    const res = await handleMockApiRequest<T>(operation, payload, requestId);
+    if (isReadOnly && res && res.ok) {
+      apiCache.set(cacheKey, { data: res, timestamp: Date.now() });
+    }
+    return res;
+  }
 
-  if (isDedupe && inFlightMap.has(cacheKey)) {
+  if (isReadOnly && inFlightMap.has(cacheKey)) {
     return inFlightMap.get(cacheKey) as Promise<ApiResponse<T>>;
   }
 
@@ -85,6 +110,9 @@ export async function sendApiRequest<T = unknown>(
       if (!json.ok && json.error) {
         throw new ApiClientError(json.error, json.meta?.requestId || requestId);
       }
+      if (isReadOnly && json.ok) {
+        apiCache.set(cacheKey, { data: json, timestamp: Date.now() });
+      }
       return json;
     } catch (err: unknown) {
       clearTimeout(timeoutId);
@@ -96,11 +124,11 @@ export async function sendApiRequest<T = unknown>(
       const rawMsg = (err as Error)?.message || '';
       throw new ApiNetworkError(rawMsg ? `Network request failed: ${rawMsg}` : 'Network request failed', err);
     } finally {
-      if (isDedupe) inFlightMap.delete(cacheKey);
+      if (isReadOnly) inFlightMap.delete(cacheKey);
     }
   };
 
   const promise = exec();
-  if (isDedupe) inFlightMap.set(cacheKey, promise);
+  if (isReadOnly) inFlightMap.set(cacheKey, promise);
   return promise;
 }

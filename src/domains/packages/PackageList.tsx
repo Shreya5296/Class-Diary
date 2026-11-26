@@ -8,7 +8,7 @@ import { DataTable, Column } from '../../components/tables/DataTable';
 import { formatCurrency } from '../../lib/currencyFormat';
 import { formatDate } from '../../lib/dateFormat';
 import { Button } from '../../components/buttons/Button';
-import { LoadingState } from '../../components/feedback/LoadingState';
+import { StudentsTableSkeleton } from '../../components/feedback/Skeleton';
 import { EmptyState } from '../../components/feedback/EmptyState';
 
 export interface PackageListProps {
@@ -92,7 +92,7 @@ export const PackageList: React.FC<PackageListProps> = ({ studentId, onRenew }) 
         </div>
       )}
 
-      {loading && <LoadingState message="Loading packages…" />}
+      {loading && <StudentsTableSkeleton />}
       {!loading && packages.length === 0 && <EmptyState title="No packages allocated" description="Create a package to assign classes to this student." />}
       {!loading && packages.length > 0 && <DataTable fixedLayout columns={columns} data={packages} keyExtractor={(p) => p.package_id || `${p.student_id}_${p.start_date}`} />}
     </div>
