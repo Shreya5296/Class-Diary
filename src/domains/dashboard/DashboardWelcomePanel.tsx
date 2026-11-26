@@ -5,7 +5,6 @@ import { getUserProfileIdentity } from '../../auth/userProfileStorage';
 import { saveStoredProfileImage, deleteStoredProfileImage } from './profileImageStorage';
 import { useProfileImage } from './useProfileImage';
 import { ProfilePictureModal } from './ProfilePictureModal';
-import { DashboardLiveClock } from './DashboardLiveClock';
 
 export const DashboardWelcomePanel: React.FC = () => {
   const { user } = useAuth();
@@ -63,17 +62,13 @@ export const DashboardWelcomePanel: React.FC = () => {
           </button>
         </div>
 
-        {/* RIGHT COLUMN: Greeting, Subtitle, and Date/Time pill */}
+        {/* RIGHT COLUMN: Greeting & Subtitle */}
         <div className={styles.contentColumn}>
           <div className={styles.greetingGroup}>
             <h2 className={styles.greetingTitle}>
               Welcome back, <span className={styles.userName}>{displayName}!</span>
             </h2>
             <p className={styles.supportingText}>Here&apos;s what&apos;s happening today.</p>
-          </div>
-
-          <div className={styles.clockRow}>
-            <DashboardLiveClock />
           </div>
         </div>
       </div>

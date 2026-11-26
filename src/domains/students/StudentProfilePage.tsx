@@ -58,7 +58,7 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
   const actionWord = isInactive ? 'reactivate' : 'archive';
 
   return (
-    <div>
+    <div style={{ paddingTop: '1.75rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
         <Button variant="outline" size="sm" onClick={onBack}>
           <ArrowLeftIcon size={14} /> Back to Directory

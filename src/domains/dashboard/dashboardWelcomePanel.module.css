@@ -53,12 +53,11 @@
 .avatarEditBtn:hover { background: #1d4ed8; transform: scale(1.08); }
 .avatarEditBtn:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; opacity: 1; pointer-events: auto; }
 
-.contentColumn { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; flex: 1; }
+.contentColumn { display: flex; flex-direction: column; gap: 0.35rem; justify-content: center; min-width: 0; flex: 1; }
 .greetingGroup { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
 .greetingTitle { margin: 0; font-size: 1.35rem; font-weight: 500; color: #f1f5f9; letter-spacing: -0.02em; line-height: 1.25; }
 .userName { font-weight: 700; color: #ffffff; background: linear-gradient(135deg, #ffffff 40%, #93c5fd 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .supportingText { margin: 0; font-size: var(--font-size-sm); color: #cbd5e1; font-weight: 400; line-height: 1.4; }
-.clockRow { display: flex; align-items: center; }
 
 @media (max-width: 900px) {
   .avatarContainer, .avatarCircle { width: 84px; height: 84px; }

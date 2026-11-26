@@ -41,7 +41,11 @@ export const StudentsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      setStudents(await fetchStudents({ query: debouncedQuery }, token));
+      const [stuList] = await Promise.all([
+        fetchStudents({ query: debouncedQuery }, token),
+        aggregates.refetch(),
+      ]);
+      setStudents(stuList);
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to load students');
     } finally {
@@ -54,32 +58,12 @@ export const StudentsPage: React.FC = () => {
   const activeCount = useMemo(() => filterStudentsByTab(students, 'ACTIVE', aggregates.getStudentBalance).length, [students, aggregates.getStudentBalance]);
   const inactiveCount = students.length - activeCount;
 
-  const handleStatusFilterChange = (val: string) => {
-    setActiveTab(val === 'ACTIVE' ? 'ACTIVE' : val === 'INACTIVE' ? 'INACTIVE' : 'ALL');
-  };
-
-  const handleFeedback = (msg: string) => {
-    setFeedback(msg);
-    setRefreshKey((k) => k + 1);
-    setTimeout(() => setFeedback(null), 4000);
-    loadStudents();
-  };
-
-  const handleEditSuccess = async (updated: Student, msg: string) => {
-    if (selectedStudent) setSelectedStudent(updated);
-    setEditingStudent(null);
-    handleFeedback(msg || 'Student details saved successfully');
-  };
-
-  const handleRegistrationSuccess = async (_s: Student, msg: string) => {
-    setIsCreating(false);
-    handleFeedback(msg);
-  };
-
+  const handleStatusFilterChange = (val: string) => setActiveTab(val === 'ACTIVE' ? 'ACTIVE' : val === 'INACTIVE' ? 'INACTIVE' : 'ALL');
+  const handleFeedback = (msg: string) => { setFeedback(msg); setRefreshKey((k) => k + 1); setTimeout(() => setFeedback(null), 4000); loadStudents(); };
+  const handleEditSuccess = async (updated: Student, msg: string) => { if (selectedStudent) setSelectedStudent(updated); setEditingStudent(null); handleFeedback(msg || 'Student details saved successfully'); };
+  const handleRegistrationSuccess = async (_s: Student, msg: string) => { setIsCreating(false); handleFeedback(msg); };
   const handleRenewalSuccess = async (_res: RenewalResult, msg: string) => {
-    setIsRenewing(false);
-    setRenewingStudent(null);
-    handleFeedback(msg);
+    setIsRenewing(false); setRenewingStudent(null); handleFeedback(msg);
     if (selectedStudent) {
       const refreshed = await fetchStudents({ query: selectedStudent.student_id }, token);
       if (refreshed.length > 0) setSelectedStudent(refreshed[0]);
@@ -106,6 +90,7 @@ export const StudentsPage: React.FC = () => {
   }
 
   const statusDropdownVal = activeTab === 'ACTIVE' ? 'ACTIVE' : activeTab === 'INACTIVE' ? 'INACTIVE' : '';
+  const isInitialLoading = (loading || aggregates.loading) && students.length === 0;
 
   return (
     <div>
@@ -127,9 +112,9 @@ export const StudentsPage: React.FC = () => {
       {isCreating && <AddStudentModal onSuccess={handleRegistrationSuccess} onClose={() => setIsCreating(false)} />}
       {editingStudent && <EditStudentModal student={editingStudent} onSuccess={handleEditSuccess} onClose={() => setEditingStudent(null)} />}
       {isRenewing && <StudentRenewalModal initialStudent={renewingStudent} onSuccess={handleRenewalSuccess} onClose={closeRenewal} />}
-      {loading && students.length === 0 && <StudentsTableSkeleton />}
+      {isInitialLoading && <StudentsTableSkeleton />}
       {error && !loading && students.length === 0 && <ErrorState message={error} onRetry={loadStudents} />}
-      {(!loading || students.length > 0) && (
+      {!isInitialLoading && (
         <StudentList
           key={refreshKey}
           students={students}
