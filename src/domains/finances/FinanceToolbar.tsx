@@ -5,7 +5,7 @@ import { Button } from '../../components/buttons/Button';
 export interface FinanceToolbarProps {
   filter: FinanceFilter;
   onFilterChange: (newFilter: FinanceFilter) => void;
-  onExportCsv: () => void;
+  onExportCsv?: () => void;
   onAddPayment?: () => void;
   onRecordPayment?: () => void;
   isExporting?: boolean;
@@ -14,10 +14,8 @@ export interface FinanceToolbarProps {
 export const FinanceToolbar: React.FC<FinanceToolbarProps> = ({
   filter,
   onFilterChange,
-  onExportCsv,
   onAddPayment,
   onRecordPayment,
-  isExporting = false,
 }) => {
   return (
     <div
@@ -49,46 +47,20 @@ export const FinanceToolbar: React.FC<FinanceToolbarProps> = ({
         />
 
         <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-          <label style={{ fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-text-muted)' }}>
-            <span>From:</span>
+          <label style={{ fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+            <span>Month:</span>
             <input
-              type="date"
-              value={filter.startDate || ''}
-              onChange={(e) => onFilterChange({ ...filter, startDate: e.target.value })}
-              style={dateInputStyle}
+              type="month"
+              aria-label="Filter payments by month"
+              value={filter.selectedMonth || ''}
+              onChange={(e) => onFilterChange({ ...filter, selectedMonth: e.target.value })}
+              style={monthInputStyle}
             />
           </label>
-          <label style={{ fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-text-muted)' }}>
-            <span>To:</span>
-            <input
-              type="date"
-              value={filter.endDate || ''}
-              onChange={(e) => onFilterChange({ ...filter, endDate: e.target.value })}
-              style={dateInputStyle}
-            />
-          </label>
-          {(filter.startDate || filter.endDate || filter.search) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onFilterChange({})}
-              style={{ fontSize: 'var(--font-size-xs)', padding: '0.25rem 0.5rem' }}
-            >
-              Reset
-            </Button>
-          )}
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-        <Button variant="outline" size="sm" onClick={onExportCsv} disabled={isExporting}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          <span>Export Finances CSV</span>
-        </Button>
         {(onAddPayment || onRecordPayment) && (
           <Button variant="primary" size="sm" onClick={onAddPayment || onRecordPayment}>
             + Add Payment
@@ -99,11 +71,13 @@ export const FinanceToolbar: React.FC<FinanceToolbarProps> = ({
   );
 };
 
-const dateInputStyle: React.CSSProperties = {
-  padding: '0.375rem 0.5rem',
+const monthInputStyle: React.CSSProperties = {
+  padding: '0.45rem 0.65rem',
   borderRadius: 'var(--radius-md)',
   border: '1px solid var(--color-border)',
-  fontSize: 'var(--font-size-xs)',
+  fontSize: 'var(--font-size-sm)',
   backgroundColor: 'var(--color-bg-surface)',
   color: 'var(--color-text-main)',
+  cursor: 'pointer',
+  minWidth: '150px',
 };

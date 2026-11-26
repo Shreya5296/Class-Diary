@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchPackages } from '../packages/packageApi';
 import { fetchPayments } from '../payments/paymentApi';
 import { calculateStudentFinancialBalances, CurrencyFinancialBalance } from '../finances/studentFinancialAccounting';
+import { calculateStudentPerClassRate, StudentPerClassRateResult } from '../finances/packageRateCalculator';
 import { StudentFinancialCardView } from './StudentFinancialCardView';
 
 export interface StudentFinancialSummaryCardProps {
@@ -15,6 +16,7 @@ export const StudentFinancialSummaryCard: React.FC<StudentFinancialSummaryCardPr
 }) => {
   const [loading, setLoading] = useState(true);
   const [balances, setBalances] = useState<CurrencyFinancialBalance[]>([]);
+  const [rateResult, setRateResult] = useState<StudentPerClassRateResult | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -25,11 +27,13 @@ export const StudentFinancialSummaryCard: React.FC<StudentFinancialSummaryCardPr
     ]).then(([pkgs, pays]) => {
       if (!active) return;
       const calculated = calculateStudentFinancialBalances(pkgs, pays, studentId);
+      const rate = calculateStudentPerClassRate(studentId, pkgs, pays);
       setBalances(calculated);
+      setRateResult(rate);
       setLoading(false);
     });
     return () => { active = false; };
   }, [studentId, token, refreshKey]);
 
-  return <StudentFinancialCardView balances={balances} loading={loading} />;
+  return <StudentFinancialCardView balances={balances} rateResult={rateResult} loading={loading} />;
 };

@@ -1,14 +1,17 @@
 import React from 'react';
 import { CurrencyFinancialBalance } from '../finances/studentFinancialAccounting';
+import { StudentPerClassRateResult } from '../finances/packageRateCalculator';
 import { formatCurrency } from '../../lib/currencyFormat';
 
 export interface StudentFinancialCardViewProps {
   balances: CurrencyFinancialBalance[];
+  rateResult?: StudentPerClassRateResult | null;
   loading?: boolean;
 }
 
 export const StudentFinancialCardView: React.FC<StudentFinancialCardViewProps> = ({
   balances,
+  rateResult,
   loading = false,
 }) => {
   if (loading) {
@@ -26,6 +29,22 @@ export const StudentFinancialCardView: React.FC<StudentFinancialCardViewProps> =
       </div>
     );
   }
+
+  const renderRateDisplay = (b: CurrencyFinancialBalance) => {
+    if (!rateResult || !rateResult.hasRate) {
+      return '—';
+    }
+    const isForeign = b.currency !== 'INR';
+    if (isForeign) {
+      if (rateResult.localDisplay && rateResult.localDisplay !== '—') {
+        return rateResult.inrDisplay && rateResult.inrDisplay !== '—'
+          ? `${rateResult.localDisplay} (${rateResult.inrDisplay})`
+          : rateResult.localDisplay;
+      }
+      return '—';
+    }
+    return rateResult.inrDisplay || '—';
+  };
 
   return (
     <div
@@ -63,7 +82,7 @@ export const StudentFinancialCardView: React.FC<StudentFinancialCardViewProps> =
               key={b.currency}
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
                 gap: 'var(--space-3)',
                 padding: '0.875rem 1rem',
                 backgroundColor: 'var(--color-bg-subtle)',
@@ -105,6 +124,15 @@ export const StudentFinancialCardView: React.FC<StudentFinancialCardViewProps> =
                 </span>
                 <strong style={{ fontSize: 'var(--font-size-md)', fontVariantNumeric: 'tabular-nums', color: b.availableCredit > 0 ? '#2563eb' : 'var(--color-text-muted)' }}>
                   {b.availableCredit > 0 ? `${formatCurrency(b.availableCredit, true, b.currency)} credit` : 'None'}
+                </strong>
+              </div>
+
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Per-Class Rate ({b.currency})
+                </span>
+                <strong style={{ fontSize: 'var(--font-size-md)', fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-main)' }}>
+                  {renderRateDisplay(b)}
                 </strong>
               </div>
             </div>

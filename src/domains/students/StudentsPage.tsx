@@ -41,10 +41,7 @@ export const StudentsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [stuList] = await Promise.all([
-        fetchStudents({ query: debouncedQuery }, token),
-        aggregates.refetch(),
-      ]);
+      const stuList = await fetchStudents({ query: debouncedQuery }, token);
       setStudents(stuList);
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to load students');

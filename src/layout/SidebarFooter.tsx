@@ -18,7 +18,7 @@ export interface SidebarFooterProps {
 }
 
 export const SidebarFooter: React.FC<SidebarFooterProps> = ({
-  user,
+  user: _user,
   profileImage,
   displayName,
   initials,
@@ -39,7 +39,6 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
         </div>
         <div className={`${footerStyles.userInfo} ${isCollapsed ? footerStyles.userInfoCollapsed : ''}`}>
           <span className={footerStyles.userName} title={displayName}>{displayName}</span>
-          <span className={footerStyles.userEmail}>{user.email || 'Administrator'}</span>
           <DashboardLiveClock variant="sidebar" />
         </div>
       </div>

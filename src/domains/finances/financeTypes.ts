@@ -23,6 +23,7 @@ export interface FinancialSummary {
 
 export interface FinanceFilter {
   search?: string;
+  selectedMonth?: string;
   startDate?: string;
   endDate?: string;
 }

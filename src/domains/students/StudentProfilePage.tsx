@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { Student } from './studentTypes';
-import { archiveStudent, reactivateStudent } from './studentApi';
 import { StudentSummary } from './StudentSummary';
 import { StudentFinancialSummaryCard } from './StudentFinancialSummaryCard';
 import { Button } from '../../components/buttons/Button';
-import { ConfirmDialog } from '../../components/overlays/ConfirmDialog';
 import { ArrowLeftIcon } from '../../components/icons/ActionIcons';
 import { PackageList } from '../packages/PackageList';
 import { PaymentList } from '../payments/PaymentList';
@@ -22,40 +20,16 @@ export interface StudentProfilePageProps {
 type TabType = 'packages' | 'payments' | 'classes';
 
 export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
-  student, onBack, onEdit, onRenew, onUpdate,
+  student, onBack, onEdit, onRenew,
 }) => {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('packages');
-  const [isArchiving, setIsArchiving] = useState(false);
-  const [showConfirmArchive, setShowConfirmArchive] = useState(false);
-  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   const tabs: { id: TabType; label: string }[] = [
     { id: 'packages', label: 'Packages & Balances' },
     { id: 'payments', label: 'Payment History' },
     { id: 'classes', label: 'Classes & Attendance' },
   ];
-
-  const handleToggleArchive = async () => {
-    const isInactive = student.status === 'INACTIVE';
-    setIsArchiving(true);
-    setArchiveError(null);
-    try {
-      const res = isInactive
-        ? await reactivateStudent(student.student_id, token)
-        : await archiveStudent(student.student_id, token);
-      const updated = { ...student, ...res, status: isInactive ? 'ACTIVE' : 'INACTIVE' };
-      if (onUpdate) onUpdate(updated);
-      setShowConfirmArchive(false);
-    } catch (err: unknown) {
-      setArchiveError((err as Error).message || 'Failed to update student status');
-    } finally {
-      setIsArchiving(false);
-    }
-  };
-
-  const isInactive = student.status === 'INACTIVE';
-  const actionWord = isInactive ? 'reactivate' : 'archive';
 
   return (
     <div style={{ paddingTop: '1.75rem' }}>
@@ -69,9 +43,6 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
               Renew Package
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => setShowConfirmArchive(true)}>
-            {isInactive ? 'Reactivate Student' : 'Archive Student'}
-          </Button>
           <Button variant="primary" size="sm" onClick={onEdit}>
             Edit Profile
           </Button>
@@ -113,17 +84,6 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
         {activeTab === 'payments' && <PaymentList studentId={student.student_id} />}
         {activeTab === 'classes' && <ClassSchedule studentId={student.student_id} />}
       </div>
-
-      <ConfirmDialog
-        isOpen={showConfirmArchive}
-        title={`${isInactive ? 'Reactivate' : 'Archive'} Student Record?`}
-        message={archiveError ? `⚠️ ${archiveError}` : `Are you sure you want to ${actionWord} ${student.student_name || student.full_name}? ${isInactive ? 'They will reappear in active directories.' : 'They will be moved to inactive records.'}`}
-        confirmLabel={isInactive ? 'Reactivate' : 'Archive'}
-        isDestructive={!isInactive}
-        isLoading={isArchiving}
-        onConfirm={handleToggleArchive}
-        onCancel={() => { setShowConfirmArchive(false); setArchiveError(null); }}
-      />
     </div>
   );
 };

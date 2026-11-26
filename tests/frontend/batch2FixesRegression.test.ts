@@ -243,9 +243,9 @@ describe('Fix Batch 2 Comprehensive Verification', () => {
       const fs = await import('fs');
       const content = fs.readFileSync('src/domains/finances/FinanceSummaryCards.tsx', 'utf8');
 
-      expect(content).toContain('Lifetime Package Value');
-      expect(content).toContain('Lifetime Payments Received');
-      expect(content).toContain('Recorded INR Value');
+      expect(content).toContain('Lifetime Earnings');
+      expect(content).toContain('Yearly Earnings');
+      expect(content).toContain('Monthly Earnings');
       expect(content).not.toContain('Total Outstanding');
       expect(content).not.toContain('Collection Performance');
       expect(content).not.toContain('collectionRate');

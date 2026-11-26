@@ -1,7 +1,6 @@
 import React from 'react';
 import { Student } from './studentTypes';
 import { formatStatusBadge } from '../../lib/textFormat';
-import { formatDate } from '../../lib/dateFormat';
 import { MeetingLinkButton } from '../meeting-links/MeetingLinkButton';
 
 export interface StudentSummaryProps {
@@ -49,7 +48,7 @@ export const StudentSummary: React.FC<StudentSummaryProps> = ({ student }) => {
               {name}
             </h2>
             <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: '2px', display: 'block' }}>
-              Student ID: <code>{student.student_id}</code> • Registered {formatDate(student.created_at)}
+              Student ID: <code>{student.student_id}</code>
             </span>
           </div>
         </div>

@@ -7,13 +7,20 @@ import { fetchFinancialSummary } from '../reports/reportApi';
 import { fetchPayments } from '../payments/paymentApi';
 import { fetchPackages } from '../packages/packageApi';
 import { sortPaymentsByDateDescending } from './financeSorting';
+import { toInputDateFormat } from '../../lib/dateFormat';
+import { getSavedTimezone } from '../../lib/userPreferences';
 
 export function useFinancesData(token?: string | null) {
+  const activeTz = getSavedTimezone() || 'Asia/Kolkata';
+  const currentMonthDefault = useMemo(() => toInputDateFormat(new Date(), activeTz).slice(0, 7), [activeTz]);
+
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FinanceFilter>({});
+  const [filter, setFilter] = useState<FinanceFilter>(() => ({
+    selectedMonth: currentMonthDefault,
+  }));
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -58,13 +65,13 @@ export function useFinancesData(token?: string | null) {
 
   const filteredPayments = useMemo(() => {
     const q = (filter.search || '').trim().toLowerCase();
-    const start = filter.startDate;
-    const end = filter.endDate;
+    const targetMonth = filter.selectedMonth;
 
     const filtered = payments.filter((p) => {
       const pDate = p.payment_date ? String(p.payment_date).slice(0, 10) : '';
-      if (start && pDate && pDate < start) return false;
-      if (end && pDate && pDate > end) return false;
+      if (targetMonth && (!pDate || !pDate.startsWith(targetMonth))) {
+        return false;
+      }
       if (q) {
         const name = (p.student_name || '').toLowerCase();
         const sid = (p.student_id || '').toLowerCase();
