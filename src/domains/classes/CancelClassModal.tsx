@@ -29,9 +29,7 @@ export const CancelClassModal: React.FC<CancelClassModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isLoading) {
-        onCancel();
-      }
+      if (e.key === 'Escape' && !isLoading) onCancel();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -61,18 +59,48 @@ export const CancelClassModal: React.FC<CancelClassModalProps> = ({
         if (e.target === e.currentTarget && !isLoading) onCancel();
       }}
     >
-      <div className={styles.dialog} style={{ maxWidth: '440px', width: '90%' }}>
-        <h2 id="cancel-dialog-title" className={styles.title}>
+      <div
+        className={styles.dialog}
+        style={{
+          maxWidth: '560px',
+          width: '92%',
+          padding: '1.75rem 2rem',
+          boxSizing: 'border-box',
+          textAlign: 'left',
+        }}
+      >
+        <h2 id="cancel-dialog-title" className={styles.title} style={{ textAlign: 'left', margin: '0 0 var(--space-2)' }}>
           Cancel Class Session
         </h2>
-        <p className={styles.body} style={{ marginBottom: 'var(--space-3)' }}>
+        <p
+          className={styles.body}
+          style={{
+            textAlign: 'left',
+            margin: '0 0 var(--space-5)',
+            lineHeight: 1.5,
+            width: '100%',
+            maxWidth: '100%',
+            minWidth: 0,
+            overflowWrap: 'break-word',
+            wordBreak: 'normal',
+            whiteSpace: 'normal',
+            boxSizing: 'border-box',
+          }}
+        >
           Please specify the reason for cancelling this session. The reason will be recorded on the session history.
         </p>
 
-        <div style={{ marginBottom: 'var(--space-4)' }}>
+        <div style={{ marginBottom: 'var(--space-5)', width: '100%' }}>
           <label
             htmlFor="cancellation-reason-input"
-            style={{ display: 'block', fontSize: 'var(--font-size-xs)', fontWeight: 600, marginBottom: '4px', color: 'var(--color-text-main)' }}
+            style={{
+              display: 'block',
+              fontSize: 'var(--font-size-sm)',
+              fontWeight: 600,
+              marginBottom: '6px',
+              color: 'var(--color-text-main)',
+              textAlign: 'left',
+            }}
           >
             Cancellation Reason <span style={{ color: 'var(--color-danger)' }}>*</span>
           </label>
@@ -80,7 +108,7 @@ export const CancelClassModal: React.FC<CancelClassModalProps> = ({
             id="cancellation-reason-input"
             data-testid="cancellation-reason-input"
             className={formStyles.textarea}
-            rows={3}
+            rows={4}
             value={reason}
             onChange={(e) => {
               setReason(e.target.value);
@@ -89,6 +117,7 @@ export const CancelClassModal: React.FC<CancelClassModalProps> = ({
             placeholder="e.g. Student ill, Family emergency, Scheduling conflict..."
             disabled={isLoading}
             autoFocus
+            style={{ width: '100%', minHeight: '90px', boxSizing: 'border-box', display: 'block' }}
           />
           {error && (
             <span role="alert" style={{ display: 'block', color: 'var(--color-danger)', fontSize: '11px', marginTop: '4px' }}>
@@ -97,7 +126,7 @@ export const CancelClassModal: React.FC<CancelClassModalProps> = ({
           )}
         </div>
 
-        <div className={styles.actions}>
+        <div className={styles.actions} style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', width: '100%' }}>
           <Button variant="secondary" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
