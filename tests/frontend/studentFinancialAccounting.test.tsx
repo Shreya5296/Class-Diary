@@ -233,15 +233,14 @@ describe('CONFIRMED ACCOUNTING RULE — Student Outstanding Money', () => {
       expect(html).toContain('Total Payments Received (USD)');
       expect(html).toContain('Outstanding Amount (USD)');
       expect(html).toContain('$100 due');
-      expect(html).toContain('None'); // credit
+      expect(html).not.toContain('Available Credit / Excess');
 
       // AUD assertions
       expect(html).toContain('Total Package Payable (AUD)');
       expect(html).toContain('Total Payments Received (AUD)');
       expect(html).toContain('Outstanding Amount (AUD)');
       expect(html).toContain('Settled');
-      expect(html).toContain('Available Credit / Excess (AUD)');
-      expect(html).toContain('credit');
+      expect(html).not.toContain('Available Credit / Excess');
     });
   });
 });

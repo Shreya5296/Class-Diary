@@ -97,6 +97,7 @@ describe('Batch 4 UI/UX Refinements Verification', () => {
       expect(html).toContain('Per-Class Rate');
       expect(html).toContain('INR');
       expect(html).toContain('₹390.63 / class');
+      expect(html).not.toContain('Available Credit / Excess');
     });
 
     it('handles foreign currency with exchange rate safely and avoids division by zero', () => {

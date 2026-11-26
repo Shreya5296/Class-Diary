@@ -82,7 +82,7 @@ export const StudentFinancialCardView: React.FC<StudentFinancialCardViewProps> =
               key={b.currency}
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                 gap: 'var(--space-3)',
                 padding: '0.875rem 1rem',
                 backgroundColor: 'var(--color-bg-subtle)',
@@ -115,15 +115,6 @@ export const StudentFinancialCardView: React.FC<StudentFinancialCardViewProps> =
                 </span>
                 <strong style={{ fontSize: 'var(--font-size-md)', fontVariantNumeric: 'tabular-nums', color: b.outstanding > 0 ? '#dc2626' : '#16a34a' }}>
                   {b.outstanding > 0 ? `${formatCurrency(b.outstanding, true, b.currency)} due` : '₹0.00 (Settled)'.replace('₹', b.currency === 'INR' ? '₹' : `${b.currency} `)}
-                </strong>
-              </div>
-
-              <div>
-                <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Available Credit / Excess ({b.currency})
-                </span>
-                <strong style={{ fontSize: 'var(--font-size-md)', fontVariantNumeric: 'tabular-nums', color: b.availableCredit > 0 ? '#2563eb' : 'var(--color-text-muted)' }}>
-                  {b.availableCredit > 0 ? `${formatCurrency(b.availableCredit, true, b.currency)} credit` : 'None'}
                 </strong>
               </div>
 

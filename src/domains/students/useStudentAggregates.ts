@@ -45,6 +45,8 @@ export function useStudentAggregates(studentIds: string[], token?: string | null
     return map;
   }, []);
 
+  const studentIdsKey = studentIds.join(',');
+
   const loadAggregates = useCallback(async () => {
     setLoading(true);
     try {
@@ -60,7 +62,7 @@ export function useStudentAggregates(studentIds: string[], token?: string | null
     } finally {
       setLoading(false);
     }
-  }, [token, JSON.stringify(studentIds), buildMap]);
+  }, [token, studentIdsKey, buildMap]);
 
   useEffect(() => {
     loadAggregates();
@@ -70,7 +72,7 @@ export function useStudentAggregates(studentIds: string[], token?: string | null
     if (packages.length > 0 && studentIds.length > 0) {
       setSchedulesMap(buildMap(packages, studentIds));
     }
-  }, [JSON.stringify(studentIds), packages, buildMap]);
+  }, [studentIdsKey, packages, buildMap]);
 
   const getStudentBalance = (sid: string) => {
     const studentPkgs = packages.filter((p) => p.student_id === sid);
