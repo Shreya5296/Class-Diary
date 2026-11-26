@@ -65,7 +65,7 @@ describe('Sidebar Icons & Accessibility', () => {
     );
 
     expect(html).toContain('Shreya Admin');
-    expect(html).toContain('admin@infineo.io');
+    expect(html).not.toContain('admin@infineo.io');
     expect(html).toContain('Class Diary');
     expect(html).toContain('aria-label="Current date, time, and timezone"');
     expect(html).toContain('Students');

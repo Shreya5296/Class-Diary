@@ -29,7 +29,7 @@ describe('Profile, Finances & Class Schedule Refinements Regression', () => {
     expect(html).toContain('justify-content:flex-end');
   });
 
-  it('verifies Finance summary cards render 5 INR-only cards without foreign currencies or descriptions', () => {
+  it('verifies Finance summary cards render 3 cards without foreign currencies or descriptions', () => {
     const payments: Payment[] = [
       { payment_id: 'p1', student_id: 's1', amount: 50000, currency: 'INR', payment_date: '2026-11-10', status: 'RECORDED' },
       { payment_id: 'p2', student_id: 's1', amount: 200, currency: 'USD', in_inr: 16500, payment_date: '2026-10-05', status: 'RECORDED' },
@@ -39,19 +39,23 @@ describe('Profile, Finances & Class Schedule Refinements Regression', () => {
     const currencyTotals = { packagesByCurrency: {}, paymentsByCurrency: {}, totalRecordedInr: 66500 };
 
     const html = renderToString(React.createElement(FinanceSummaryCards, {
-      summary, currencyTotals, payments, timeZone: 'Asia/Kolkata',
+      summary, currencyTotals, payments, timeZone: 'Asia/Kolkata', selectedMonth: '2026-11',
     }));
 
-    // 5 card headers
-    expect(html).toContain('Lifetime Package Value');
-    expect(html).toContain('Lifetime Payments Received');
-    expect(html).toContain('Recorded INR Value');
-    expect(html).toContain('Monthly Earnings');
+    // 3 card headers
+    expect(html).toContain('Lifetime Earnings');
     expect(html).toContain('Yearly Earnings');
+    expect(html).toContain('Monthly Earnings');
+    expect(html).not.toContain('Lifetime Package Value');
+    expect(html).not.toContain('Recorded INR Value');
 
-    // Values formatted in INR
-    expect(html).toContain('₹1,50,000');
+    // Values formatted in INR:
+    // Lifetime: 50000 + 16500 + 10000 = 76500
+    // Yearly: 50000 + 16500 = 66500
+    // Monthly (2026-11): 50000
+    expect(html).toContain('₹76,500');
     expect(html).toContain('₹66,500');
+    expect(html).toContain('₹50,000');
 
     // Removed foreign currencies and descriptions
     expect(html).not.toContain('Total agreed value by package currency');

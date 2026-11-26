@@ -83,16 +83,6 @@
   line-height: 1.3;
 }
 
-.userEmail {
-  font-size: 12px;
-  font-weight: 400;
-  color: #94a3b8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.35;
-}
-
 .sidebarActions {
   display: flex;
   gap: 0.5rem;

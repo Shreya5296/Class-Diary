@@ -10,7 +10,6 @@ import { FinancialHistoryTable } from './FinancialHistoryTable';
 import { StudentBalanceTable } from './StudentBalanceTable';
 import { AddPaymentModal } from './AddPaymentModal';
 import { useFinancesData } from './useFinancesData';
-import { exportFinancesCsv } from './financeCsvExport';
 import { getAllPendingPayments, getOtherAdminPendingCount, subscribePendingPayments } from './paymentIdempotency';
 import { getAdminScope } from './paymentAdminScope';
 
@@ -25,7 +24,7 @@ export const FinancesPage: React.FC = () => {
   const [otherAdminCount, setOtherAdminCount] = useState(() => getOtherAdminPendingCount(adminId));
 
   const {
-    summary, packages, payments, filteredPayments, studentBalances, currencyTotals, loading, filter, setFilter, refresh,
+    summary, packages, payments, filteredPayments, studentBalances, loading, filter, setFilter, refresh,
   } = useFinancesData(token);
 
   useEffect(() => {
@@ -48,7 +47,7 @@ export const FinancesPage: React.FC = () => {
 
   return (
     <div>
-      <PageHeader title="Finances" subtitle="Unified ledger of agreed packages, received tuition, and student payment history." />
+      <PageHeader title="Finances" />
       {isInitialLoading ? (
         <FinancesSkeleton />
       ) : (
@@ -67,12 +66,8 @@ export const FinancesPage: React.FC = () => {
               ℹ️ {otherAdminCount} unverified payment attempt{otherAdminCount > 1 ? 's are' : ' is'} recorded by another administrator session on this device.
             </div>
           )}
-          <FinanceSummaryCards summary={summary} currencyTotals={currencyTotals} payments={payments} />
-          <FinanceToolbar
-            filter={filter} onFilterChange={setFilter}
-            onExportCsv={() => exportFinancesCsv(summary, filteredPayments, currencyTotals)}
-            onAddPayment={() => setIsAddPaymentOpen(true)}
-          />
+          <FinanceSummaryCards payments={payments} selectedMonth={filter.selectedMonth} />
+          <FinanceToolbar filter={filter} onFilterChange={setFilter} onAddPayment={() => setIsAddPaymentOpen(true)} />
 
           <div role="tablist" aria-label="Finances ledger views" style={tabContainerStyle}>
             <button

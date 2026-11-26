@@ -59,20 +59,31 @@ export interface MonthlyAndYearlyEarnings {
   yearlyEarnings: number;
 }
 
+export interface FinanceEarningsSummary {
+  lifetimeEarnings: number;
+  yearlyEarnings: number;
+  monthlyEarnings: number;
+}
+
 /**
- * Calculates monthly and yearly earnings in INR for valid recorded payments based on active timezone.
+ * Calculates lifetime, yearly, and monthly earnings in INR for valid recorded payments based on active timezone
+ * and optional selected month (YYYY-MM).
  */
-export function calculateMonthlyAndYearlyEarnings(
+export function calculateFinanceEarnings(
   payments: Payment[],
   timeZone: string = 'Asia/Kolkata',
+  selectedMonthStr?: string,
   referenceDate: Date = new Date()
-): MonthlyAndYearlyEarnings {
+): FinanceEarningsSummary {
   const todayStr = toInputDateFormat(referenceDate, timeZone);
   const currentYearStr = todayStr.slice(0, 4);
-  const currentMonthStr = todayStr.slice(0, 7);
+  const targetMonthStr = selectedMonthStr && /^\d{4}-\d{2}$/.test(selectedMonthStr)
+    ? selectedMonthStr
+    : todayStr.slice(0, 7);
 
-  let monthlyEarnings = 0;
+  let lifetimeEarnings = 0;
   let yearlyEarnings = 0;
+  let monthlyEarnings = 0;
 
   for (const p of payments) {
     if (!isValidRecordedPayment(p)) continue;
@@ -82,16 +93,35 @@ export function calculateMonthlyAndYearlyEarnings(
     const amtInr = getPaymentInrAmount(p);
     if (amtInr <= 0) continue;
 
+    lifetimeEarnings += amtInr;
+
     if (payDateInTz.startsWith(currentYearStr)) {
       yearlyEarnings += amtInr;
-      if (payDateInTz.startsWith(currentMonthStr)) {
-        monthlyEarnings += amtInr;
-      }
+    }
+
+    if (payDateInTz.startsWith(targetMonthStr)) {
+      monthlyEarnings += amtInr;
     }
   }
 
   return {
-    monthlyEarnings: Math.round(monthlyEarnings * 100) / 100,
+    lifetimeEarnings: Math.round(lifetimeEarnings * 100) / 100,
     yearlyEarnings: Math.round(yearlyEarnings * 100) / 100,
+    monthlyEarnings: Math.round(monthlyEarnings * 100) / 100,
+  };
+}
+
+/**
+ * Calculates monthly and yearly earnings in INR for valid recorded payments based on active timezone.
+ */
+export function calculateMonthlyAndYearlyEarnings(
+  payments: Payment[],
+  timeZone: string = 'Asia/Kolkata',
+  referenceDate: Date = new Date()
+): MonthlyAndYearlyEarnings {
+  const res = calculateFinanceEarnings(payments, timeZone, undefined, referenceDate);
+  return {
+    monthlyEarnings: res.monthlyEarnings,
+    yearlyEarnings: res.yearlyEarnings,
   };
 }
