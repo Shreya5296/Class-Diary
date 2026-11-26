@@ -162,6 +162,7 @@ function Classes_repoUpdate(spreadsheet, id, updates) {
       }
       var updatedRow = _clsMapper.recordToRow(map, headerRow, rec);
       sheet.getRange(rowNum, 1, 1, updatedRow.length).setValues([updatedRow]);
+      delete sheet._cachedRows;
       rec._rowIndex = rowNum;
       return rec;
     }
@@ -221,6 +222,7 @@ function Classes_repoUpdate(spreadsheet, id, updates) {
           }
           var outRow = _clsMapper.recordToRow(map2, headerRow2, currentRec);
           sheet.getRange(r + 1, 1, 1, outRow.length).setValues([outRow]);
+          delete sheet._cachedRows;
           currentRec._rowIndex = r + 1;
           return currentRec;
         }

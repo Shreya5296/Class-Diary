@@ -4,8 +4,11 @@
  * Compatible with both Google Apps Script runtime (Sheet.getDataRange) and MockSheet.
  */
 
+var _cacheRowsHelper = typeof SheetCache_getRows === 'function' ? SheetCache_getRows : (typeof require !== 'undefined' ? require('./SheetCache.gs').SheetCache_getRows : null);
+
 function _getSheetRows(sheet) {
   if (!sheet) return [];
+  if (_cacheRowsHelper) return _cacheRowsHelper(sheet);
   if (typeof sheet.getData === 'function') {
     return sheet.getData();
   }

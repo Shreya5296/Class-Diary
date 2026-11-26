@@ -520,6 +520,7 @@ function Payments_void(spreadsheet, data, actor) {
   if (typeof sheet.deleteRow === 'function') {
     sheet.deleteRow(targetSheetRow);
   }
+  if (sheet._cachedRows) delete sheet._cachedRows;
 
   if (payId) {
     _voidedPaymentIds[payId] = true;

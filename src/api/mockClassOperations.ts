@@ -1,4 +1,5 @@
 import { MOCK_CLASSES, MOCK_PACKAGES, MOCK_LINKS } from './mockDataInitial';
+import { ApiClientError } from './apiErrors';
 
 export function upsertMockMeetingLink(payload: Record<string, unknown>) {
   const sid = String(payload.student_id || '');
@@ -10,15 +11,10 @@ export function upsertMockMeetingLink(payload: Record<string, unknown>) {
     if (l2 !== undefined) { ex.meeting_link_2 = l2; }
   } else {
     ex = {
-      meeting_link_id: `ml_${Date.now()}`,
-      student_id: sid,
-      student_name: String(payload.student_name || ''),
-      provider: 'GOOGLE_MEET',
-      link_label: 'Class Meeting Link',
-      meeting_url: l1 || '',
-      meeting_link_1: l1 || '',
-      meeting_link_2: l2 || '',
-      is_preferred: true,
+      meeting_link_id: `ml_${Date.now()}`, student_id: sid,
+      student_name: String(payload.student_name || ''), provider: 'GOOGLE_MEET',
+      link_label: 'Class Meeting Link', meeting_url: l1 || '',
+      meeting_link_1: l1 || '', meeting_link_2: l2 || '', is_preferred: true,
     };
     MOCK_LINKS.push(ex);
   }
@@ -45,16 +41,20 @@ export function handleMockClassRecordAttendance(payload: Record<string, unknown>
   const rawOutcome = String(payload.outcome || payload.attendance_status || 'PRESENT').toUpperCase();
   const isAbsent = rawOutcome === 'NO_SHOW' || rawOutcome === 'ABSENT' || rawOutcome === 'ABSENT_UNEXCUSED';
   const attStatus = isAbsent ? 'NO_SHOW' : 'PRESENT';
-  const deduct = isAbsent ? Boolean(payload.deduct_class ?? true) : true;
+  const deduct = isAbsent ? Boolean(payload.deduct_class ?? false) : true;
+  if (!isAbsent && session) {
+    const rawStart = session.scheduled_start || session.start_time;
+    if (rawStart && new Date(String(rawStart)).getTime() > Date.now()) {
+      throw new ApiClientError({ message: 'Class is scheduled for the future and cannot be marked Attended yet.', code: 'VALIDATION_ERROR' });
+    }
+  }
   if (session) {
     session.attendance_status = attStatus;
     session.session_status = 'COMPLETED';
     session.status = 'COMPLETED';
     session.deduct_class = deduct;
     session.class_credit_effect = deduct ? 'CONSUME' : 'NO_CONSUME';
-    if (payload.session_notes !== undefined) {
-      session.session_notes = String(payload.session_notes).trim();
-    }
+    if (payload.session_notes !== undefined) session.session_notes = String(payload.session_notes).trim();
     return session;
   }
   return { session_id: sid, attendance_status: attStatus, session_status: 'COMPLETED', deduct_class: deduct };
@@ -132,16 +132,9 @@ export function handleMockClassUpdate(payload: Record<string, unknown>) {
   const classesList = MOCK_CLASSES as unknown as Record<string, unknown>[];
   const session = classesList.find((c) => c.session_id === sid || c.class_session_id === sid);
   if (session) {
-    if (payload.session_notes !== undefined) {
-      session.session_notes = payload.session_notes;
-      session.notes = payload.session_notes;
-    }
-    if (payload.cancellation_reason !== undefined) {
-      session.cancellation_reason = payload.cancellation_reason;
-    }
-    if (payload.attendance_status !== undefined) {
-      session.attendance_status = payload.attendance_status;
-    }
+    if (payload.session_notes !== undefined) { session.session_notes = payload.session_notes; session.notes = payload.session_notes; }
+    if (payload.cancellation_reason !== undefined) session.cancellation_reason = payload.cancellation_reason;
+    if (payload.attendance_status !== undefined) session.attendance_status = payload.attendance_status;
     return session;
   }
   return { session_id: sid, ...payload };

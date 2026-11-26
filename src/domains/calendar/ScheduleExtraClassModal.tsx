@@ -8,6 +8,7 @@ import { ClassSession } from '../classes/classTypes';
 import { scheduleClass } from '../classes/classApi';
 import { getPackageRemainingCredits } from './extraClassAccounting';
 import { makeIsoInTz } from '../dashboard/calendarEventGenerator';
+import { invalidateAppData } from '../../context/AppDataContext';
 
 export interface ScheduleExtraClassModalProps {
   isOpen: boolean;
@@ -83,6 +84,7 @@ export const ScheduleExtraClassModal: React.FC<ScheduleExtraClassModalProps> = (
         class_title: `${selectedStu?.subject || 'Class'} (Extra Class)`,
       }, token);
 
+      invalidateAppData('dashboard');
       onScheduled();
       onClose();
     } catch (err: unknown) {

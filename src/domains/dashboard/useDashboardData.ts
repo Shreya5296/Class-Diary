@@ -1,88 +1,88 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchDashboardOverview } from './dashboardApi';
-import { fetchClasses } from '../classes/classApi';
-import { fetchSchedules, WeeklyScheduleEntry } from '../classes/scheduleApi';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useAppData } from '../../context/AppDataContext';
 import { parseCanonicalScheduleString } from '../students/scheduleFormatter';
-import { fetchStudents } from '../students/studentApi';
-import { fetchPackages } from '../packages/packageApi';
-import { sendApiRequest } from '../../api/apiClient';
-import { ClassSession } from '../classes/classTypes';
-import { Student } from '../students/studentTypes';
-import { Package } from '../packages/packageTypes';
-import { DashboardOverviewData } from './dashboardTypes';
+import { WeeklyScheduleEntry } from '../classes/scheduleApi';
+import { fetchDashboardCombined, DashboardCombinedData } from '../../api/combinedApi';
 
 export function useDashboardData(token?: string | null) {
-  const [overview, setOverview] = useState<DashboardOverviewData | null>(null);
-  const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [schedules, setSchedules] = useState<WeeklyScheduleEntry[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [meetingLinks, setMeetingLinks] = useState<any[]>([]);
-  const [fees, setFees] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  let ctx: ReturnType<typeof useAppData> | null = null;
+  try {
+    ctx = useAppData();
+  } catch {
+    ctx = null;
+  }
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [ov, cls, schedList, stuList, pkgList, feeList] = await Promise.all([
-        fetchDashboardOverview(token),
-        fetchClasses(undefined, token).catch(() => []),
-        fetchSchedules(undefined, token).catch(() => []),
-        fetchStudents({}, token).catch(() => []),
-        fetchPackages(undefined, token).catch(() => []),
-        sendApiRequest<any[]>('fees.list', {}, { token }).then((r) => r.data || []).catch(() => []),
-      ]);
-      let finalScheds = schedList;
-      if (finalScheds.length === 0 && pkgList.length > 0) {
-        const extracted: WeeklyScheduleEntry[] = [];
-        for (const p of pkgList) {
-          if (p.class_schedule) {
-            const parsed = parseCanonicalScheduleString(p.class_schedule, Number(p.class_duration) || 60);
-            for (const entry of parsed) {
-              entry.student_id = p.student_id;
-              entry.student_name = p.student_name;
-              extracted.push(entry);
-            }
-          }
-        }
-        if (extracted.length > 0) finalScheds = extracted;
+  const [localData, setLocalData] = useState<DashboardCombinedData | null>(null);
+  const [localLoading, setLocalLoading] = useState(!localData);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const loadData = useCallback(async (force = false) => {
+    if (ctx) {
+      await ctx.getDashboard(token, force);
+    } else {
+      setLocalLoading(true);
+      try {
+        const res = await fetchDashboardCombined(token);
+        setLocalData(res);
+      } catch (err: unknown) {
+        setLocalError((err as Error).message || 'Failed to load dashboard data');
+      } finally {
+        setLocalLoading(false);
       }
-      setOverview(ov);
-      setClasses(cls);
-      setSchedules(finalScheds);
-      setStudents(stuList);
-      setPackages(pkgList);
-      setFees(feeList);
-      const derived = stuList.map((s) => ({
-        student_id: s.student_id,
-        student_name: s.student_name,
-        meeting_link_1: s.primary_meeting_link || '',
-        meeting_url: s.primary_meeting_link || '',
-      }));
-      setMeetingLinks(derived);
-    } catch (err: unknown) {
-      setError((err as Error).message || 'Failed to load dashboard metrics');
-    } finally {
-      setLoading(false);
     }
-  }, [token]);
+  }, [ctx, token]);
 
   useEffect(() => {
-    loadData();
+    loadData(false);
   }, [loadData]);
 
+  const data = ctx ? ctx.dashboardData : localData;
+  const loading = ctx ? (!ctx.dashboardData && ctx.dashboardLoading) : localLoading;
+  const error = ctx ? ctx.dashboardError : localError;
+
+  const schedules = useMemo(() => {
+    if (!data) return [];
+    let finalScheds = data.schedules || [];
+    if (finalScheds.length === 0 && data.packages?.length > 0) {
+      const extracted: WeeklyScheduleEntry[] = [];
+      for (const p of data.packages) {
+        if (p.class_schedule) {
+          const parsed = parseCanonicalScheduleString(p.class_schedule, Number(p.class_duration) || 60);
+          for (const entry of parsed) {
+            entry.student_id = p.student_id;
+            entry.student_name = p.student_name;
+            extracted.push(entry);
+          }
+        }
+      }
+      if (extracted.length > 0) finalScheds = extracted;
+    }
+    return finalScheds;
+  }, [data]);
+
+  const meetingLinks = useMemo(() => {
+    if (!data?.students) return [];
+    return data.students.map((s) => ({
+      meeting_link_id: `ml_${s.student_id}`,
+      student_id: s.student_id,
+      student_name: s.student_name,
+      meeting_link_1: s.primary_meeting_link || '',
+      meeting_url: s.primary_meeting_link || '',
+      provider: 'GOOGLE_MEET' as const,
+      is_preferred: true,
+    }));
+  }, [data?.students]);
+
   return {
-    overview,
-    classes,
+    overview: data?.overview || null,
+    classes: data?.classes || [],
     schedules,
-    students,
-    packages,
+    students: data?.students || [],
+    packages: data?.packages || [],
     meetingLinks,
-    fees,
+    fees: data?.fees || [],
     loading,
     error,
-    refreshData: loadData,
+    refreshData: () => loadData(true),
   };
 }

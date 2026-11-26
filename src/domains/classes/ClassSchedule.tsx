@@ -12,6 +12,7 @@ import { buildSessionProgressMap } from './sessionProgressCalculator';
 import { getSessionStatusStyle } from './sessionStatusStyles';
 import { EditSessionNotesModal } from './EditSessionNotesModal';
 import { splitAndSortSessions } from './classSorting';
+import { invalidateAppData } from '../../context/AppDataContext';
 import styles from './classSchedule.module.css';
 
 export interface ClassScheduleProps {
@@ -28,10 +29,11 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
 }) => {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [pastPage, setPastPage] = useState(1);
   const [notesSession, setNotesSession] = useState<ClassSession | null>(null);
   const {
-    sessions, packages, loading, refetch, getStudentConsumedClasses, getStudentMeetingLink,
-  } = useClassScheduleData(studentId, token);
+    sessions, packages, loading, pastLoaded, pastLoading, refetch, getStudentConsumedClasses, getStudentMeetingLink,
+  } = useClassScheduleData(studentId, token, activeTab);
 
   const activeTz = 'Asia/Kolkata';
   const todayKey = toInputDateFormat(new Date(), activeTz);
@@ -43,9 +45,11 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
     return splitAndSortSessions(sessions, nowMs, activeTz);
   }, [sessions, nowMs, activeTz]);
 
-  const getProgress = (s: ClassSession) => {
-    return progressMap.get(s.session_id) || progressMap.get(`${s.student_id}__${s.schedule_date}__${s.schedule_time}`);
-  };
+  const pagedPast = useMemo(() => past.slice(0, pastPage * 50), [past, pastPage]);
+  const displayedSessions = activeTab === 'upcoming' ? upcoming : pagedPast;
+
+  const getProgress = (s: ClassSession) =>
+    progressMap.get(s.session_id) || progressMap.get(`${s.student_id}__${s.schedule_date}__${s.schedule_time}`);
 
   const handleUpdateStatus = async (sessionId: string, outcome: string, cancellationReason?: string, notes?: string) => {
     if (outcome === 'CANCELLED' && cancellationReason) {
@@ -53,11 +57,13 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
     } else {
       await recordAttendance(sessionId, outcome as AttendanceStatus, token, cancellationReason, notes);
     }
+    invalidateAppData('dashboard');
     await refetch();
   };
 
   const handleRestore = async (sessionId: string) => {
     await restoreCredit(sessionId, 'Admin manual credit restoration', token);
+    invalidateAppData('dashboard');
     await refetch();
   };
 
@@ -67,11 +73,9 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
     onEditNotes: (s) => setNotesSession(s),
   });
 
-  const displayedSessions = activeTab === 'upcoming' ? upcoming : past;
-
   const rowStyle = (session: ClassSession) => {
-    const statusCfg = getSessionStatusStyle(session.session_status || session.status, session.attendance_status);
-    return statusCfg.rowBg !== 'transparent' ? { backgroundColor: statusCfg.rowBg } : undefined;
+    const s = getSessionStatusStyle(session.session_status || session.status, session.attendance_status);
+    return s.rowBg !== 'transparent' ? { backgroundColor: s.rowBg } : undefined;
   };
 
   return (
@@ -79,9 +83,7 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
       <div className={styles.singleToolbar}>
         <div className={styles.tabBar} role="tablist" aria-label="Class schedule views">
           <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'upcoming'}
+            type="button" role="tab" aria-selected={activeTab === 'upcoming'}
             className={`${styles.tabButton} ${activeTab === 'upcoming' ? styles.tabButtonActive : ''}`}
             onClick={() => setActiveTab('upcoming')}
           >
@@ -89,28 +91,20 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
             <span className={styles.badge}>{loading ? '-' : upcoming.length}</span>
           </button>
           <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'past'}
+            type="button" role="tab" aria-selected={activeTab === 'past'}
             className={`${styles.tabButton} ${activeTab === 'past' ? styles.tabButtonActive : ''}`}
             onClick={() => setActiveTab('past')}
           >
             <span>Past Classes</span>
-            <span className={styles.badge}>{loading ? '-' : past.length}</span>
+            <span className={styles.badge}>{!pastLoaded ? (pastLoading ? '...' : '-') : past.length}</span>
           </button>
         </div>
 
         <div className={styles.flexibleSpacer} />
-
-        {toolbarRight && (
-          <div className={styles.toolbarControls}>
-            {toolbarRight}
-          </div>
-        )}
+        {toolbarRight && <div className={styles.toolbarControls}>{toolbarRight}</div>}
       </div>
 
       {scheduleForm}
-
       {loading && displayedSessions.length === 0 && <ClassScheduleSkeleton />}
 
       {!loading && invalid.length > 0 && (
@@ -127,16 +121,22 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
       )}
 
       {!loading && displayedSessions.length > 0 && (
-        <DataTable fixedLayout minWidth="800px" columns={columns} data={displayedSessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />
+        <>
+          <DataTable fixedLayout minWidth="800px" columns={columns} data={displayedSessions} keyExtractor={(c) => c.session_id} rowStyle={rowStyle} />
+          {activeTab === 'past' && pagedPast.length < past.length && (
+            <div style={{ textAlign: 'center', margin: '16px 0' }}>
+              <button type="button" className={styles.tabButton} onClick={() => setPastPage((p) => p + 1)}>
+                Load more past classes ({past.length - pagedPast.length} remaining)
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {notesSession && (
         <EditSessionNotesModal
-          session={notesSession}
-          token={token}
-          isOpen={Boolean(notesSession)}
-          onClose={() => setNotesSession(null)}
-          onSaved={refetch}
+          session={notesSession} token={token} isOpen={Boolean(notesSession)}
+          onClose={() => setNotesSession(null)} onSaved={refetch}
         />
       )}
     </div>

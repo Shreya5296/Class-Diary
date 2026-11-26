@@ -8,6 +8,8 @@ import { createPackage, updatePackage } from '../packages/packageApi';
 import { calculateEndTime } from '../classes/scheduleDurationCalculator';
 import { formatCanonicalScheduleString } from './scheduleFormatter';
 import { startAsyncScheduling } from './asyncScheduleWorker';
+import { generatePackageClasses } from '../classes/packageClassGeneratorApi';
+import { invalidateAppData } from '../../context/AppDataContext';
 
 export interface SubmitEditStudentParams {
   student: Student;
@@ -111,7 +113,15 @@ export async function submitEditStudent(params: SubmitEditStudentParams): Promis
       token,
     });
     successMessage = 'Class schedule saved. Scheduling classes now…';
+  } else if (schedsToSave.length > 0) {
+    // Automatically regenerate future package classes when schedule is added or edited
+    try {
+      await generatePackageClasses(student.student_id, token, { regenerateFuture: true });
+    } catch (e) {
+      console.warn('Auto-generation of future package classes:', e);
+    }
   }
 
+  invalidateAppData('all');
   return { updatedStudent: updatedStu, successMessage };
 }

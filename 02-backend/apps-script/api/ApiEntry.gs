@@ -15,7 +15,9 @@ var _jsonRes = typeof createJsonResponse === 'function' ? createJsonResponse : (
 var _handleLogin = typeof handleAuthLogin === 'function' ? handleAuthLogin : (typeof require !== 'undefined' ? require('../auth/AuthService.gs').handleAuthLogin : null);
 
 function doPost(e) {
+  var opStartMs = new Date().getTime();
   var requestId = 'req_init';
+  var opName = 'unknown';
   try {
     // 1. Parse request envelope
     var req = _parseReq(e);
@@ -23,6 +25,7 @@ function doPost(e) {
       return _errRes(req.requestId, req.code, req.message, null, false);
     }
     requestId = req.requestId;
+    opName = req.operation;
 
     // 2. Unauthenticated auth endpoint: Administrator login
     if (req.operation === 'auth.login') {
@@ -65,12 +68,19 @@ function doPost(e) {
     };
 
     var result = _routeOp(context);
+    var durationMs = new Date().getTime() - opStartMs;
+    if (typeof Logger !== 'undefined' && Logger.log) {
+      Logger.log('[Apps Script Timing] ' + opName + ' completed in ' + durationMs + 'ms');
+    }
     if (!result.success) {
       return _errRes(requestId, result.code, result.message, result.details, result.retryable);
     }
 
     return _succRes(requestId, result.data, result.meta);
   } catch (err) {
+    if (typeof Logger !== 'undefined' && Logger.log) {
+      Logger.log('[Apps Script Timing] ' + opName + ' failed in ' + (new Date().getTime() - opStartMs) + 'ms: ' + err);
+    }
     return _errRes(requestId, 'INTERNAL_ERROR', 'An unhandled server exception occurred', null, true);
   }
 }

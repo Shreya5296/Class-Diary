@@ -8,6 +8,7 @@ import { ArrowLeftIcon } from '../../components/icons/ActionIcons';
 import { PackageList } from '../packages/PackageList';
 import { PaymentList } from '../payments/PaymentList';
 import { ClassSchedule } from '../classes/ClassSchedule';
+import { GeneratePackageClassesModal } from '../classes/GeneratePackageClassesModal';
 
 export interface StudentProfilePageProps {
   student: Student;
@@ -24,6 +25,8 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
 }) => {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('packages');
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [scheduleVersion, setScheduleVersion] = useState(0);
 
   const tabs: { id: TabType; label: string }[] = [
     { id: 'packages', label: 'Packages & Balances' },
@@ -38,14 +41,8 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
           <ArrowLeftIcon size={14} /> Back to Directory
         </Button>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          {onRenew && (
-            <Button variant="secondary" size="sm" onClick={onRenew}>
-              Renew Package
-            </Button>
-          )}
-          <Button variant="primary" size="sm" onClick={onEdit}>
-            Edit Profile
-          </Button>
+          {onRenew && <Button variant="secondary" size="sm" onClick={onRenew}>Renew Package</Button>}
+          <Button variant="primary" size="sm" onClick={onEdit}>Edit Profile</Button>
         </div>
       </div>
 
@@ -61,16 +58,11 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
               type="button"
               onClick={() => setActiveTab(tab.id)}
               style={{
-                padding: '0.625rem 1rem',
-                border: 'none',
-                background: 'none',
-                fontWeight: isActive ? 600 : 500,
-                fontSize: 'var(--font-size-sm)',
+                padding: '0.625rem 1rem', border: 'none', background: 'none',
+                fontWeight: isActive ? 600 : 500, fontSize: 'var(--font-size-sm)',
                 color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
                 borderBottom: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'color 120ms ease, border-color 120ms ease',
+                cursor: 'pointer', whiteSpace: 'nowrap',
               }}
             >
               {tab.label}
@@ -82,8 +74,27 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
       <div>
         {activeTab === 'packages' && <PackageList studentId={student.student_id} onRenew={onRenew} />}
         {activeTab === 'payments' && <PaymentList studentId={student.student_id} />}
-        {activeTab === 'classes' && <ClassSchedule studentId={student.student_id} />}
+        {activeTab === 'classes' && (
+          <ClassSchedule
+            key={scheduleVersion}
+            studentId={student.student_id}
+            toolbarRight={
+              <Button variant="outline" size="sm" onClick={() => setShowGenerateModal(true)}>
+                Generate classes
+              </Button>
+            }
+          />
+        )}
       </div>
+
+      <GeneratePackageClassesModal
+        isOpen={showGenerateModal}
+        studentId={student.student_id}
+        studentName={student.student_name || student.full_name}
+        token={token}
+        onClose={() => setShowGenerateModal(false)}
+        onGenerated={() => setScheduleVersion((v) => v + 1)}
+      />
     </div>
   );
 };

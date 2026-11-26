@@ -36,6 +36,7 @@ export async function sendApiRequest<T = unknown>(
   payload: Record<string, unknown> = {},
   options: RequestOptions = {}
 ): Promise<ApiResponse<T>> {
+  const startMs = Date.now();
   const config = getRuntimeConfig();
   const url = config.appsScriptUrl;
   const requestId = options.requestId || generateRequestId();
@@ -57,6 +58,7 @@ export async function sendApiRequest<T = unknown>(
     if (isReadOnly && res && res.ok) {
       apiCache.set(cacheKey, { data: res, timestamp: Date.now() });
     }
+    console.log(`[API Timing (Mock)] ${operation} completed in ${Date.now() - startMs}ms`);
     return res;
   }
 
@@ -125,6 +127,7 @@ export async function sendApiRequest<T = unknown>(
       throw new ApiNetworkError(rawMsg ? `Network request failed: ${rawMsg}` : 'Network request failed', err);
     } finally {
       if (isReadOnly) inFlightMap.delete(cacheKey);
+      console.log(`[API Timing] ${operation} completed in ${Date.now() - startMs}ms`);
     }
   };
 

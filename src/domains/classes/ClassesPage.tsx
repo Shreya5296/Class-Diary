@@ -7,6 +7,7 @@ import { ClassSessionInput } from './classTypes';
 import { fetchStudents } from '../students/studentApi';
 import { Student } from '../students/studentTypes';
 import { useAuth } from '../../auth/AuthProvider';
+import { invalidateAppData } from '../../context/AppDataContext';
 import { Button } from '../../components/buttons/Button';
 import { PageHeader } from '../../layout/PageHeader';
 import formStyles from '../../components/forms/forms.module.css';
@@ -30,6 +31,7 @@ export const ClassesPage: React.FC = () => {
     setScheduleError(null);
     try {
       await scheduleClass(input, token);
+      invalidateAppData('dashboard');
       setIsScheduling(false);
       setRefreshKey((k) => k + 1);
     } catch (err: unknown) {

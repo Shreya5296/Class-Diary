@@ -9,6 +9,7 @@ import { batchScheduleClasses, fetchClasses } from '../classes/classApi';
 import { startAsyncScheduling } from './asyncScheduleWorker';
 import { formatCanonicalScheduleString } from './scheduleFormatter';
 import { ApiClientError } from '../../api/apiErrors';
+import { invalidateAppData } from '../../context/AppDataContext';
 
 export interface SubmitRegistrationResult {
   student: Student;
@@ -110,6 +111,7 @@ export async function submitRegistration(
     }
   }
 
+  invalidateAppData('all');
   return {
     student: activeStudent,
     message: `Student ${activeStudent.student_name} (${activeStudent.student_id}) registered successfully.`,

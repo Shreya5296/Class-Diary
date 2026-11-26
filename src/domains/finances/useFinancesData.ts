@@ -1,44 +1,55 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { FinancialSummary, FinanceFilter, StudentFinancialRecord, CurrencyTotals } from './financeTypes';
-import { calculateStudentPerClassRate } from './packageRateCalculator';
+import { FinanceFilter, CurrencyTotals } from './financeTypes';
 import { Payment } from '../payments/paymentTypes';
 import { Package } from '../packages/packageTypes';
-import { fetchFinancialSummary } from '../reports/reportApi';
-import { fetchPayments } from '../payments/paymentApi';
-import { fetchPackages } from '../packages/packageApi';
 import { sortPaymentsByDateDescending } from './financeSorting';
 import { toInputDateFormat } from '../../lib/dateFormat';
 import { getSavedTimezone } from '../../lib/userPreferences';
+import { useAppData } from '../../context/AppDataContext';
+import { fetchFinancesCombined, FinancesCombinedData } from '../../api/combinedApi';
+import { buildStudentFinancialRecords } from './studentBalanceCalculator';
 
 export function useFinancesData(token?: string | null) {
   const activeTz = getSavedTimezone() || 'Asia/Kolkata';
   const currentMonthDefault = useMemo(() => toInputDateFormat(new Date(), activeTz).slice(0, 7), [activeTz]);
 
-  const [summary, setSummary] = useState<FinancialSummary | null>(null);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [loading, setLoading] = useState(true);
+  let ctx: ReturnType<typeof useAppData> | null = null;
+  try {
+    ctx = useAppData();
+  } catch {
+    ctx = null;
+  }
+
+  const [localData, setLocalData] = useState<FinancesCombinedData | null>(null);
+  const [localLoading, setLocalLoading] = useState(false);
   const [filter, setFilter] = useState<FinanceFilter>(() => ({
     selectedMonth: currentMonthDefault,
   }));
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [sum, payList, pkgList] = await Promise.all([
-        fetchFinancialSummary(token, { startDate: filter.startDate, endDate: filter.endDate }).catch(() => null),
-        fetchPayments(undefined, undefined, token).catch(() => []),
-        fetchPackages(undefined, token).catch(() => []),
-      ]);
-      setSummary(sum);
-      setPayments(payList);
-      setPackages(pkgList);
-    } finally {
-      setLoading(false);
+  const loadData = useCallback(async (force = false) => {
+    const params = { startDate: filter.startDate, endDate: filter.endDate };
+    if (ctx) {
+      await ctx.getFinances(token, params, force);
+    } else {
+      setLocalLoading(true);
+      try {
+        const d = await fetchFinancesCombined(token, params);
+        setLocalData(d);
+      } catch {
+        // gracefully handle
+      } finally {
+        setLocalLoading(false);
+      }
     }
-  }, [token, filter.startDate, filter.endDate]);
+  }, [ctx, token, filter.startDate, filter.endDate]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { loadData(false); }, [loadData]);
+
+  const data = ctx ? ctx.financesData : localData;
+  const loading = ctx ? (!ctx.financesData && ctx.financesLoading) : localLoading;
+  const summary = data?.summary || null;
+  const payments: Payment[] = data?.payments || [];
+  const packages: Package[] = data?.packages || [];
 
   const currencyTotals = useMemo(() => {
     const packagesByCurrency: CurrencyTotals = {};
@@ -69,9 +80,7 @@ export function useFinancesData(token?: string | null) {
 
     const filtered = payments.filter((p) => {
       const pDate = p.payment_date ? String(p.payment_date).slice(0, 10) : '';
-      if (targetMonth && (!pDate || !pDate.startsWith(targetMonth))) {
-        return false;
-      }
+      if (targetMonth && (!pDate || !pDate.startsWith(targetMonth))) return false;
       if (q) {
         const name = (p.student_name || '').toLowerCase();
         const sid = (p.student_id || '').toLowerCase();
@@ -83,52 +92,8 @@ export function useFinancesData(token?: string | null) {
     return sortPaymentsByDateDescending(filtered);
   }, [payments, filter]);
 
-  const studentBalances = useMemo<StudentFinancialRecord[]>(() => {
-    const map = new Map<string, StudentFinancialRecord>();
-
-    for (const pkg of packages) {
-      const sid = pkg.student_id || '_unknown_';
-      const name = pkg.student_name || sid;
-      const cur = (pkg.currency || 'INR').trim().toUpperCase();
-      const price = Number(pkg.package_price || pkg.price || 0);
-      const existing = map.get(sid) || {
-        student_id: sid, student_name: name,
-        packageTotalsByCurrency: {}, paymentTotalsByCurrency: {},
-        paymentCount: 0,
-      };
-      existing.packageTotalsByCurrency[cur] = (existing.packageTotalsByCurrency[cur] || 0) + price;
-      map.set(sid, existing);
-    }
-
-    for (const p of payments) {
-      const sid = p.student_id || '_unknown_';
-      const name = p.student_name || sid;
-      const cur = (p.currency || 'INR').trim().toUpperCase();
-      const amt = Number(p.amount || 0);
-      const existing = map.get(sid) || {
-        student_id: sid, student_name: name,
-        packageTotalsByCurrency: {}, paymentTotalsByCurrency: {},
-        paymentCount: 0,
-      };
-      existing.paymentTotalsByCurrency[cur] = (existing.paymentTotalsByCurrency[cur] || 0) + amt;
-      existing.paymentCount += 1;
-      if (p.in_inr && Number(p.in_inr) > 0) {
-        existing.recordedInrEquivalent = (existing.recordedInrEquivalent || 0) + Number(p.in_inr);
-      }
-      if (!existing.lastPaymentDate || p.payment_date > existing.lastPaymentDate) {
-        existing.lastPaymentDate = p.payment_date;
-      }
-      map.set(sid, existing);
-    }
-
-    for (const [sid, record] of map.entries()) {
-      record.perClassRate = calculateStudentPerClassRate(sid, packages, payments);
-    }
-
-    const q = (filter.search || '').trim().toLowerCase();
-    return Array.from(map.values()).filter(
-      (r) => !q || r.student_name.toLowerCase().includes(q) || r.student_id.toLowerCase().includes(q)
-    );
+  const studentBalances = useMemo(() => {
+    return buildStudentFinancialRecords(packages, payments, filter.search);
   }, [packages, payments, filter.search]);
 
   return {
@@ -141,6 +106,6 @@ export function useFinancesData(token?: string | null) {
     loading,
     filter,
     setFilter,
-    refresh: loadData,
+    refresh: () => loadData(true),
   };
 }

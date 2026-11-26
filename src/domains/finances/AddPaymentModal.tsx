@@ -10,6 +10,7 @@ import { PaymentFormFields } from './PaymentFormFields';
 import { savePendingPayment, removePendingPayment, classifyPaymentError, PendingPayment } from './paymentIdempotency';
 import { getAdminScope } from './paymentAdminScope';
 import { useAuth } from '../../auth/AuthProvider';
+import { invalidateAppData } from '../../context/AppDataContext';
 import { UnverifiedPaymentNotice } from './UnverifiedPaymentNotice';
 import { usePaymentModalForm } from './usePaymentModalForm';
 import { backdropStyle, dialogStyle, headerStyle, closeButtonStyle, serverErrorStyle, actionRowStyle } from './paymentModalStyles';
@@ -62,6 +63,7 @@ export const AddPaymentModal: React.FC<AddPaymentModalProps> = ({
         in_inr: numInInr, payment_date: values.payment_date,
         payment_method: 'RECORDED', idempotency_key: idempKey,
       }, token);
+      invalidateAppData('all');
       removePendingPayment(idempKey, adminId);
       setCurrentPending(null);
       const formattedAmt = formatCurrency(numAmount, true, values.currency.toUpperCase());

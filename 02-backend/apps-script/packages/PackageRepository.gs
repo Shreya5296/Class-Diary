@@ -24,6 +24,13 @@ var _pkgRegistry = {
   getExpectedHeaders: function(name) { return _resolvePkgRepoHeaders(name); }
 };
 var _pkgMapper = typeof createHeaderMap === 'function' ? { createHeaderMap: createHeaderMap, rowToRecord: rowToRecord, recordToRow: recordToRow } : (typeof require !== 'undefined' ? require('../sheets/HeaderMapper.gs') : null);
+var _pkgCacheClear = typeof SheetCache_clear === 'function' ? SheetCache_clear : (typeof require !== 'undefined' ? require('../sheets/SheetCache.gs').SheetCache_clear : null);
+function _pkgSafeClear(sheet) {
+  if (sheet) {
+    delete sheet._cachedRows;
+    if (_pkgCacheClear) _pkgCacheClear(sheet);
+  }
+}
 
 function Packages_getAll(spreadsheet) {
   var sheet = spreadsheet.getSheetByName(_pkgRegistry.SHEET_NAMES.PACKAGES);
@@ -133,6 +140,7 @@ function Packages_repoUpdate(spreadsheet, studentId, updates) {
       }
       var updatedRow = _pkgMapper.recordToRow(map, headerRow, rec);
       sheet.getRange(rowNum, 1, 1, updatedRow.length).setValues([updatedRow]);
+      _pkgSafeClear(sheet);
       rec._rowIndex = rowNum;
       return rec;
     }

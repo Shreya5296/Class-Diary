@@ -268,9 +268,74 @@ function Reports_getFinancialSummary(spreadsheet, options) {
   };
 }
 
+function Reports_getDashboardCombined(spreadsheet, payload) {
+  var overviewRes = Reports_getDashboardOverview(spreadsheet);
+  var overview = (overviewRes && overviewRes.data) ? overviewRes.data : overviewRes;
+
+  var clsSheet = spreadsheet.getSheetByName(_repReg.SHEET_NAMES.CLASS_SESSIONS);
+  var rawClasses = clsSheet ? _repRowReader.readAllRecords(clsSheet, _repMap) : [];
+  var classes = rawClasses.map(function(c) {
+    var copy = Object.assign({}, c);
+    copy.session_id = c.session_id || (c.student_id + '__' + c.schedule_date + '__' + c.schedule_time);
+    copy.topic = (c.student_name || 'Class') + ' - Session';
+    copy.class_title = copy.topic;
+    copy.start_time = c.schedule_time || c.start_time;
+    copy.status = c.session_status || 'SCHEDULED';
+    copy.duration_minutes = Number(c.duration_minutes) || 60;
+    copy.session_notes = c.session_notes || '';
+    return copy;
+  });
+
+  var stuSheet = spreadsheet.getSheetByName(_repReg.SHEET_NAMES.STUDENTS);
+  var students = stuSheet ? _repRowReader.readAllRecords(stuSheet, _repMap) : [];
+
+  var pkgSheet = spreadsheet.getSheetByName(_repReg.SHEET_NAMES.PACKAGES);
+  var packages = pkgSheet ? _repRowReader.readAllRecords(pkgSheet, _repMap) : [];
+
+  var schedService = typeof Schedules_list === 'function' ? { Schedules_list: Schedules_list } : (typeof require !== 'undefined' ? require('../classes/ClassScheduleService.gs') : null);
+  var schedules = (schedService && schedService.Schedules_list) ? schedService.Schedules_list(spreadsheet) : [];
+
+  var feeSheet = spreadsheet.getSheetByName('Fees') || spreadsheet.getSheetByName('FeeObligations');
+  var fees = feeSheet ? _repRowReader.readAllRecords(feeSheet, _repMap) : [];
+
+  return {
+    success: true,
+    data: {
+      overview: overview,
+      classes: classes,
+      schedules: schedules,
+      students: students,
+      packages: packages,
+      fees: fees
+    }
+  };
+}
+
+function Reports_getFinancesCombined(spreadsheet, payload) {
+  var summaryRes = Reports_getFinancialSummary(spreadsheet, payload);
+  var summary = (summaryRes && summaryRes.data) ? summaryRes.data : summaryRes;
+
+  var paySheet = spreadsheet.getSheetByName(_repReg.SHEET_NAMES.PAYMENTS);
+  var payments = paySheet ? _repRowReader.readAllRecords(paySheet, _repMap) : [];
+
+  var pkgSheet = spreadsheet.getSheetByName(_repReg.SHEET_NAMES.PACKAGES);
+  var packages = pkgSheet ? _repRowReader.readAllRecords(pkgSheet, _repMap) : [];
+
+  return {
+    success: true,
+    data: {
+      summary: summary,
+      payments: payments,
+      packages: packages
+    }
+  };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     Reports_getDashboardOverview: Reports_getDashboardOverview,
-    Reports_getFinancialSummary: Reports_getFinancialSummary
+    Reports_getFinancialSummary: Reports_getFinancialSummary,
+    Reports_getDashboardCombined: Reports_getDashboardCombined,
+    Reports_getFinancesCombined: Reports_getFinancesCombined
   };
 }

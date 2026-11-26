@@ -4,10 +4,12 @@ import { ClassSession, ClassSessionInput, AttendanceStatus } from './classTypes'
 
 export async function fetchClasses(
   studentId?: string,
-  token?: string | null
+  token?: string | null,
+  options?: { scope?: 'upcoming' | 'past' | 'all' }
 ): Promise<ClassSession[]> {
   const payload: Record<string, unknown> = {};
   if (studentId) payload.student_id = studentId;
+  if (options?.scope) payload.scope = options.scope;
 
   const response = await sendApiRequest<ClassSession[]>(
     'classes.list',

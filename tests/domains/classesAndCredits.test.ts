@@ -109,7 +109,7 @@ describe('Phase 5 — Classes, Credits, Meeting Links, and Notes', () => {
     }, actor);
     const pkgId = pkgRes.data.package_id;
 
-    // 1. Unexcused No-Show (outcome: 'NO_SHOW') consumes 1 credit
+    // 1. Unexcused No-Show (outcome: 'NO_SHOW') defaults to NO_CONSUME (does not use up a class)
     const clsNoShow = ClassService.Classes_schedule(spreadsheet, {
       student_id: studentId, package_id: pkgId, class_title: 'Physics Lab 1',
       scheduled_start: '2026-03-10T10:00:00.000Z', scheduled_end: '2026-03-10T11:00:00.000Z'
@@ -117,10 +117,22 @@ describe('Phase 5 — Classes, Credits, Meeting Links, and Notes', () => {
     const compNoShow = ClassService.Classes_complete(spreadsheet, {
       class_session_id: clsNoShow.data.class_session_id, outcome: 'NO_SHOW'
     }, actor);
-    expect(compNoShow.data.class_credit_effect).toBe('CONSUME');
+    expect(compNoShow.data.class_credit_effect).toBe('NO_CONSUME');
     expect(compNoShow.data.attendance_status).toBe('ABSENT_UNEXCUSED');
 
     let bal = PackageService.Packages_enrichWithBalance(spreadsheet, PackageRepository.Packages_getById(spreadsheet, pkgId));
+    expect(bal.remaining_classes).toBe(10); // Does not consume credit by default
+
+    // Unexcused No-Show with explicit deduct_class: true consumes 1 credit
+    const clsNoShowDeduct = ClassService.Classes_schedule(spreadsheet, {
+      student_id: studentId, package_id: pkgId, class_title: 'Physics Lab 1b',
+      scheduled_start: '2026-03-10T14:00:00.000Z', scheduled_end: '2026-03-10T15:00:00.000Z'
+    }, actor);
+    const compNoShowDeduct = ClassService.Classes_complete(spreadsheet, {
+      class_session_id: clsNoShowDeduct.data.class_session_id, outcome: 'NO_SHOW', deduct_class: true
+    }, actor);
+    expect(compNoShowDeduct.data.class_credit_effect).toBe('CONSUME');
+    bal = PackageService.Packages_enrichWithBalance(spreadsheet, PackageRepository.Packages_getById(spreadsheet, pkgId));
     expect(bal.remaining_classes).toBe(9);
 
     // 2. Excused Absence (outcome: 'EXCUSED') preserves credit

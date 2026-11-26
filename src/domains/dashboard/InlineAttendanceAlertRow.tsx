@@ -3,6 +3,7 @@ import styles from './inlineAttendanceAlertRow.module.css';
 import { AttentionAlert } from './attentionAlertTypes';
 import { Button } from '../../components/buttons/Button';
 import { recordAttendance, cancelClass, scheduleClass } from '../classes/classApi';
+import { invalidateAppData } from '../../context/AppDataContext';
 
 export interface InlineAttendanceAlertRowProps {
   alert: AttentionAlert; isExpanded: boolean; onToggle: () => void;
@@ -37,6 +38,7 @@ export const InlineAttendanceAlertRow: React.FC<InlineAttendanceAlertRowProps> =
     setLoading(true); setErrorMsg(null);
     try {
       await recordAttendance(sessionId, outcome, token, undefined, vNotes);
+      invalidateAppData('dashboard');
       setSuccessMsg(`✓ Marked ${label}`);
       if (onRefresh) await onRefresh();
     } catch (err: unknown) {
@@ -62,6 +64,7 @@ export const InlineAttendanceAlertRow: React.FC<InlineAttendanceAlertRowProps> =
         class_title: `${alert.studentName} - Rescheduled Class`, deduct_class: false,
         session_notes: `${vNotes} (Rescheduled from ${alert.formattedClassDate || alert.classDate || 'previous session'})`,
       }, token);
+      invalidateAppData('dashboard');
       setSuccessMsg(`✓ Rescheduled to ${rescheduleDate}`);
       if (onRefresh) await onRefresh();
     } catch (err: unknown) {

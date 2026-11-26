@@ -11,11 +11,34 @@ import {
   handleMockClassUpdate,
 } from './mockClassOperations';
 import { handleMockRenewal } from './mockRenewalOperations';
+import { handleMockGenerateForPackage } from './mockPackageClassGenerator';
+import { handleMockCreatePackage, handleMockRecordPayment } from './mockFinancialOperations';
 
 export function handleMockApiRequest<T>(operation: string, payload: Record<string, unknown>, reqId: string): ApiResponse<T> {
   const meta = { requestId: reqId, timestamp: new Date().toISOString() };
   if (operation === 'dashboard.overview') {
     return { ok: true, data: { activeStudentsCount: 3, classesUpcoming7Days: 2, outstandingFeesTotal: 50000, currency: 'INR' } as T, meta };
+  }
+  if (operation === 'dashboard.combined') {
+    return {
+      ok: true,
+      data: {
+        overview: { activeStudentsCount: 3, classesUpcoming7Days: 2, outstandingFeesTotal: 50000, currency: 'INR' },
+        classes: MOCK_CLASSES, schedules: Object.values(MOCK_SCHEDULES).flat(),
+        students: MOCK_STUDENTS, packages: MOCK_PACKAGES, fees: MOCK_FEES,
+      } as T,
+      meta,
+    };
+  }
+  if (operation === 'finances.combined') {
+    return {
+      ok: true,
+      data: {
+        summary: { totalInvoiced: 216800, totalBilled: 216800, totalCollected: 166800, totalReceived: 166800, totalOutstanding: 50000, currency: 'INR' },
+        payments: MOCK_PAYMENTS, packages: MOCK_PACKAGES,
+      } as T,
+      meta,
+    };
   }
   if (operation === 'students.list') {
     const q = String(payload.query || '').toLowerCase();
@@ -51,7 +74,18 @@ export function handleMockApiRequest<T>(operation: string, payload: Record<strin
   }
   if (operation === 'classes.list') {
     const sid = payload.student_id as string | undefined;
-    return { ok: true, data: (sid ? MOCK_CLASSES.filter(c => c.student_id === sid) : MOCK_CLASSES) as T, meta };
+    const scope = payload.scope as string | undefined;
+    let list = sid ? MOCK_CLASSES.filter(c => c.student_id === sid) : MOCK_CLASSES;
+    if (scope === 'upcoming' || scope === 'past') {
+      const now = new Date().toISOString();
+      list = list.filter(c => {
+        const item = c as Record<string, any>;
+        const start = item.scheduled_start || (item.schedule_date && item.schedule_time ? `${item.schedule_date}T${item.schedule_time}` : item.start_time);
+        const isUp = (start && start >= now) || item.session_status === 'SCHEDULED' || item.status === 'SCHEDULED';
+        return scope === 'upcoming' ? isUp : !isUp;
+      });
+    }
+    return { ok: true, data: list as T, meta };
   }
   if (operation === 'classes.schedule') return { ok: true, data: scheduleMockClass(payload) as T, meta };
   if (operation === 'classes.recordAttendance' || operation === 'classes.complete') {
@@ -66,24 +100,13 @@ export function handleMockApiRequest<T>(operation: string, payload: Record<strin
   if (operation === 'classes.update') {
     return { ok: true, data: handleMockClassUpdate(payload) as T, meta };
   }
+  if (operation === 'classes.generateForPackage') {
+    return { ok: true, data: handleMockGenerateForPackage(payload) as T, meta };
+  }
   if (operation === 'packages.list') return { ok: true, data: MOCK_PACKAGES as T, meta };
   if (operation === 'packages.update') return { ok: true, data: updateMockPackage(payload) as T, meta };
   if (operation === 'packages.create') {
-    const newPkg = {
-      package_id: `pkg_${Date.now()}`,
-      student_id: String(payload.student_id || ''),
-      student_name: String(payload.student_name || ''),
-      plan_type: String(payload.plan_type || 'PACKAGE'),
-      currency: String(payload.currency || 'INR').toUpperCase(),
-      package_price: Number(payload.package_price || payload.price || 0),
-      per_class: Number(payload.per_class || 0),
-      classes_purchased: Number(payload.classes_purchased || payload.total_classes || 0),
-      total_classes: Number(payload.classes_purchased || payload.total_classes || 0),
-      class_duration: payload.class_duration ? Number(payload.class_duration) : undefined,
-      status: 'ACTIVE'
-    };
-    MOCK_PACKAGES.unshift(newPkg);
-    return { ok: true, data: newPkg as T, meta };
+    return { ok: true, data: handleMockCreatePackage(payload) as T, meta };
   }
   if (operation === 'packages.getBalance') return { ok: true, data: { totalPurchased: 12, totalConsumed: 4, remainingBalance: 8 } as T, meta };
   if (operation === 'schedules.list') {
@@ -106,25 +129,7 @@ export function handleMockApiRequest<T>(operation: string, payload: Record<strin
     };
   }
   if (operation === 'payments.record') {
-    const sid = String(payload.student_id || '');
-    const stu = MOCK_STUDENTS.find((s) => s.student_id === sid);
-    const sname = stu ? stu.student_name : String(payload.student_name || sid);
-    const cur = String(payload.currency || 'INR').toUpperCase();
-    const amt = Number(payload.amount) || 0;
-    const inInr = payload.in_inr !== undefined && payload.in_inr !== null ? Number(payload.in_inr) : (cur === 'INR' ? amt : 0);
-    const newPay = {
-      payment_id: `pay_${Date.now()}`,
-      student_id: sid,
-      student_name: sname,
-      amount: amt,
-      currency: cur,
-      in_inr: inInr,
-      payment_date: String(payload.payment_date || new Date().toISOString().slice(0, 10)),
-      status: 'RECORDED',
-      payment_status: 'RECORDED'
-    };
-    MOCK_PAYMENTS.push(newPay);
-    return { ok: true, data: newPay as T, meta };
+    return { ok: true, data: handleMockRecordPayment(payload) as T, meta };
   }
   if (operation === 'packages.renew' || operation === 'students.renew') {
     return handleMockRenewal<T>(payload, reqId);

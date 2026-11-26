@@ -27,6 +27,7 @@ export class MockSheet {
   }
 
   clear(): void {
+    delete (this as any)._cachedRows;
     this.rows = [];
   }
 
@@ -76,6 +77,7 @@ export class MockSheet {
         return result;
       },
       setValue: (val: any) => {
+        delete (this as any)._cachedRows;
         const rowIdx = row - 1;
         const colIdx = col - 1;
         while (this.rows.length <= rowIdx) {
@@ -84,6 +86,7 @@ export class MockSheet {
         this.rows[rowIdx][colIdx] = val;
       },
       setValues: (values: any[][]) => {
+        delete (this as any)._cachedRows;
         for (let r = 0; r < numRows; r++) {
           const rowIdx = row - 1 + r;
           while (this.rows.length <= rowIdx) {
@@ -102,6 +105,7 @@ export class MockSheet {
   }
 
   appendRow(row: any[]): void {
+    delete (this as any)._cachedRows;
     this.rows.push([...row]);
   }
 
@@ -110,12 +114,14 @@ export class MockSheet {
   }
 
   setRow(index: number, row: any[]): void {
+    delete (this as any)._cachedRows;
     if (index >= 0 && index < this.rows.length) {
       this.rows[index] = [...row];
     }
   }
 
   deleteRow(rowPosition: number): void {
+    delete (this as any)._cachedRows;
     // In Google Apps Script, rowPosition is 1-based: row 1 is header (index 0).
     // Safety guard: rowPosition must be > 1 to avoid deleting the header.
     if (rowPosition > 1 && rowPosition <= this.rows.length) {

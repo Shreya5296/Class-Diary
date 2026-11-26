@@ -125,7 +125,7 @@ describe('Extra Class Update Identity Integrity & Lock Enforcement', () => {
     expect(rest.success).toBe(true);
     expect(env.getBackendAvailableBalance(env.studentAId).consumed).toBe(0);
 
-    const canc = ClassService.Classes_cancel(env.spreadsheet, { class_session_id: sid, cancellation_reason: 'Rescheduled' }, env.actor);
+    const canc = ClassService.Classes_cancel(env.spreadsheet, { class_session_id: sid, cancellation_reason: 'Rescheduled', deduct_class: false }, env.actor);
     expect(canc.success).toBe(true);
     expect(env.getBackendAvailableBalance(env.studentAId).consumed).toBe(0);
     expect(env.getBackendAvailableBalance(env.studentAId).available).toBe(10);

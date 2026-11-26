@@ -438,6 +438,7 @@ function Packages_renew(spreadsheet, data, actor) {
             var pSheet = spreadsheet.getSheetByName('Packages');
             if (pSheet && typeof pSheet.deleteRow === 'function') {
               pSheet.deleteRow(pkgRecord._rowIndex);
+              if (pSheet._cachedRows) delete pSheet._cachedRows;
             }
           }
           var rollbackRepo = _getRenPkgRepo();
