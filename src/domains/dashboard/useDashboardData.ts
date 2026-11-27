@@ -16,9 +16,11 @@ export function useDashboardData(token?: string | null) {
   const [localLoading, setLocalLoading] = useState(!localData);
   const [localError, setLocalError] = useState<string | null>(null);
 
+  const getDash = ctx?.getDashboard;
+
   const loadData = useCallback(async (force = false) => {
-    if (ctx) {
-      await ctx.getDashboard(token, force);
+    if (getDash) {
+      await getDash(token, force);
     } else {
       setLocalLoading(true);
       try {
@@ -30,14 +32,14 @@ export function useDashboardData(token?: string | null) {
         setLocalLoading(false);
       }
     }
-  }, [ctx, token]);
+  }, [getDash, token]);
 
   useEffect(() => {
     loadData(false);
-  }, [loadData]);
+  }, [token, getDash]);
 
   const data = ctx ? ctx.dashboardData : localData;
-  const loading = ctx ? (!ctx.dashboardData && ctx.dashboardLoading) : localLoading;
+  const loading = ctx ? (!ctx.dashboardData && !ctx.dashboardError && ctx.dashboardLoading) : localLoading;
   const error = ctx ? ctx.dashboardError : localError;
 
   const schedules = useMemo(() => {

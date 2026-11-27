@@ -22,6 +22,13 @@ var _payRegistry = {
   getExpectedHeaders: function(name) { return _resolvePayRepoHeaders(name); }
 };
 var _payMapper = typeof createHeaderMap === 'function' ? { createHeaderMap: createHeaderMap, rowToRecord: rowToRecord, recordToRow: recordToRow } : (typeof require !== 'undefined' ? require('../sheets/HeaderMapper.gs') : null);
+var _payCacheClear = typeof SheetCache_clear === 'function' ? SheetCache_clear : (typeof require !== 'undefined' ? require('../sheets/SheetCache.gs').SheetCache_clear : null);
+function _paySafeClear(sheet) {
+  if (sheet) {
+    delete sheet._cachedRows;
+    if (_payCacheClear) _payCacheClear(sheet);
+  }
+}
 
 var _paymentMemoryCache = (typeof globalThis !== 'undefined' && globalThis.__paymentMemoryCache)
   ? globalThis.__paymentMemoryCache
@@ -123,6 +130,7 @@ function Payments_update(spreadsheet, target, updates) {
   var updatedRecord = Object.assign({}, record, updates);
   var newRowVals = _payMapper.recordToRow(map, headers, updatedRecord);
   sheet.getRange(targetRow, 1, 1, headers.length).setValues([newRowVals]);
+  _paySafeClear(sheet);
   if (typeof sheet.setRow === 'function') {
     sheet.setRow(targetRow - 1, newRowVals);
   }

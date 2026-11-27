@@ -3,6 +3,7 @@ import { handleMockApiRequest } from '../../src/api/mockDataStore';
 import {
   fetchDashboardCombined,
   fetchFinancesCombined,
+  resetApiCapabilities,
   DashboardCombinedData,
   FinancesCombinedData,
 } from '../../src/api/combinedApi';
@@ -21,6 +22,7 @@ describe('Performance, Store Lifecycle & Cache Invalidation Audit Tests', () => 
     vi.restoreAllMocks();
     clearApiCache();
     clearAppDataStore();
+    resetApiCapabilities();
   });
 
   describe('Finding F-01: Authentication Cache Cleanup & Isolation', () => {
@@ -229,6 +231,91 @@ describe('Performance, Store Lifecycle & Cache Invalidation Audit Tests', () => 
       const fin = await fetchFinancesCombined('test_tok');
       expect(fin.summary).toBeDefined();
       expect(fin.payments.length).toBeGreaterThan(0);
+    });
+
+    it('gracefully falls back to individual endpoints when combined endpoint returns UNKNOWN_OPERATION', async () => {
+      globalThis.fetch = vi.fn().mockImplementation(async (_url, options) => {
+        const body = JSON.parse(options.body);
+        if (body.operation === 'dashboard.combined' || body.operation === 'finances.combined') {
+          return {
+            ok: true,
+            json: async () => ({
+              ok: false,
+              error: { code: 'UNKNOWN_OPERATION', message: `Unknown operation: ${body.operation}` },
+            }),
+          };
+        }
+        const res = handleMockApiRequest(body.operation, body, 'req_test');
+        return {
+          ok: true,
+          json: async () => res,
+        };
+      });
+
+      const dash = await fetchDashboardCombined('test_tok');
+      expect(dash.overview).toBeDefined();
+      expect(dash.classes.length).toBeGreaterThan(0);
+      expect(dash.students.length).toBeGreaterThan(0);
+      expect(dash.packages.length).toBeGreaterThan(0);
+
+      const fin = await fetchFinancesCombined('test_tok');
+      expect(fin.summary).toBeDefined();
+      expect(fin.packages.length).toBeGreaterThan(0);
+      expect(fin.payments.length).toBeGreaterThan(0);
+    });
+
+    it('propagates terminal error when non-UNKNOWN_OPERATION failure occurs', async () => {
+      globalThis.fetch = vi.fn().mockImplementation(async () => {
+        return {
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+        };
+      });
+
+      await expect(fetchDashboardCombined('test_tok')).rejects.toThrow();
+      await expect(fetchFinancesCombined('test_tok')).rejects.toThrow();
+    });
+
+    it('remembers unsupported combined endpoints and skips redundant probing on subsequent requests', async () => {
+      resetApiCapabilities();
+      const attemptedOps: string[] = [];
+
+      globalThis.fetch = vi.fn().mockImplementation(async (_url, options) => {
+        const body = JSON.parse(options.body);
+        attemptedOps.push(body.operation);
+        if (body.operation === 'dashboard.combined' || body.operation === 'finances.combined') {
+          return {
+            ok: true,
+            json: async () => ({
+              ok: false,
+              error: { code: 'UNKNOWN_OPERATION', message: `Unknown operation: ${body.operation}` },
+            }),
+          };
+        }
+        const res = handleMockApiRequest(body.operation, body, 'req_test');
+        return {
+          ok: true,
+          json: async () => res,
+        };
+      });
+
+      // First call encounters UNKNOWN_OPERATION and marks unsupported
+      await fetchDashboardCombined('test_tok');
+      expect(attemptedOps).toContain('dashboard.combined');
+
+      // Second call must NOT attempt dashboard.combined
+      clearApiCache();
+      attemptedOps.length = 0;
+      await fetchDashboardCombined('test_tok');
+      expect(attemptedOps).not.toContain('dashboard.combined');
+      expect(attemptedOps).toContain('dashboard.overview');
+
+      // resetApiCapabilities restores probing
+      resetApiCapabilities();
+      attemptedOps.length = 0;
+      await fetchDashboardCombined('test_tok');
+      expect(attemptedOps).toContain('dashboard.combined');
     });
   });
 });

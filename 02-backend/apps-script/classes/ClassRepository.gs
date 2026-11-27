@@ -23,6 +23,13 @@ var _clsRegistry = {
   getExpectedHeaders: function(name) { return _resolveClsRepoHeaders(name); }
 };
 var _clsMapper = typeof createHeaderMap === 'function' ? { createHeaderMap: createHeaderMap, rowToRecord: rowToRecord, recordToRow: recordToRow } : (typeof require !== 'undefined' ? require('../sheets/HeaderMapper.gs') : null);
+var _clsCacheClear = typeof SheetCache_clear === 'function' ? SheetCache_clear : (typeof require !== 'undefined' ? require('../sheets/SheetCache.gs').SheetCache_clear : null);
+function _clsSafeClear(sheet) {
+  if (sheet) {
+    delete sheet._cachedRows;
+    if (_clsCacheClear) _clsCacheClear(sheet);
+  }
+}
 
 function Classes_getAll(spreadsheet) {
   var sheet = spreadsheet.getSheetByName(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
@@ -162,7 +169,7 @@ function Classes_repoUpdate(spreadsheet, id, updates) {
       }
       var updatedRow = _clsMapper.recordToRow(map, headerRow, rec);
       sheet.getRange(rowNum, 1, 1, updatedRow.length).setValues([updatedRow]);
-      delete sheet._cachedRows;
+      _clsSafeClear(sheet);
       rec._rowIndex = rowNum;
       return rec;
     }
@@ -222,7 +229,7 @@ function Classes_repoUpdate(spreadsheet, id, updates) {
           }
           var outRow = _clsMapper.recordToRow(map2, headerRow2, currentRec);
           sheet.getRange(r + 1, 1, 1, outRow.length).setValues([outRow]);
-          delete sheet._cachedRows;
+          _clsSafeClear(sheet);
           currentRec._rowIndex = r + 1;
           return currentRec;
         }

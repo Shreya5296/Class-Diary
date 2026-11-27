@@ -24,6 +24,16 @@ var _renSchedSvc = typeof Schedules_save === 'function' ? { Schedules_save: Sche
 var _renLock = typeof withLock === 'function' ? { withLock: withLock } : (typeof require !== 'undefined' ? require('../sheets/LockManager.gs') : null);
 var _renTrans = typeof _cancelFutureSessionsOnRenewal === 'function' ? { _countConsumedCredits: _countConsumedCredits, _cancelFutureSessionsOnRenewal: _cancelFutureSessionsOnRenewal, _planRenewalSlots: _planRenewalSlots, _generateNewRenewalSessions: _generateNewRenewalSessions } : (typeof require !== 'undefined' ? require('./RenewalSessionTransition.gs') : null);
 var _renIdemp = typeof _checkRenewalIdempotency === 'function' ? { _checkRenewalIdempotency: _checkRenewalIdempotency, _recordRenewalInitiated: _recordRenewalInitiated, _saveRenewalIdempotency: _saveRenewalIdempotency } : (typeof require !== 'undefined' ? require('./RenewalIdempotency.gs') : null);
+var _renClearCache = typeof SheetCache_clear === 'function' ? SheetCache_clear : (typeof require !== 'undefined' ? (function() { try { return require('../sheets/SheetCache.gs').SheetCache_clear; } catch(e) { return null; } })() : null);
+
+function _renSafeClear(sheet) {
+  if (sheet) {
+    delete sheet._cachedRows;
+    if (_renClearCache) {
+      _renClearCache(sheet);
+    }
+  }
+}
 
 var PACKAGE_12_COLUMNS = [
   'student_id',
@@ -438,7 +448,7 @@ function Packages_renew(spreadsheet, data, actor) {
             var pSheet = spreadsheet.getSheetByName('Packages');
             if (pSheet && typeof pSheet.deleteRow === 'function') {
               pSheet.deleteRow(pkgRecord._rowIndex);
-              if (pSheet._cachedRows) delete pSheet._cachedRows;
+              _renSafeClear(pSheet);
             }
           }
           var rollbackRepo = _getRenPkgRepo();

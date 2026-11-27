@@ -18,6 +18,16 @@ var _clsReg = {
   }
 };
 var _clsMap = typeof createHeaderMap === 'function' ? { createHeaderMap: createHeaderMap, rowToRecord: rowToRecord, recordToRow: recordToRow } : (typeof require !== 'undefined' ? require('../sheets/HeaderMapper.gs') : null);
+var _clsSvcClearCache = typeof SheetCache_clear === 'function' ? SheetCache_clear : (typeof require !== 'undefined' ? (function() { try { return require('../sheets/SheetCache.gs').SheetCache_clear; } catch(e) { return null; } })() : null);
+
+function _clsSvcSafeClear(sheet) {
+  if (sheet) {
+    delete sheet._cachedRows;
+    if (_clsSvcClearCache) {
+      _clsSvcClearCache(sheet);
+    }
+  }
+}
 
 var _sessionMetaMap = (typeof globalThis !== 'undefined' && globalThis.__sessionMetaMap)
   ? globalThis.__sessionMetaMap
@@ -446,7 +456,7 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
             sheet.deleteRow(rowsToDelete[d]);
           }
         }
-        if (sheet && sheet._cachedRows) delete sheet._cachedRows;
+        _clsSvcSafeClear(sheet);
         allSessions = _clsRepo.Classes_getAll(spreadsheet) || [];
       }
     }

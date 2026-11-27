@@ -26,10 +26,12 @@ export function useFinancesData(token?: string | null) {
     selectedMonth: currentMonthDefault,
   }));
 
+  const getFin = ctx?.getFinances;
+
   const loadData = useCallback(async (force = false) => {
     const params = { startDate: filter.startDate, endDate: filter.endDate };
-    if (ctx) {
-      await ctx.getFinances(token, params, force);
+    if (getFin) {
+      await getFin(token, params, force);
     } else {
       setLocalLoading(true);
       try {
@@ -41,15 +43,16 @@ export function useFinancesData(token?: string | null) {
         setLocalLoading(false);
       }
     }
-  }, [ctx, token, filter.startDate, filter.endDate]);
+  }, [getFin, token, filter.startDate, filter.endDate]);
 
-  useEffect(() => { loadData(false); }, [loadData]);
+  useEffect(() => { loadData(false); }, [token, filter.startDate, filter.endDate, getFin]);
 
   const data = ctx ? ctx.financesData : localData;
-  const loading = ctx ? (!ctx.financesData && ctx.financesLoading) : localLoading;
+  const loading = ctx ? (!ctx.financesData && !ctx.financesError && ctx.financesLoading) : localLoading;
+  const error = ctx ? ctx.financesError : null;
   const summary = data?.summary || null;
   const payments: Payment[] = data?.payments || [];
-  const packages: Package[] = data?.packages || [];
+  const packages: Package[] = data?.packages || ctx?.dashboardData?.packages || [];
 
   const currencyTotals = useMemo(() => {
     const packagesByCurrency: CurrencyTotals = {};
@@ -104,6 +107,7 @@ export function useFinancesData(token?: string | null) {
     studentBalances,
     currencyTotals,
     loading,
+    error,
     filter,
     setFilter,
     refresh: () => loadData(true),

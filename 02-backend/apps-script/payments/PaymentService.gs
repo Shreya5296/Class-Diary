@@ -25,6 +25,16 @@ var _payReg = {
   }
 };
 var _payMap = typeof createHeaderMap === 'function' ? { createHeaderMap: createHeaderMap, rowToRecord: rowToRecord, recordToRow: recordToRow } : (typeof require !== 'undefined' ? require('../sheets/HeaderMapper.gs') : null);
+var _paySvcClearCache = typeof SheetCache_clear === 'function' ? SheetCache_clear : (typeof require !== 'undefined' ? (function() { try { return require('../sheets/SheetCache.gs').SheetCache_clear; } catch(e) { return null; } })() : null);
+
+function _paySvcSafeClear(sheet) {
+  if (sheet) {
+    delete sheet._cachedRows;
+    if (_paySvcClearCache) {
+      _paySvcClearCache(sheet);
+    }
+  }
+}
 
 var _idempotencyCache = {};
 var _voidedPaymentIds = {};
@@ -520,7 +530,7 @@ function Payments_void(spreadsheet, data, actor) {
   if (typeof sheet.deleteRow === 'function') {
     sheet.deleteRow(targetSheetRow);
   }
-  if (sheet._cachedRows) delete sheet._cachedRows;
+  _paySvcSafeClear(sheet);
 
   if (payId) {
     _voidedPaymentIds[payId] = true;

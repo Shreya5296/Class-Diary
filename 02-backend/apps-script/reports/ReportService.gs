@@ -293,7 +293,8 @@ function Reports_getDashboardCombined(spreadsheet, payload) {
   var packages = pkgSheet ? _repRowReader.readAllRecords(pkgSheet, _repMap) : [];
 
   var schedService = typeof Schedules_list === 'function' ? { Schedules_list: Schedules_list } : (typeof require !== 'undefined' ? require('../classes/ClassScheduleService.gs') : null);
-  var schedules = (schedService && schedService.Schedules_list) ? schedService.Schedules_list(spreadsheet) : [];
+  var schedRes = (schedService && schedService.Schedules_list) ? schedService.Schedules_list(spreadsheet) : [];
+  var schedules = (schedRes && Array.isArray(schedRes.data)) ? schedRes.data : (Array.isArray(schedRes) ? schedRes : []);
 
   var feeSheet = spreadsheet.getSheetByName('Fees') || spreadsheet.getSheetByName('FeeObligations');
   var fees = feeSheet ? _repRowReader.readAllRecords(feeSheet, _repMap) : [];

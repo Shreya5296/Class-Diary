@@ -10,6 +10,7 @@ var DATE_COLUMNS_CONFIG = {
   'Enrollments': ['start_date', 'end_date'],
   'FeeObligations': ['issue_date', 'due_date']
 };
+var _dateClearCache = typeof SheetCache_clear === 'function' ? SheetCache_clear : (typeof require !== 'undefined' ? (function() { try { return require('./SheetCache.gs').SheetCache_clear; } catch(e) { return null; } })() : null);
 
 function parseIsoToSheetDate(dateVal) {
   if (!dateVal) return null;
@@ -82,6 +83,9 @@ function standardizeAllDateFormats(spreadsheet) {
 
       if (changed && typeof range.setValues === 'function') {
         range.setValues(values);
+        if (_dateClearCache) {
+          _dateClearCache(sheet);
+        }
       }
       if (typeof range.setNumberFormat === 'function') {
         range.setNumberFormat('dd/MM/yyyy');

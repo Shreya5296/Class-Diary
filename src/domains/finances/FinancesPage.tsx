@@ -3,6 +3,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { PageHeader } from '../../layout/PageHeader';
 import { FinancesSkeleton } from '../../components/feedback/Skeleton';
+import { ErrorState } from '../../components/feedback/ErrorState';
 import { FinanceTab } from './financeTypes';
 import { FinanceSummaryCards } from './FinanceSummaryCards';
 import { FinanceToolbar } from './FinanceToolbar';
@@ -24,7 +25,7 @@ export const FinancesPage: React.FC = () => {
   const [otherAdminCount, setOtherAdminCount] = useState(() => getOtherAdminPendingCount(adminId));
 
   const {
-    summary, packages, payments, filteredPayments, studentBalances, loading, filter, setFilter, refresh,
+    summary, packages, payments, filteredPayments, studentBalances, loading, error, filter, setFilter, refresh,
   } = useFinancesData(token);
 
   useEffect(() => {
@@ -50,6 +51,8 @@ export const FinancesPage: React.FC = () => {
       <PageHeader title="Finances" />
       {isInitialLoading ? (
         <FinancesSkeleton />
+      ) : error && !summary && filteredPayments.length === 0 ? (
+        <ErrorState message={error} onRetry={refresh} />
       ) : (
         <>
           {successBanner && <div style={successBannerStyle}>✓ {successBanner}</div>}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../../auth/AuthProvider';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { useOptionalAppData } from '../../context/AppDataContext';
 import { fetchClasses } from '../classes/classApi';
 import { fetchSchedules, WeeklyScheduleEntry } from '../classes/scheduleApi';
 import { fetchStudents } from '../students/studentApi';
@@ -25,6 +26,8 @@ import { ErrorState } from '../../components/feedback/ErrorState';
 
 export const CalendarPage: React.FC = () => {
   const { token } = useAuth();
+  const appData = useOptionalAppData();
+  const cachedDash = appData?.dashboardData;
   const activeTz = getSavedTimezone() || 'Asia/Kolkata';
 
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
@@ -32,16 +35,16 @@ export const CalendarPage: React.FC = () => {
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => toInputDateFormat(new Date(), activeTz));
   const [yearMonthStr, setYearMonthStr] = useState<string>(() => toInputDateFormat(new Date(), activeTz).slice(0, 7));
 
-  const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [schedules, setSchedules] = useState<WeeklyScheduleEntry[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState<ClassSession[]>(() => cachedDash?.classes || []);
+  const [schedules, setSchedules] = useState<WeeklyScheduleEntry[]>(() => cachedDash?.schedules || []);
+  const [students, setStudents] = useState<Student[]>(() => cachedDash?.students || []);
+  const [packages, setPackages] = useState<Package[]>(() => cachedDash?.packages || []);
+  const [loading, setLoading] = useState(() => !cachedDash?.classes?.length);
   const [error, setError] = useState<string | null>(null);
   const [isExtraModalOpen, setIsExtraModalOpen] = useState(false);
 
   const loadCalendarData = useCallback(async () => {
-    setLoading(true);
+    if (!classes.length) setLoading(true);
     setError(null);
     try {
       const [cls, scheds, stuList, pkgs] = await Promise.all([
@@ -51,14 +54,17 @@ export const CalendarPage: React.FC = () => {
         fetchPackages(undefined, token).catch(() => []),
       ]);
       setClasses(cls); setSchedules(scheds); setStudents(stuList); setPackages(pkgs);
+      if (appData?.updateDashboardCache) {
+        appData.updateDashboardCache((prev) => prev ? { ...prev, classes: cls, schedules: scheds, students: stuList, packages: pkgs } : prev);
+      }
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to load calendar data');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, classes.length, appData]);
 
-  useEffect(() => { loadCalendarData(); }, [loadCalendarData]);
+  useEffect(() => { loadCalendarData(); }, [token]);
 
   const weekDates = useMemo(() => getWeekDates(mondayStr), [mondayStr]);
   const sundayStr = weekDates[6];

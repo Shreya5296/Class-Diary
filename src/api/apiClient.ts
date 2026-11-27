@@ -15,9 +15,13 @@ export interface RequestOptions {
 const inFlightMap = new Map<string, Promise<ApiResponse<any>>>();
 const apiCache = new Map<string, { data: ApiResponse<any>; timestamp: number }>();
 const CACHE_TTL_MS = 30000;
+type CapabilityListener = (version: string) => void;
+let capListener: CapabilityListener | null = null;
+export const onCapabilityVersion = (fn: CapabilityListener | null): void => { capListener = fn; };
 
 export function clearApiCache(): void {
   apiCache.clear();
+  inFlightMap.clear();
 }
 
 function isReadOnlyOp(op: string, idempKey?: string): boolean {
@@ -27,7 +31,8 @@ function isReadOnlyOp(op: string, idempKey?: string): boolean {
     op.endsWith('.get') ||
     op.endsWith('.overview') ||
     op.endsWith('.getBalance') ||
-    op.endsWith('.financialSummary')
+    op.endsWith('.financialSummary') ||
+    op.endsWith('.combined')
   );
 }
 
@@ -55,6 +60,9 @@ export async function sendApiRequest<T = unknown>(
 
   if (config.useMockData) {
     const res = await handleMockApiRequest<T>(operation, payload, requestId);
+    if (res?.ok && typeof res.meta?.capabilitiesVersion === 'string') {
+      capListener?.(res.meta.capabilitiesVersion);
+    }
     if (isReadOnly && res && res.ok) {
       apiCache.set(cacheKey, { data: res, timestamp: Date.now() });
     }
@@ -111,6 +119,9 @@ export async function sendApiRequest<T = unknown>(
 
       if (!json.ok && json.error) {
         throw new ApiClientError(json.error, json.meta?.requestId || requestId);
+      }
+      if (json.ok && typeof json.meta?.capabilitiesVersion === 'string') {
+        capListener?.(json.meta.capabilitiesVersion);
       }
       if (isReadOnly && json.ok) {
         apiCache.set(cacheKey, { data: json, timestamp: Date.now() });

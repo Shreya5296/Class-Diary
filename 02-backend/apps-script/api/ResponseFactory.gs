@@ -2,15 +2,19 @@
  * ResponseFactory: Creates canonical API success and error envelopes.
  */
 
+var BACKEND_CAPABILITIES_VERSION = 'v2.1';
+
 function createSuccessResponse(requestId, data, meta) {
+  var responseMeta = Object.assign({ capabilitiesVersion: BACKEND_CAPABILITIES_VERSION }, meta || {});
   var envelope = {
     apiVersion: '1',
+    capabilitiesVersion: BACKEND_CAPABILITIES_VERSION,
     requestId: requestId || 'req_unknown',
     success: true,
     ok: true,
     data: data !== undefined ? data : {},
     error: null,
-    meta: meta || null
+    meta: responseMeta
   };
   return createJsonResponse(envelope);
 }

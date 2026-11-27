@@ -3,6 +3,7 @@ export interface ApiMeta {
   timestamp: string;
   idempotentRetry?: boolean;
   version?: string;
+  capabilitiesVersion?: string;
   total?: number;
   offset?: number;
   limit?: number;
