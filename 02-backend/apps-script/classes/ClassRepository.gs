@@ -5,7 +5,7 @@
  */
 
 var _clsRowReader = typeof readAllRecords === 'function' ? { readAllRecords: readAllRecords, findRecordById: findRecordById } : (typeof require !== 'undefined' ? require('../sheets/RowReader.gs') : null);
-var _clsRowWriter = typeof appendRecord === 'function' ? { appendRecord: appendRecord, updateRecordById: updateRecordById } : (typeof require !== 'undefined' ? require('../sheets/RowWriter.gs') : null);
+var _clsRowWriter = typeof appendRecord === 'function' ? { appendRecord: appendRecord, appendRecords: (typeof appendRecords === 'function' ? appendRecords : null), updateRecordById: updateRecordById } : (typeof require !== 'undefined' ? require('../sheets/RowWriter.gs') : null);
 function _resolveClsRepoSheetNames() {
   if (typeof SHEET_NAMES !== 'undefined' && SHEET_NAMES) return SHEET_NAMES;
   if (typeof require !== 'undefined') return require('../sheets/SheetRegistry.gs').SHEET_NAMES;
@@ -144,6 +144,15 @@ function Classes_insert(spreadsheet, record) {
   return _clsRowWriter.appendRecord(sheet, _clsMapper, headers, record);
 }
 
+function Classes_insertMany(spreadsheet, records) {
+  var sheet = spreadsheet.getSheetByName(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
+  var headers = _clsRegistry.getExpectedHeaders(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
+  if (_clsRowWriter && typeof _clsRowWriter.appendRecords === 'function') {
+    return _clsRowWriter.appendRecords(sheet, _clsMapper, headers, records);
+  }
+  return records.map(function(r) { return Classes_insert(spreadsheet, r); });
+}
+
 function Classes_repoUpdate(spreadsheet, id, updates) {
   var sheet = spreadsheet.getSheetByName(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
   if (!sheet) return null;
@@ -256,6 +265,7 @@ if (typeof module !== 'undefined' && module.exports) {
     Classes_getAll: Classes_getAll,
     Classes_getById: Classes_getById,
     Classes_insert: Classes_insert,
+    Classes_insertMany: Classes_insertMany,
     Classes_update: Classes_repoUpdate,
     Classes_repoUpdate: Classes_repoUpdate
   };
