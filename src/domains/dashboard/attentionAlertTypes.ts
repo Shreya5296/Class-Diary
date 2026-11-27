@@ -1,5 +1,6 @@
 import { Student } from '../students/studentTypes';
 import { Package } from '../packages/packageTypes';
+import { Payment } from '../payments/paymentTypes';
 import { MeetingLink } from '../meeting-links/meetingLinkTypes';
 import { WeeklyScheduleEntry } from '../classes/scheduleApi';
 import { ClassSession } from '../classes/classTypes';
@@ -30,6 +31,7 @@ export interface AttentionAlertParams {
   schedules: WeeklyScheduleEntry[];
   meetingLinks: MeetingLink[];
   packages: Package[];
+  payments?: Payment[];
   sessions?: ClassSession[];
   fees?: any[];
   activeTz?: string;

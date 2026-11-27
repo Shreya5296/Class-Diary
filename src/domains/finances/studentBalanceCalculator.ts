@@ -11,6 +11,9 @@ export function buildStudentFinancialRecords(
   const map = new Map<string, StudentFinancialRecord>();
 
   for (const pkg of packages) {
+    const status = String(pkg.status || (pkg as any).package_status || '').trim().toUpperCase();
+    if (status === 'VOID' || status === 'CANCELLED') continue;
+
     const sid = pkg.student_id || '_unknown_';
     const name = pkg.student_name || sid;
     const cur = (pkg.currency || 'INR').trim().toUpperCase();
@@ -27,6 +30,9 @@ export function buildStudentFinancialRecords(
   }
 
   for (const p of payments) {
+    const status = String(p.status || (p as any).payment_status || '').trim().toUpperCase();
+    if (status === 'VOID' || status === 'CANCELLED') continue;
+
     const sid = p.student_id || '_unknown_';
     const name = p.student_name || sid;
     const cur = (p.currency || 'INR').trim().toUpperCase();

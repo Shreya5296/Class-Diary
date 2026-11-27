@@ -53,7 +53,8 @@ export function generateProposedSessions(
   existingSessions: ClassSession[] = [],
   studentId?: string,
   durationMinutes?: number,
-  timeZone = 'Asia/Kolkata'
+  timeZone = 'Asia/Kolkata',
+  endDateStr?: string
 ): ProposedSession[] {
   if (!schedules.length || !startDateStr || count <= 0) return [];
 
@@ -62,20 +63,20 @@ export function generateProposedSessions(
   const [startY, startM, startD] = startDateStr.split('-').map((n) => parseInt(n, 10));
   const curr = new Date(startY, startM - 1, startD, 12, 0, 0);
 
-  let iterations = 0;
-  const maxDays = 365 * 2;
+  let iterations = 0; const maxDays = 365 * 2;
 
   while (proposed.length < count && iterations < maxDays) {
+    const y = curr.getFullYear();
+    const m = String(curr.getMonth() + 1).padStart(2, '0');
+    const d = String(curr.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+    if (endDateStr && dateStr > endDateStr) break;
+
     const dayOfWeek = curr.getDay();
     const matching = sortedScheds.filter((s) => DAY_MAP[s.day_of_week.toUpperCase()] === dayOfWeek);
 
     for (const entry of matching) {
       if (proposed.length >= count) break;
-
-      const y = curr.getFullYear();
-      const m = String(curr.getMonth() + 1).padStart(2, '0');
-      const d = String(curr.getDate()).padStart(2, '0');
-      const dateStr = `${y}-${m}-${d}`;
 
       const computedEnd = (durationMinutes && calculateEndTime(entry.start_time, durationMinutes)) || entry.end_time;
       const dur = durationMinutes || Math.max(15, parseTimeToMinutes(computedEnd) - parseTimeToMinutes(entry.start_time));
@@ -89,9 +90,18 @@ export function generateProposedSessions(
       let conflictDetails: string | undefined;
 
       for (const ex of existingSessions) {
+        if (ex.session_status === 'CANCELLED' || ex.status === 'CANCELLED') continue;
+
+        const exDate = ex.schedule_date || ex.class_date || (ex.scheduled_start ? String(ex.scheduled_start).slice(0, 10) : '');
+        const exTime = ex.schedule_time || ex.start_time || (ex.scheduled_start ? String(ex.scheduled_start).slice(11, 16) : '');
+        if (ex.student_id === studentId && exDate === dateStr && exTime.slice(0, 5) === entry.start_time.slice(0, 5)) {
+          isDuplicate = true; hasConflict = true;
+          conflictDetails = `Exact duplicate: already scheduled for ${ex.student_name || 'this student'}`;
+          break;
+        }
+
         const exStart = ex.scheduled_start || ex.start_time;
         if (!exStart) continue;
-        if (ex.session_status === 'CANCELLED' || ex.status === 'CANCELLED') continue;
 
         const exStartMs = new Date(exStart).getTime();
         const exDurMs = (ex.duration_minutes || 60) * 60000;
@@ -101,8 +111,7 @@ export function generateProposedSessions(
         const isLegacyLocalMatch = exStart.slice(0, 10) === dateStr && exStart.slice(11, 16) === entry.start_time;
 
         if (ex.student_id === studentId && (isExactTimeMatch || isLegacyLocalMatch)) {
-          isDuplicate = true;
-          hasConflict = true;
+          isDuplicate = true; hasConflict = true;
           conflictDetails = `Exact duplicate: already scheduled for ${ex.student_name || 'this student'}`;
           break;
         }
@@ -114,9 +123,7 @@ export function generateProposedSessions(
           const exEndMin = exStartMin + (ex.duration_minutes || 60);
           const propStartMin = parseTimeToMinutes(entry.start_time);
           const propEndMin = parseTimeToMinutes(computedEnd);
-          if (propStartMin < exEndMin && propEndMin > exStartMin) {
-            hasLegacyOverlap = true;
-          }
+          if (propStartMin < exEndMin && propEndMin > exStartMin) hasLegacyOverlap = true;
         }
 
         if (hasEpochOverlap || hasLegacyOverlap) {
@@ -126,16 +133,8 @@ export function generateProposedSessions(
       }
 
       proposed.push({
-        dateStr,
-        dayName: DAY_NAMES[dayOfWeek],
-        startTime: entry.start_time,
-        endTime: computedEnd,
-        scheduledStart,
-        scheduledEnd,
-        durationMinutes: dur,
-        hasConflict,
-        conflictDetails,
-        isDuplicate,
+        dateStr, dayName: DAY_NAMES[dayOfWeek], startTime: entry.start_time, endTime: computedEnd,
+        scheduledStart, scheduledEnd, durationMinutes: dur, hasConflict, conflictDetails, isDuplicate,
       });
     }
 

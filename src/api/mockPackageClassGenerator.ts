@@ -4,6 +4,7 @@ import { WeeklyScheduleEntry } from '../domains/classes/scheduleApi';
 import { parseCanonicalScheduleString } from '../domains/students/scheduleFormatter';
 import { generateProposedSessions } from '../domains/classes/classGenerator';
 import { getSessionStartTimestamp } from '../domains/classes/sessionFutureValidator';
+import { isYearlyPackage, calculateYearlyOccurrencesCount } from '../domains/packages/yearlyPackageCalculations';
 
 export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
   const sid = String(payload.student_id || '');
@@ -23,9 +24,16 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
       const c = classesList[i];
       if (c.student_id === sid) {
         const sStartMs = getSessionStartTimestamp(c, 'Asia/Kolkata');
-        const isFuture = sStartMs !== null && sStartMs > nowMs;
-        const isUncompleted = (c.session_status === 'SCHEDULED' || !c.session_status) && (c.attendance_status === 'NOT_MARKED' || !c.attendance_status);
-        if (isFuture && isUncompleted) {
+        const cDate = c.schedule_date || c.class_date || '';
+        const isFuture = (sStartMs !== null && sStartMs > nowMs) || cDate >= todayStr;
+        const sStatus = String(c.session_status || c.status || '').toUpperCase();
+        const aStatus = String(c.attendance_status || '').toUpperCase();
+        const isScheduled = (sStatus === 'SCHEDULED' || !sStatus) && (aStatus === 'NOT_MARKED' || !aStatus);
+        const hasNotes = Boolean((c as any).notes || c.session_notes || (c as any).cancellation_reason);
+        const hasPaymentLink = Boolean((c as any).payment_link);
+        const isDeduct = (c as any).deduct_class === true || (c as any).deduct_class === 'true';
+
+        if (isFuture && isScheduled && !hasNotes && !hasPaymentLink && !isDeduct) {
           classesList.splice(i, 1);
         }
       }
@@ -38,21 +46,9 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
     if (sStatus === 'CANCELLED') return false;
     const rawDeduct = (c as any).deduct_class;
     const isDeduct = rawDeduct === true || rawDeduct === 'true' || rawDeduct === 'TRUE';
-    const sStartMs = getSessionStartTimestamp(c, 'Asia/Kolkata');
-    const isFuture = sStartMs !== null && sStartMs > nowMs;
-    const isFutureScheduled = (sStatus === 'SCHEDULED' || !sStatus) && (c.attendance_status === 'NOT_MARKED' || !c.attendance_status) && isFuture;
-    return isFutureScheduled || isDeduct;
+    const isScheduled = (sStatus === 'SCHEDULED' || !sStatus) && (c.attendance_status === 'NOT_MARKED' || !c.attendance_status);
+    return isScheduled || isDeduct;
   });
-
-  const totalPurchased = Number(pkg.classes_purchased || pkg.total_classes || 0);
-  const classesNeeded = Math.max(0, totalPurchased - consumingStudentClasses.length);
-
-  if (classesNeeded <= 0) {
-    return {
-      success: true, count: 0, createdCount: 0, totalPurchased, existingCount: consumingStudentClasses.length,
-      lastClassDate: null, message: 'All package classes are already generated (0 new classes)',
-    };
-  }
 
   let scheds: WeeklyScheduleEntry[] = (MOCK_SCHEDULES[sid] as WeeklyScheduleEntry[]) || [];
   if ((!scheds || scheds.length === 0) && pkg.class_schedule) {
@@ -62,10 +58,38 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
     return { success: false, code: 'VALIDATION_ERROR', message: 'No weekly schedule configured' };
   }
 
-  const pkgStartDate = pkg.start_date ? String(pkg.start_date) : '';
-  const startDateStr = (!pkgStartDate || pkgStartDate < todayStr) ? todayStr : pkgStartDate;
+  const isYearly = isYearlyPackage(String(pkg.plan_type || pkg.package_name || ''));
+  const pkgStartDate = pkg.start_date ? String(pkg.start_date).slice(0, 10) : '';
+  const pkgEndDate = pkg.end_date ? String(pkg.end_date).slice(0, 10) : undefined;
+  const startDateStr = payload.start_date
+    ? String(payload.start_date).slice(0, 10)
+    : (payload.regenerate_future ? todayStr : (pkgStartDate || todayStr));
+
+  let totalPurchased: number;
+  let classesNeeded: number;
+
+  if (isYearly && pkgEndDate) {
+    const totalOcc = calculateYearlyOccurrencesCount(pkgStartDate || startDateStr, pkgEndDate, scheds);
+    totalPurchased = totalOcc > 0 ? totalOcc : Number(pkg.classes_purchased || pkg.total_classes || 0);
+    classesNeeded = 9999;
+    pkg.classes_purchased = totalPurchased;
+    pkg.total_classes = totalPurchased;
+    if (pkg.package_price || pkg.price) {
+      pkg.per_class = Math.round((Number(pkg.package_price || pkg.price) / totalPurchased) * 100) / 100;
+    }
+  } else {
+    totalPurchased = Number(pkg.classes_purchased || pkg.total_classes || 0);
+    classesNeeded = Math.max(0, totalPurchased - consumingStudentClasses.length);
+  }
+
+  if (classesNeeded <= 0 && !isYearly) {
+    return {
+      success: true, count: 0, createdCount: 0, totalPurchased, existingCount: consumingStudentClasses.length,
+      lastClassDate: null, message: 'All package classes are already generated (0 new classes)',
+    };
+  }
   const proposed = generateProposedSessions(
-    scheds, startDateStr, classesNeeded, allStudentClasses, sid, Number(pkg.class_duration) || 60
+    scheds, startDateStr, classesNeeded, allStudentClasses, sid, Number(pkg.class_duration) || 60, 'Asia/Kolkata', pkgEndDate
   );
 
   const lastClassDate = proposed.length > 0 ? proposed[proposed.length - 1].dateStr : null;
@@ -79,6 +103,7 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
 
   const created: ClassSession[] = [];
   for (const p of proposed) {
+    if (p.isDuplicate) continue;
     const newSession: ClassSession = {
       session_id: `${sid}__${p.dateStr}__${p.startTime}`,
       class_session_id: `${sid}__${p.dateStr}__${p.startTime}`,
@@ -102,7 +127,7 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
   }
 
   return {
-    success: true, count: created.length, createdCount: created.length,
+    success: true, count: proposed.length, createdCount: created.length,
     totalPurchased, existingCount: consumingStudentClasses.length, lastClassDate, data: created,
   };
 }

@@ -1,6 +1,7 @@
 import { Package } from '../packages/packageTypes';
 import { Payment } from '../payments/paymentTypes';
 import { getCurrencySymbol } from '../../lib/userPreferences';
+import { getPackageTotalClasses } from '../packages/packagePlanCalculations';
 
 export interface StudentPerClassRateResult {
   hasRate: boolean;
@@ -40,9 +41,8 @@ export function calculateStudentPerClassRate(
   if (!pkg) return { hasRate: false, inrDisplay: null, localDisplay: null };
 
   const rawPrice = pkg.package_price !== undefined && pkg.package_price !== null ? pkg.package_price : pkg.price;
-  const rawClasses = pkg.classes_purchased !== undefined && pkg.classes_purchased !== null ? pkg.classes_purchased : pkg.total_classes;
   const price = Number(rawPrice);
-  const count = Number(rawClasses);
+  const count = getPackageTotalClasses(pkg);
 
   if (isNaN(price) || isNaN(count) || price <= 0 || count <= 0) {
     return { hasRate: false, inrDisplay: null, localDisplay: null };

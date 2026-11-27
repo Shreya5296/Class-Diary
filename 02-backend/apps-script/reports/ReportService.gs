@@ -299,6 +299,9 @@ function Reports_getDashboardCombined(spreadsheet, payload) {
   var feeSheet = spreadsheet.getSheetByName('Fees') || spreadsheet.getSheetByName('FeeObligations');
   var fees = feeSheet ? _repRowReader.readAllRecords(feeSheet, _repMap) : [];
 
+  var paySheet = spreadsheet.getSheetByName(_repReg.SHEET_NAMES.PAYMENTS);
+  var payments = paySheet ? _repRowReader.readAllRecords(paySheet, _repMap) : [];
+
   return {
     success: true,
     data: {
@@ -307,6 +310,7 @@ function Reports_getDashboardCombined(spreadsheet, payload) {
       schedules: schedules,
       students: students,
       packages: packages,
+      payments: payments,
       fees: fees
     }
   };

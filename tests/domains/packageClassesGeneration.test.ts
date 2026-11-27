@@ -222,7 +222,7 @@ describe('Prompt B: Package Classes Generation for Scheduled Students (Rehaan, V
     expect(completed.length).toBe(2);
 
     // Future scheduled sessions now have Thu (day=4) and NO Wed (day=3)
-    const futureScheduled = updatedSessions.filter((s: any) => s.session_status === 'SCHEDULED');
+    const futureScheduled = updatedSessions.filter((s: any) => s.session_status === 'SCHEDULED' && s.schedule_date >= '2026-11-27');
     const futureDays = futureScheduled.map((s: any) => new Date(s.schedule_date + 'T12:00:00Z').getUTCDay());
 
     expect(futureDays).toContain(4); // Thursday present
@@ -426,7 +426,8 @@ describe('Prompt B: Package Classes Generation for Scheduled Students (Rehaan, V
     });
 
     it('7. Non-consuming No-Show slot is protected against duplicate generation', () => {
-      // Future scheduled slot on Friday 2026-11-27 at 10:00 AM has a No-Show with deduct_class = false
+      // Package starts on 2026-11-27 where a No-Show slot exists with deduct_class = false
+      PackageService.Packages_update(spreadsheet, synthPkgId, { start_date: '2026-11-27' }, actor);
       ClassRepository.Classes_insert(spreadsheet, {
         student_id: synthStuId,
         schedule_date: '2026-11-27',
@@ -763,24 +764,24 @@ describe('Prompt B: Package Classes Generation for Scheduled Students (Rehaan, V
 
       // Verification:
       // Total purchased: 10
-      // Allocation consumers:
+      // Allocation consumers under Prompt F:
       // - cls_edge_1: Future scheduled (+1)
+      // - cls_edge_2: Past scheduled for package (+1)
       // - cls_edge_3: Past attended & deducted (+1)
       // - cls_edge_5: Past deducted No-Show (+1)
       // Non-consumers:
-      // - cls_edge_2: Past overdue scheduled unmarked (0)
       // - cls_edge_4: Past non-consuming No-Show (0)
-      // Total consuming: 3. Needed: 10 - 3 = 7.
+      // Total consuming: 4. Needed: 10 - 4 = 6.
 
       const dryRes = handleMockGenerateForPackage({ student_id: edgeStuId, dry_run: true });
       expect(dryRes.success).toBe(true);
-      expect(dryRes.existingCount).toBe(3);
-      expect(dryRes.count).toBe(7);
+      expect(dryRes.existingCount).toBe(4);
+      expect(dryRes.count).toBe(6);
 
       const genRes = handleMockGenerateForPackage({ student_id: edgeStuId });
       expect(genRes.success).toBe(true);
-      expect(genRes.existingCount).toBe(3);
-      expect(genRes.count).toBe(7);
+      expect(genRes.existingCount).toBe(4);
+      expect(genRes.count).toBe(6);
 
       // Verify collision prevention: the overdue unmarked session's slot (2026-11-02 10:00)
       // is still preserved in existing sessions, and no duplicate was generated for it.
@@ -875,13 +876,13 @@ describe('Prompt B: Package Classes Generation for Scheduled Students (Rehaan, V
       // Backend generation run:
       const backendDry = ClassService.Classes_generateForPackage(edgeSpreadsheet, { student_id: backendStudentId, dry_run: true }, actor);
       expect(backendDry.success).toBe(true);
-      expect(backendDry.existingCount).toBe(3);
-      expect(backendDry.count).toBe(7);
+      expect(backendDry.existingCount).toBe(4);
+      expect(backendDry.count).toBe(6);
 
       const backendRes = ClassService.Classes_generateForPackage(edgeSpreadsheet, { student_id: backendStudentId }, actor);
       expect(backendRes.success).toBe(true);
-      expect(backendRes.existingCount).toBe(3);
-      expect(backendRes.createdCount).toBe(7);
+      expect(backendRes.existingCount).toBe(4);
+      expect(backendRes.createdCount).toBe(6);
 
       // Clean up mock arrays
       const sIdx2 = MOCK_STUDENTS.findIndex(s => s.student_id === edgeStuId);
@@ -1029,13 +1030,13 @@ describe('Prompt B: Package Classes Generation for Scheduled Students (Rehaan, V
 
         const mockDry = handleMockGenerateForPackage({ student_id: fixedStuId, current_time: FIXED_NOW_ISO, dry_run: true });
         expect(mockDry.success).toBe(true);
-        expect(mockDry.existingCount).toBe(3);
-        expect(mockDry.count).toBe(7);
+        expect(mockDry.existingCount).toBe(5);
+        expect(mockDry.count).toBe(5);
 
         const mockGen = handleMockGenerateForPackage({ student_id: fixedStuId, current_time: FIXED_NOW_ISO });
         expect(mockGen.success).toBe(true);
-        expect(mockGen.existingCount).toBe(3);
-        expect(mockGen.count).toBe(7);
+        expect(mockGen.existingCount).toBe(5);
+        expect(mockGen.count).toBe(5);
 
         // Verify Backend Apps Script ClassService with exact same fixed clock
         const edgeSpreadsheet = new MockSpreadsheet();
@@ -1149,8 +1150,8 @@ describe('Prompt B: Package Classes Generation for Scheduled Students (Rehaan, V
           actor
         );
         expect(backendDry.success).toBe(true);
-        expect(backendDry.existingCount).toBe(3);
-        expect(backendDry.count).toBe(7);
+        expect(backendDry.existingCount).toBe(5);
+        expect(backendDry.count).toBe(5);
 
         const backendRes = ClassService.Classes_generateForPackage(
           edgeSpreadsheet,
@@ -1158,8 +1159,8 @@ describe('Prompt B: Package Classes Generation for Scheduled Students (Rehaan, V
           actor
         );
         expect(backendRes.success).toBe(true);
-        expect(backendRes.existingCount).toBe(3);
-        expect(backendRes.createdCount).toBe(7);
+        expect(backendRes.existingCount).toBe(5);
+        expect(backendRes.createdCount).toBe(5);
 
         // Cleanup
         const sIdx = MOCK_STUDENTS.findIndex(s => s.student_id === fixedStuId);

@@ -20,6 +20,7 @@ export async function generatePackageClasses(
     regenerateFuture?: boolean;
     packageId?: string;
     startDate?: string;
+    extendToEndDate?: boolean;
   }
 ): Promise<GeneratePackageClassesResult> {
   const payload: Record<string, unknown> = {
@@ -29,11 +30,16 @@ export async function generatePackageClasses(
   if (options?.regenerateFuture) payload.regenerate_future = true;
   if (options?.packageId) payload.package_id = options.packageId;
   if (options?.startDate) payload.start_date = options.startDate;
+  if (options?.extendToEndDate) payload.extend_to_end_date = true;
 
-  const response = await sendApiRequest<GeneratePackageClassesResult>(
+  const response = await sendApiRequest<any>(
     'classes.generateForPackage',
     payload,
     { token }
   );
-  return response.data || { success: true, count: 0, createdCount: 0 };
+  const raw = response.data || {};
+  if (Array.isArray(raw)) {
+    return { success: true, count: raw.length, createdCount: raw.length, data: raw };
+  }
+  return raw;
 }

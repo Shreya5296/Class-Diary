@@ -338,10 +338,36 @@ function Packages_enrichWithBalance(spreadsheet, pkgRecord) {
         }
       }
     }
-    consumed = Math.min(totalConsumed, Number(pkgRecord.classes_purchased || pkgRecord.purchased_classes || 0));
+    var isYearlyPlan = String(pkgRecord.plan_type || pkgRecord.package_name || '').toUpperCase().indexOf('YEARLY') !== -1;
+    var basePurchased = Number(pkgRecord.classes_purchased !== undefined ? pkgRecord.classes_purchased : pkgRecord.purchased_classes) || 0;
+    if (isYearlyPlan && pkgRecord.start_date && (pkgRecord.end_date || pkgRecord.expiry_date)) {
+      var schedList = pkgRecord.schedules || _parseScheduleString(pkgRecord.class_schedule, pkgRecord.class_duration);
+      if (schedList && schedList.length > 0) {
+        var sDt = typeof _toYyyyMmDdHelper === 'function' ? _toYyyyMmDdHelper(pkgRecord.start_date) : String(pkgRecord.start_date).slice(0, 10);
+        var eDt = typeof _toYyyyMmDdHelper === 'function' ? _toYyyyMmDdHelper(pkgRecord.end_date || pkgRecord.expiry_date) : String(pkgRecord.end_date || pkgRecord.expiry_date).slice(0, 10);
+        var yOcc = _calcYearlyOccurrences(sDt, eDt, schedList);
+        if (yOcc > 0) {
+          basePurchased = yOcc;
+        }
+      }
+    }
+    consumed = Math.min(totalConsumed, basePurchased);
   }
 
+  var isYearlyPlan = String(pkgRecord.plan_type || pkgRecord.package_name || '').toUpperCase().indexOf('YEARLY') !== -1;
   var purchased = Number(pkgRecord.classes_purchased !== undefined ? pkgRecord.classes_purchased : pkgRecord.purchased_classes) || 0;
+  if (isYearlyPlan && pkgRecord.start_date && (pkgRecord.end_date || pkgRecord.expiry_date)) {
+    var schedList = pkgRecord.schedules || _parseScheduleString(pkgRecord.class_schedule, pkgRecord.class_duration);
+    if (schedList && schedList.length > 0) {
+      var sDt = typeof _toYyyyMmDdHelper === 'function' ? _toYyyyMmDdHelper(pkgRecord.start_date) : String(pkgRecord.start_date).slice(0, 10);
+      var eDt = typeof _toYyyyMmDdHelper === 'function' ? _toYyyyMmDdHelper(pkgRecord.end_date || pkgRecord.expiry_date) : String(pkgRecord.end_date || pkgRecord.expiry_date).slice(0, 10);
+      var yOcc = _calcYearlyOccurrences(sDt, eDt, schedList);
+      if (yOcc > 0) {
+        purchased = yOcc;
+      }
+    }
+  }
+
   var remaining = Math.max(0, purchased - consumed);
 
   var enriched = Object.assign({}, pkgRecord);
@@ -362,6 +388,13 @@ function Packages_enrichWithBalance(spreadsheet, pkgRecord) {
   enriched.status = pkgRecord.package_status || 'ACTIVE';
   enriched.class_schedule = pkgRecord.class_schedule || '';
   enriched.schedules = _parseScheduleString(enriched.class_schedule, enriched.class_duration);
+
+  var pkgPrice = enriched.price || 0;
+  var perClassRate = (pkgRecord.per_class !== '' && pkgRecord.per_class !== undefined) ? Number(pkgRecord.per_class) : 0;
+  if (isYearlyPlan && pkgPrice > 0 && purchased > 0) {
+    perClassRate = Math.round((pkgPrice / purchased) * 100) / 100;
+  }
+  enriched.per_class = perClassRate;
 
   return enriched;
 }

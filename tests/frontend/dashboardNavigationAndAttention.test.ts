@@ -117,9 +117,9 @@ describe('Dashboard Things That Need Attention - Expanded Monitoring', () => {
     expect(bal3?.severity).toBe('warning');
   });
 
-  it('evaluates Category C unmarked attendance with 15-minute grace period', () => {
+  it('evaluates Category C unmarked attendance: only classes whose end time is over appear (Fix F2)', () => {
     const pastStart = new Date('2026-11-19T10:00:00Z').getTime();
-    // Class ends at 11:00:00Z. Grace period ends at 11:15:00Z.
+    // Class ends at 11:00:00Z (60 min duration)
     const session: ClassSession = {
       session_id: 'sess_1',
       student_id: 'STU_001',
@@ -129,14 +129,20 @@ describe('Dashboard Things That Need Attention - Expanded Monitoring', () => {
       attendance_status: 'NOT_MARKED',
     };
 
-    // Before grace period (11:10:00Z) -> false
-    expect(isSessionAttendanceOverdue(session, pastStart + 70 * 60 * 1000)).toBe(false);
+    // Class that ended 5 minutes ago (11:05:00Z) -> true (shows)
+    expect(isSessionAttendanceOverdue(session, pastStart + 65 * 60 * 1000)).toBe(true);
 
-    // Exactly 15 mins after end (11:15:00Z) -> false (needs > 15 mins)
-    expect(isSessionAttendanceOverdue(session, pastStart + 75 * 60 * 1000)).toBe(false);
+    // Yesterday's class -> true (shows)
+    expect(isSessionAttendanceOverdue(session, pastStart + 24 * 60 * 60 * 1000)).toBe(true);
 
-    // 16 mins after end (11:16:00Z) -> true
-    expect(isSessionAttendanceOverdue(session, pastStart + 76 * 60 * 1000)).toBe(true);
+    // Class currently running (started 30 mins ago, 10:30:00Z) -> false (does not show)
+    expect(isSessionAttendanceOverdue(session, pastStart + 30 * 60 * 1000)).toBe(false);
+
+    // Class starting in 1 hour (09:00:00Z) -> false (does not show)
+    expect(isSessionAttendanceOverdue(session, pastStart - 60 * 60 * 1000)).toBe(false);
+
+    // Class next week -> false (does not show)
+    expect(isSessionAttendanceOverdue(session, pastStart - 7 * 24 * 60 * 60 * 1000)).toBe(false);
 
     // Cancelled class should never trigger unmarked alert
     const cancelledSession: ClassSession = { ...session, session_status: 'CANCELLED' };

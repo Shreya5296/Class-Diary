@@ -27,6 +27,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     schedules,
     students,
     packages,
+    payments,
     meetingLinks,
     fees,
     loading,
@@ -72,6 +73,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     schedules,
     meetingLinks,
     packages,
+    payments,
     sessions: classes,
     fees,
   });

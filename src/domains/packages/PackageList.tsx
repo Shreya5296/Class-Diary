@@ -10,6 +10,7 @@ import { formatDate } from '../../lib/dateFormat';
 import { Button } from '../../components/buttons/Button';
 import { StudentsTableSkeleton } from '../../components/feedback/Skeleton';
 import { EmptyState } from '../../components/feedback/EmptyState';
+import { getPackagePlanDetails } from './packagePlanCalculations';
 
 export interface PackageListProps {
   studentId: string;
@@ -52,14 +53,31 @@ export const PackageList: React.FC<PackageListProps> = ({ studentId, onRenew }) 
   };
 
   const columns: Column<Package>[] = [
-    { key: 'package_name', header: 'Package Name', width: '28%', render: (p) => <span style={{ fontWeight: 600 }}>{p.package_name}</span> },
-    { key: 'total_classes', header: 'Total Classes', width: '18%', render: (p) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.total_classes} classes</span> },
-    { key: 'price', header: 'Package Price', width: '20%', render: (p) => <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatCurrency(p.price)}</span> },
-    { key: 'start_date', header: 'Start Date', width: '18%', render: (p) => formatDate(p.start_date) },
+    { key: 'package_name', header: 'Package Name', width: '22%', render: (p) => <span style={{ fontWeight: 600 }}>{p.package_name}</span> },
+    {
+      key: 'total_classes',
+      header: 'Total Classes in Plan',
+      width: '18%',
+      render: (p) => {
+        const d = getPackagePlanDetails(p);
+        return <span style={{ fontVariantNumeric: 'tabular-nums' }}>{d.totalClasses} classes</span>;
+      },
+    },
+    {
+      key: 'per_class',
+      header: 'Rate per class',
+      width: '16%',
+      render: (p) => {
+        const d = getPackagePlanDetails(p);
+        return <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{d.ratePerClass > 0 ? formatCurrency(d.ratePerClass, true, p.currency) : '—'}</span>;
+      },
+    },
+    { key: 'price', header: 'Package Price', width: '16%', render: (p) => <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>{formatCurrency(p.price, true, p.currency)}</span> },
+    { key: 'start_date', header: 'Start Date', width: '14%', render: (p) => formatDate(p.start_date) },
     {
       key: 'status',
       header: 'Status',
-      width: '16%',
+      width: '14%',
       render: (p) => (
         <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: p.status === 'ACTIVE' ? 'var(--color-success-bg)' : 'var(--color-bg-subtle)', color: p.status === 'ACTIVE' ? 'var(--color-success-text)' : 'var(--color-text-muted)', border: `1px solid ${p.status === 'ACTIVE' ? 'var(--color-success-border)' : 'var(--color-border)'}` }}>
           {p.status}
