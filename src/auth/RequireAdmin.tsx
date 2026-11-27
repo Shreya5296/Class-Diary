@@ -40,14 +40,18 @@ export const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children
           signInWithToken('mock_admin_token', { email, name: resolveDisplayName('Authorized Administrator', email), isAdmin: true });
           return;
         }
-        let res = await sendApiRequest<LoginPayload>('auth.loginWithDashboard', { key }).catch(() => null);
-        if (!res || (!res.ok && (res.error?.code === 'UNSUPPORTED_OPERATION' || res.error?.code === 'NOT_FOUND' || /unknown|unsupported/i.test(res.error?.message || '')))) {
-          res = await sendApiRequest<LoginPayload>('auth.login', { key });
+        let res: any = null;
+        try {
+          res = await sendApiRequest<LoginPayload>('auth.loginWithDashboard', { key });
+        } catch (err: unknown) {
+          const c = (err as any)?.code || '';
+          if (c === 'UNSUPPORTED_OPERATION' || c === 'NOT_FOUND' || /unknown|unsupported/i.test((err as Error)?.message || '')) {
+            res = await sendApiRequest<LoginPayload>('auth.login', { key });
+          } else throw err;
         }
         if (res?.ok && res.data) {
           if (res.data.dashboard && appData?.bootstrapDashboard) appData.bootstrapDashboard(res.data.dashboard);
-          const token = res.data.token || res.data.sessionToken || '';
-          signInWithToken(token, { ...res.data.user, name: resolveDisplayName(res.data.user.name, res.data.user.email) });
+          signInWithToken(res.data.token || res.data.sessionToken || '', { ...res.data.user, name: resolveDisplayName(res.data.user.name, res.data.user.email) });
         } else {
           setLoginError(res?.error?.message || 'Invalid administrator access key');
         }
