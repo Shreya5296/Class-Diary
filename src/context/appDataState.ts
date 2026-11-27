@@ -13,6 +13,7 @@ export interface AppDataContextValue {
   getFinances: (token?: string | null, params?: { startDate?: string; endDate?: string }, force?: boolean) => Promise<FinancesCombinedData | null>;
   invalidate: (scope?: AppDataScope) => void;
   updateDashboardCache: (updater: (prev: DashboardCombinedData | null) => DashboardCombinedData | null) => void;
+  bootstrapDashboard: (data: DashboardCombinedData) => void;
 }
 
 let clearFn: (() => void) | null = null;

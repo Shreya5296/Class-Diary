@@ -13,6 +13,7 @@ var _errRes = typeof createErrorResponse === 'function' ? createErrorResponse : 
 var _succRes = typeof createSuccessResponse === 'function' ? createSuccessResponse : (typeof require !== 'undefined' ? require('./ResponseFactory.gs').createSuccessResponse : null);
 var _jsonRes = typeof createJsonResponse === 'function' ? createJsonResponse : (typeof require !== 'undefined' ? require('./ResponseFactory.gs').createJsonResponse : null);
 var _handleLogin = typeof handleAuthLogin === 'function' ? handleAuthLogin : (typeof require !== 'undefined' ? require('../auth/AuthService.gs').handleAuthLogin : null);
+var _getDashCombined = typeof Reports_getDashboardCombined === 'function' ? Reports_getDashboardCombined : (typeof require !== 'undefined' ? (function() { try { return require('../reports/ReportService.gs').Reports_getDashboardCombined; } catch (e) { return null; } })() : null);
 
 function doPost(e) {
   var opStartMs = new Date().getTime();
@@ -27,11 +28,28 @@ function doPost(e) {
     requestId = req.requestId;
     opName = req.operation;
 
-    // 2. Unauthenticated auth endpoint: Administrator login
-    if (req.operation === 'auth.login') {
+    // 2. Unauthenticated auth endpoint: Administrator login & Bootstrap
+    if (req.operation === 'auth.login' || req.operation === 'auth.loginWithDashboard') {
       var loginRes = _handleLogin ? _handleLogin(req.payload) : { success: false, code: 'UNAVAILABLE', message: 'Auth service unavailable' };
       if (!loginRes.success) {
         return _errRes(requestId, loginRes.code, loginRes.message, null, false);
+      }
+      if (req.operation === 'auth.loginWithDashboard') {
+        var dashData = null;
+        try {
+          var ss = _getSpreadsheet ? _getSpreadsheet() : null;
+          var dashRes = _getDashCombined ? _getDashCombined(ss, req.payload) : null;
+          dashData = (dashRes && dashRes.data) ? dashRes.data : dashRes;
+        } catch (dashErr) {
+          dashData = null;
+        }
+        var combinedPayload = {
+          token: loginRes.data.token,
+          sessionToken: loginRes.data.token,
+          user: loginRes.data.user,
+          dashboard: dashData
+        };
+        return _succRes(requestId, combinedPayload, null);
       }
       return _succRes(requestId, loginRes.data, null);
     }

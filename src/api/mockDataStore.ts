@@ -16,19 +16,22 @@ import { handleMockCreatePackage, handleMockRecordPayment } from './mockFinancia
 
 export function handleMockApiRequest<T>(operation: string, payload: Record<string, unknown>, reqId: string): ApiResponse<T> {
   const meta = { requestId: reqId, timestamp: new Date().toISOString() };
+  const mockDash = {
+    overview: { activeStudentsCount: 3, classesUpcoming7Days: 2, outstandingFeesTotal: 50000, currency: 'INR' },
+    classes: MOCK_CLASSES, schedules: Object.values(MOCK_SCHEDULES).flat(),
+    students: MOCK_STUDENTS, packages: MOCK_PACKAGES, fees: MOCK_FEES,
+  };
+  if (operation === 'auth.loginWithDashboard') {
+    return { ok: true, data: { token: 'mock_admin_token', sessionToken: 'mock_admin_token', user: { email: 'ashreya0502@gmail.com', name: 'Authorized Administrator', isAdmin: true }, dashboard: mockDash } as T, meta };
+  }
+  if (operation === 'auth.login') {
+    return { ok: true, data: { token: 'mock_admin_token', user: { email: 'ashreya0502@gmail.com', name: 'Authorized Administrator', isAdmin: true } } as T, meta };
+  }
   if (operation === 'dashboard.overview') {
     return { ok: true, data: { activeStudentsCount: 3, classesUpcoming7Days: 2, outstandingFeesTotal: 50000, currency: 'INR' } as T, meta };
   }
   if (operation === 'dashboard.combined') {
-    return {
-      ok: true,
-      data: {
-        overview: { activeStudentsCount: 3, classesUpcoming7Days: 2, outstandingFeesTotal: 50000, currency: 'INR' },
-        classes: MOCK_CLASSES, schedules: Object.values(MOCK_SCHEDULES).flat(),
-        students: MOCK_STUDENTS, packages: MOCK_PACKAGES, fees: MOCK_FEES,
-      } as T,
-      meta,
-    };
+    return { ok: true, data: mockDash as T, meta };
   }
   if (operation === 'finances.combined') {
     return {

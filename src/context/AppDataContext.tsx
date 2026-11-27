@@ -5,8 +5,7 @@ import { AppDataContextValue, AppDataScope, registerAppDataHandlers, clearAppDat
 
 export { clearAppDataStore, invalidateAppData };
 export type { AppDataContextValue, AppDataScope };
-
-const AppDataContext = createContext<AppDataContextValue | null>(null);
+export const AppDataContext = createContext<AppDataContextValue | null>(null);
 
 export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const auth = useContext(AuthContext);
@@ -26,6 +25,8 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const dashDataRef = useRef<DashboardCombinedData | null>(null);
   const finDataRef = useRef<FinancesCombinedData | null>(null);
   const tokenRef = useRef<string | null>(null);
+  const dashFetchedAtRef = useRef(0);
+  const prevUserIdRef = useRef(currentUserId);
 
   dashDataRef.current = dashboardData;
   finDataRef.current = financesData;
@@ -35,6 +36,7 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     authEpochRef.current += 1;
     dashInFlight.current = null;
     finInFlight.current = null;
+    dashFetchedAtRef.current = 0;
     resetApiCapabilities();
     setDashboardData(null);
     setFinancesData(null);
@@ -44,11 +46,25 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setFinancesError(null);
   }, []);
 
-  useEffect(() => { resetAllData(); }, [currentUserId, resetAllData]);
+  useEffect(() => {
+    if (prevUserIdRef.current !== currentUserId) {
+      const isLogin = !prevUserIdRef.current && currentUserId;
+      prevUserIdRef.current = currentUserId;
+      if (!isLogin) resetAllData();
+    }
+  }, [currentUserId, resetAllData]);
 
   const invalidate = useCallback((scope?: AppDataScope) => {
-    if (!scope || scope === 'all' || scope === 'dashboard') setDashboardData(null);
+    if (!scope || scope === 'all' || scope === 'dashboard') { setDashboardData(null); dashFetchedAtRef.current = 0; }
     if (!scope || scope === 'all' || scope === 'finances') setFinancesData(null);
+  }, []);
+
+  const bootstrapDashboard = useCallback((data: DashboardCombinedData) => {
+    dashDataRef.current = data;
+    dashFetchedAtRef.current = Date.now();
+    setDashboardData(data);
+    setDashboardLoading(false);
+    setDashboardError(null);
   }, []);
 
   useEffect(() => registerAppDataHandlers(resetAllData, invalidate), [resetAllData, invalidate]);
@@ -56,31 +72,26 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const getDashboard = useCallback(async (token?: string | null, force?: boolean) => {
     const activeToken = token ?? tokenRef.current, reqEpoch = authEpochRef.current;
     if (dashDataRef.current && !force) {
-      if (!dashInFlight.current) {
-        dashInFlight.current = fetchDashboardCombined(activeToken)
-          .then((fresh) => {
-            if (authEpochRef.current === reqEpoch) { setDashboardData(fresh); setDashboardError(null); }
-            return fresh;
-          })
-          .catch(() => null).finally(() => { dashInFlight.current = null; });
+      if (Date.now() - dashFetchedAtRef.current > 30000 && !dashInFlight.current) {
+        dashInFlight.current = fetchDashboardCombined(activeToken).then((fresh) => {
+          if (authEpochRef.current === reqEpoch) { setDashboardData(fresh); setDashboardError(null); dashFetchedAtRef.current = Date.now(); }
+          return fresh;
+        }).catch(() => null).finally(() => { dashInFlight.current = null; });
       }
       return dashDataRef.current;
     }
     if (dashInFlight.current) return dashInFlight.current;
     setDashboardLoading(true); setDashboardError(null);
-    dashInFlight.current = fetchDashboardCombined(activeToken)
-      .then((data) => {
-        if (authEpochRef.current === reqEpoch) { setDashboardData(data); setDashboardError(null); }
-        return data;
-      })
-      .catch((err) => {
-        if (authEpochRef.current === reqEpoch) setDashboardError(err.message || 'Failed fetch');
-        return null;
-      })
-      .finally(() => {
-        if (authEpochRef.current === reqEpoch) setDashboardLoading(false);
-        dashInFlight.current = null;
-      });
+    dashInFlight.current = fetchDashboardCombined(activeToken).then((data) => {
+      if (authEpochRef.current === reqEpoch) { setDashboardData(data); setDashboardError(null); dashFetchedAtRef.current = Date.now(); }
+      return data;
+    }).catch((err) => {
+      if (authEpochRef.current === reqEpoch) setDashboardError(err.message || 'Failed fetch');
+      return null;
+    }).finally(() => {
+      if (authEpochRef.current === reqEpoch) setDashboardLoading(false);
+      dashInFlight.current = null;
+    });
     return dashInFlight.current;
   }, []);
 
@@ -88,30 +99,25 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const activeToken = token ?? tokenRef.current, reqEpoch = authEpochRef.current;
     if (finDataRef.current && !force) {
       if (!finInFlight.current) {
-        finInFlight.current = fetchFinancesCombined(activeToken, params)
-          .then((fresh) => {
-            if (authEpochRef.current === reqEpoch) { setFinancesData(fresh); setFinancesError(null); }
-            return fresh;
-          })
-          .catch(() => null).finally(() => { finInFlight.current = null; });
+        finInFlight.current = fetchFinancesCombined(activeToken, params).then((fresh) => {
+          if (authEpochRef.current === reqEpoch) { setFinancesData(fresh); setFinancesError(null); }
+          return fresh;
+        }).catch(() => null).finally(() => { finInFlight.current = null; });
       }
       return finDataRef.current;
     }
     if (finInFlight.current) return finInFlight.current;
     setFinancesLoading(true); setFinancesError(null);
-    finInFlight.current = fetchFinancesCombined(activeToken, params)
-      .then((data) => {
-        if (authEpochRef.current === reqEpoch) { setFinancesData(data); setFinancesError(null); }
-        return data;
-      })
-      .catch((err) => {
-        if (authEpochRef.current === reqEpoch) setFinancesError(err.message || 'Failed fetch');
-        return null;
-      })
-      .finally(() => {
-        if (authEpochRef.current === reqEpoch) setFinancesLoading(false);
-        finInFlight.current = null;
-      });
+    finInFlight.current = fetchFinancesCombined(activeToken, params).then((data) => {
+      if (authEpochRef.current === reqEpoch) { setFinancesData(data); setFinancesError(null); }
+      return data;
+    }).catch((err) => {
+      if (authEpochRef.current === reqEpoch) setFinancesError(err.message || 'Failed fetch');
+      return null;
+    }).finally(() => {
+      if (authEpochRef.current === reqEpoch) setFinancesLoading(false);
+      finInFlight.current = null;
+    });
     return finInFlight.current;
   }, []);
 
@@ -121,10 +127,10 @@ export const AppDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const contextValue = useMemo<AppDataContextValue>(() => ({
     dashboardData, financesData, dashboardLoading, financesLoading,
-    dashboardError, financesError, getDashboard, getFinances, invalidate, updateDashboardCache,
+    dashboardError, financesError, getDashboard, getFinances, invalidate, updateDashboardCache, bootstrapDashboard,
   }), [
     dashboardData, financesData, dashboardLoading, financesLoading,
-    dashboardError, financesError, getDashboard, getFinances, invalidate, updateDashboardCache,
+    dashboardError, financesError, getDashboard, getFinances, invalidate, updateDashboardCache, bootstrapDashboard,
   ]);
 
   return <AppDataContext.Provider value={contextValue}>{children}</AppDataContext.Provider>;

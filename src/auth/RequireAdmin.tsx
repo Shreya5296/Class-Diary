@@ -4,11 +4,16 @@ import { getRuntimeConfig } from '../config/runtimeConfig';
 import { sendApiRequest } from '../api/apiClient';
 import { AuthUser } from './authState';
 import { resolveDisplayName } from './userProfileStorage';
+import { useOptionalAppData } from '../context/AppDataContext';
+import { DashboardCombinedData } from '../api/combinedApi';
 import { Button } from '../components/buttons/Button';
 import formStyles from '../components/forms/forms.module.css';
 
+type LoginPayload = { token?: string; sessionToken?: string; user: AuthUser; dashboard?: DashboardCombinedData };
+
 export const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { status, user, signInWithToken } = useAuth();
+  const appData = useOptionalAppData();
   const config = getRuntimeConfig();
   const [accessKey, setAccessKey] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,7 +30,8 @@ export const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children
   if (status === 'unauthenticated' || !user) {
     const handleLogin = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!accessKey.trim()) return;
+      const key = accessKey.trim();
+      if (!key) return;
       setIsSubmitting(true);
       setLoginError(null);
       try {
@@ -34,12 +40,16 @@ export const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children
           signInWithToken('mock_admin_token', { email, name: resolveDisplayName('Authorized Administrator', email), isAdmin: true });
           return;
         }
-        const res = await sendApiRequest<{ token: string; user: AuthUser }>('auth.login', { key: accessKey.trim() });
-        if (res.ok && res.data) {
-          const resolvedUser: AuthUser = { ...res.data.user, name: resolveDisplayName(res.data.user.name, res.data.user.email) };
-          signInWithToken(res.data.token, resolvedUser);
+        let res = await sendApiRequest<LoginPayload>('auth.loginWithDashboard', { key }).catch(() => null);
+        if (!res || (!res.ok && (res.error?.code === 'UNSUPPORTED_OPERATION' || res.error?.code === 'NOT_FOUND' || /unknown|unsupported/i.test(res.error?.message || '')))) {
+          res = await sendApiRequest<LoginPayload>('auth.login', { key });
+        }
+        if (res?.ok && res.data) {
+          if (res.data.dashboard && appData?.bootstrapDashboard) appData.bootstrapDashboard(res.data.dashboard);
+          const token = res.data.token || res.data.sessionToken || '';
+          signInWithToken(token, { ...res.data.user, name: resolveDisplayName(res.data.user.name, res.data.user.email) });
         } else {
-          setLoginError(res.error?.message || 'Invalid administrator access key');
+          setLoginError(res?.error?.message || 'Invalid administrator access key');
         }
       } catch (err: unknown) {
         setLoginError((err as Error)?.message || 'Authentication request failed');
