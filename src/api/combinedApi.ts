@@ -21,6 +21,7 @@ export interface DashboardCombinedData {
   schedules: WeeklyScheduleEntry[];
   students: Student[];
   packages: Package[];
+  payments?: Payment[];
   fees: any[];
 }
 
@@ -89,13 +90,14 @@ onCapabilityVersion((version: string) => {
 });
 
 async function fetchDashboardFallback(token?: string | null): Promise<DashboardCombinedData> {
-  const [ov, cls, stu, pkg] = await Promise.all([
+  const [ov, cls, stu, pkg, pay] = await Promise.all([
     fetchDashboardOverview(token),
     fetchClasses(undefined, token).catch(() => []),
     fetchStudents({}, token).catch(() => []),
     fetchPackages(undefined, token).catch(() => []),
+    fetchPayments(undefined, undefined, token).catch(() => []),
   ]);
-  return { overview: ov, classes: cls, schedules: [], students: stu, packages: pkg, fees: [] };
+  return { overview: ov, classes: cls, schedules: [], students: stu, packages: pkg, payments: pay, fees: [] };
 }
 
 export async function fetchDashboardCombined(token?: string | null): Promise<DashboardCombinedData> {

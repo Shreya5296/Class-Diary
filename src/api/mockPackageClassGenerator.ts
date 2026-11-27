@@ -38,10 +38,8 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
     if (sStatus === 'CANCELLED') return false;
     const rawDeduct = (c as any).deduct_class;
     const isDeduct = rawDeduct === true || rawDeduct === 'true' || rawDeduct === 'TRUE';
-    const sStartMs = getSessionStartTimestamp(c, 'Asia/Kolkata');
-    const isFuture = sStartMs !== null && sStartMs > nowMs;
-    const isFutureScheduled = (sStatus === 'SCHEDULED' || !sStatus) && (c.attendance_status === 'NOT_MARKED' || !c.attendance_status) && isFuture;
-    return isFutureScheduled || isDeduct;
+    const isScheduled = (sStatus === 'SCHEDULED' || !sStatus) && (c.attendance_status === 'NOT_MARKED' || !c.attendance_status);
+    return isScheduled || isDeduct;
   });
 
   const totalPurchased = Number(pkg.classes_purchased || pkg.total_classes || 0);
@@ -62,10 +60,11 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
     return { success: false, code: 'VALIDATION_ERROR', message: 'No weekly schedule configured' };
   }
 
-  const pkgStartDate = pkg.start_date ? String(pkg.start_date) : '';
-  const startDateStr = (!pkgStartDate || pkgStartDate < todayStr) ? todayStr : pkgStartDate;
+  const pkgStartDate = pkg.start_date ? String(pkg.start_date).slice(0, 10) : '';
+  const pkgEndDate = pkg.end_date ? String(pkg.end_date).slice(0, 10) : undefined;
+  const startDateStr = payload.regenerate_future ? todayStr : (pkgStartDate || todayStr);
   const proposed = generateProposedSessions(
-    scheds, startDateStr, classesNeeded, allStudentClasses, sid, Number(pkg.class_duration) || 60
+    scheds, startDateStr, classesNeeded, allStudentClasses, sid, Number(pkg.class_duration) || 60, 'Asia/Kolkata', pkgEndDate
   );
 
   const lastClassDate = proposed.length > 0 ? proposed[proposed.length - 1].dateStr : null;
@@ -79,6 +78,7 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
 
   const created: ClassSession[] = [];
   for (const p of proposed) {
+    if (p.isDuplicate) continue;
     const newSession: ClassSession = {
       session_id: `${sid}__${p.dateStr}__${p.startTime}`,
       class_session_id: `${sid}__${p.dateStr}__${p.startTime}`,
@@ -102,7 +102,7 @@ export function handleMockGenerateForPackage(payload: Record<string, unknown>) {
   }
 
   return {
-    success: true, count: created.length, createdCount: created.length,
+    success: true, count: proposed.length, createdCount: created.length,
     totalPurchased, existingCount: consumingStudentClasses.length, lastClassDate, data: created,
   };
 }

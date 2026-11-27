@@ -120,18 +120,19 @@ describe('CONFIRMED ACCOUNTING RULE — Student Outstanding Money', () => {
   });
 
   describe('5. Cancelled packages and voided payments treatment', () => {
-    it('includes cancelled packages in total payable until an explicit business rule instructs otherwise', () => {
+    it('ignores VOID and CANCELLED packages under explicit Point 2 business rule', () => {
       const packages = [
         { student_id: studentId, package_price: 10000, currency: 'INR', status: 'CANCELLED' },
+        { student_id: studentId, package_price: 15000, currency: 'INR', status: 'ACTIVE' },
       ];
       const payments = [
         { student_id: studentId, amount: 5000, currency: 'INR' },
       ];
 
       const [balance] = calculateStudentFinancialBalances(packages, payments, studentId);
-      expect(balance.totalPayable).toBe(10000);
+      expect(balance.totalPayable).toBe(15000);
       expect(balance.totalPaid).toBe(5000);
-      expect(balance.outstanding).toBe(5000);
+      expect(balance.outstanding).toBe(10000);
     });
 
     it('includes every recorded payment row for the student from the physical 6-column table', () => {

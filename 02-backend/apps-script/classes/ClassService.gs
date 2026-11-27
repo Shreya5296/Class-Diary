@@ -346,25 +346,67 @@ function _getSessionStartMs(s) {
   if (raw) {
     if (raw instanceof Date) return raw.getTime();
     var str = String(raw).trim();
-    if (str.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(str)) {
-      var ms = new Date(str).getTime();
-      if (!isNaN(ms)) return ms;
-    }
-    if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}/.test(str)) {
-      var d = str.slice(0, 10);
-      var t = str.slice(11, 16);
-      var ms2 = new Date(d + 'T' + t + ':00+05:30').getTime();
-      if (!isNaN(ms2)) return ms2;
+    if (!str.includes('1899-')) {
+      if (str.includes('Z') || /[+-]\d{2}:?\d{2}$/.test(str)) {
+        var ms = new Date(str).getTime();
+        if (!isNaN(ms)) return ms;
+      }
+      if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}/.test(str)) {
+        var d = str.slice(0, 10);
+        var t = str.slice(11, 16);
+        var ms2 = new Date(d + 'T' + t + ':00+05:30').getTime();
+        if (!isNaN(ms2)) return ms2;
+      }
     }
   }
   var dStr = s.schedule_date || s.class_date || '';
   if (dStr) {
     dStr = String(dStr).slice(0, 10);
-    var tStr = String(s.schedule_time || s.start_time || '00:00').slice(0, 5);
+    var rawT = String(s.schedule_time || s.start_time || '10:00').trim().slice(0, 5);
+    var tStr = /^\d{2}:\d{2}$/.test(rawT) ? rawT : '10:00';
     var ms3 = new Date(dStr + 'T' + tStr + ':00+05:30').getTime();
     if (!isNaN(ms3)) return ms3;
   }
   return NaN;
+}
+
+function _toYyyyMmDdHelper(val) {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    var str = val.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    var isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(str);
+    if (isoMatch) {
+      if (str.indexOf('T') !== -1) {
+        var d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          try {
+            return Utilities.formatDate(d, 'Asia/Kolkata', 'yyyy-MM-dd');
+          } catch (e) {
+            var istOffset = 5.5 * 60 * 60 * 1000;
+            return new Date(d.getTime() + istOffset).toISOString().slice(0, 10);
+          }
+        }
+      }
+      return isoMatch[1] + '-' + isoMatch[2] + '-' + isoMatch[3];
+    }
+    var ddmmyyyyMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(str);
+    if (ddmmyyyyMatch) {
+      var d2 = ddmmyyyyMatch[1].length === 1 ? '0' + ddmmyyyyMatch[1] : ddmmyyyyMatch[1];
+      var m2 = ddmmyyyyMatch[2].length === 1 ? '0' + ddmmyyyyMatch[2] : ddmmyyyyMatch[2];
+      return ddmmyyyyMatch[3] + '-' + m2 + '-' + d2;
+    }
+  }
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return '';
+    try {
+      return Utilities.formatDate(val, 'Asia/Kolkata', 'yyyy-MM-dd');
+    } catch (e) {
+      var istOffset = 5.5 * 60 * 60 * 1000;
+      return new Date(val.getTime() + istOffset).toISOString().slice(0, 10);
+    }
+  }
+  return '';
 }
 
 function Classes_generateForPackage(spreadsheet, data, actor) {
@@ -406,7 +448,8 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
 
   var classesPurchased = Number(targetPkg.classes_purchased !== undefined ? targetPkg.classes_purchased : targetPkg.total_classes) || 0;
   var dur = Number(data.duration_minutes || targetPkg.class_duration || 60) || 60;
-  var pkgStart = data.start_date || targetPkg.start_date || '';
+  var pkgStart = _toYyyyMmDdHelper(data.start_date || targetPkg.start_date);
+  var pkgEnd = _toYyyyMmDdHelper(data.end_date || targetPkg.end_date || targetPkg.expiry_date);
 
   var schedEntries = [];
   if (data.schedules && Array.isArray(data.schedules) && data.schedules.length > 0) {
@@ -430,7 +473,7 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
       todayStr = new Date(nowMs + istOffset).toISOString().slice(0, 10);
     }
 
-    var effectiveStart = (!pkgStart || pkgStart < todayStr) ? todayStr : pkgStart;
+    var effectiveStart = data.regenerate_future ? todayStr : (pkgStart || todayStr);
 
     if (data.regenerate_future) {
       var sheet = spreadsheet.getSheetByName('ClassSessions');
@@ -474,21 +517,14 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
         var sStartMs = _getSessionStartMs(s);
         var isFuture = !isNaN(sStartMs) && (sStartMs > nowMs);
 
-        var isFutureScheduled = (sStatus === 'SCHEDULED' || sStatus === '') && (s.attendance_status === 'NOT_MARKED' || !s.attendance_status) && isFuture;
+        var isScheduled = (sStatus === 'SCHEDULED' || sStatus === '') && (s.attendance_status === 'NOT_MARKED' || !s.attendance_status);
 
-        // Package allocation counting:
-        // - Future scheduled sessions reserve allocation (start instant > current instant).
-        // - Attended / completed sessions count toward allocation ONLY if deduct_class is true.
-        // - Overdue past unmarked sessions (sStartMs <= nowMs, attendance NOT_MARKED) do NOT automatically reserve allocation.
-        // - Cancelled sessions and non-deducted sessions (e.g. No-Show with deduct_class = false) do NOT count toward allocation.
         if (sStatus !== 'CANCELLED') {
-          if (isFutureScheduled || isDeduct) {
+          if (isScheduled || isDeduct) {
             consumingSessions.push(s);
           }
         }
 
-        // Duplicate / slot occupation prevention:
-        // Any existing session (whether consuming, non-consuming No-Show, overdue unmarked, or scheduled) occupies its date/time slot!
         if (sDate && sTime) {
           existingKeys[sDate + '__' + sTime.slice(0, 5)] = true;
         }
@@ -532,6 +568,10 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
       if (d.length < 2) d = '0' + d;
       var dateStr = y + '-' + m + '-' + d;
       var dayOfWeek = currDate.getUTCDay();
+
+      if (pkgEnd && dateStr > pkgEnd) {
+        break;
+      }
 
       for (var sIdx = 0; sIdx < sortedScheds.length; sIdx++) {
         if (proposed.length >= classesNeeded) break;
@@ -1194,6 +1234,59 @@ function Classes_batchUpdate(spreadsheet, data, actor) {
   }, 15000);
 }
 
+function Classes_deleteUntouched(spreadsheet, data, actor) {
+  var studentId = data.student_id ? String(data.student_id).trim() : '';
+  if (!studentId) {
+    return { success: false, code: 'VALIDATION_ERROR', message: 'Student ID is required' };
+  }
+  return _runWithClassLock(function() {
+    var sheet = spreadsheet.getSheetByName('ClassSessions');
+    if (!sheet) {
+      return { success: false, code: 'SHEET_NOT_FOUND', message: 'ClassSessions sheet not found' };
+    }
+    var allSessions = _clsRepo.Classes_getAll(spreadsheet) || [];
+    var rowsToDelete = [];
+    var matchedCount = 0;
+    var skippedCount = 0;
+
+    for (var i = allSessions.length - 1; i >= 0; i--) {
+      var s = allSessions[i];
+      if (s.student_id !== studentId) continue;
+
+      var sStatus = String(s.session_status || s.status || '').toUpperCase();
+      var sAtt = String(s.attendance_status || '').toUpperCase();
+      var hasNotes = Boolean(s.session_notes || s.notes || s.cancellation_reason);
+      var isUntouched = (sStatus === 'SCHEDULED' || sStatus === '') &&
+                        (sAtt === 'NOT_MARKED' || sAtt === '') &&
+                        !hasNotes;
+
+      if (isUntouched) {
+        if (s._rowIndex) {
+          rowsToDelete.push(s._rowIndex);
+        }
+        matchedCount++;
+      } else {
+        skippedCount++;
+      }
+    }
+
+    rowsToDelete.sort(function(a, b) { return b - a; });
+    for (var d = 0; d < rowsToDelete.length; d++) {
+      if (typeof sheet.deleteRow === 'function') {
+        sheet.deleteRow(rowsToDelete[d]);
+      }
+    }
+    _clsSvcSafeClear(sheet);
+
+    return {
+      success: true,
+      deletedCount: rowsToDelete.length,
+      skippedCount: skippedCount,
+      message: 'Deleted ' + rowsToDelete.length + ' untouched classes for student ' + studentId
+    };
+  }, 30000);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     Classes_schedule: Classes_schedule,
@@ -1204,6 +1297,7 @@ if (typeof module !== 'undefined' && module.exports) {
     Classes_restoreCredit: Classes_restoreCredit,
     Classes_update: Classes_update,
     Classes_batchUpdate: Classes_batchUpdate,
+    Classes_deleteUntouched: Classes_deleteUntouched,
     _setLockManager: function(lm) { _clsLock = lm; }
   };
 }

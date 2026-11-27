@@ -10,7 +10,8 @@ var _clsSvcH = typeof Classes_schedule === 'function' ? {
   Classes_cancel: Classes_cancel,
   Classes_restoreCredit: Classes_restoreCredit,
   Classes_update: Classes_update,
-  Classes_batchUpdate: Classes_batchUpdate
+  Classes_batchUpdate: Classes_batchUpdate,
+  Classes_deleteUntouched: Classes_deleteUntouched
 } : (typeof require !== 'undefined' ? require('./ClassService.gs') : null);
 var _clsRepoH = typeof Classes_repoUpdate === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_repoUpdate } : (typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null));
 
@@ -67,9 +68,14 @@ function registerClassOperations(router) {
 
   reg('classes.generateForPackage', function(ctx) {
     var p = ctx.payload || ctx.data || {};
-    return _clsSvcH.Classes_generateForPackage(ctx.spreadsheet, p, {
+    var res = _clsSvcH.Classes_generateForPackage(ctx.spreadsheet, p, {
       actorId: ctx.actorId, email: ctx.verifiedEmail, requestId: ctx.requestId
     });
+    if (!res || !res.success) return res;
+    return {
+      success: true,
+      data: res
+    };
   });
 
   var completeHandler = function(ctx) {
@@ -88,6 +94,13 @@ function registerClassOperations(router) {
 
   reg('classes.restoreCredit', function(ctx) {
     return _clsSvcH.Classes_restoreCredit(ctx.spreadsheet, ctx.payload, {
+      actorId: ctx.actorId, email: ctx.verifiedEmail, requestId: ctx.requestId
+    });
+  });
+
+  reg('classes.deleteUntouched', function(ctx) {
+    var p = ctx.payload || ctx.data || {};
+    return _clsSvcH.Classes_deleteUntouched(ctx.spreadsheet, p, {
       actorId: ctx.actorId, email: ctx.verifiedEmail, requestId: ctx.requestId
     });
   });

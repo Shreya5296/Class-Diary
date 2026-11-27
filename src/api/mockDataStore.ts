@@ -19,7 +19,7 @@ export function handleMockApiRequest<T>(operation: string, payload: Record<strin
   const mockDash = {
     overview: { activeStudentsCount: 3, classesUpcoming7Days: 2, outstandingFeesTotal: 50000, currency: 'INR' },
     classes: MOCK_CLASSES, schedules: Object.values(MOCK_SCHEDULES).flat(),
-    students: MOCK_STUDENTS, packages: MOCK_PACKAGES, fees: MOCK_FEES,
+    students: MOCK_STUDENTS, packages: MOCK_PACKAGES, payments: MOCK_PAYMENTS, fees: MOCK_FEES,
   };
   if (operation === 'auth.loginWithDashboard') {
     return { ok: true, data: { token: 'mock_admin_token', sessionToken: 'mock_admin_token', user: { email: 'ashreya0502@gmail.com', name: 'Authorized Administrator', isAdmin: true }, dashboard: mockDash } as T, meta };

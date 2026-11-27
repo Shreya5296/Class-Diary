@@ -81,6 +81,7 @@ export function useDashboardData(token?: string | null) {
     schedules,
     students: data?.students || [],
     packages: data?.packages || [],
+    payments: data?.payments || ctx?.financesData?.payments || [],
     meetingLinks,
     fees: data?.fees || [],
     loading,
