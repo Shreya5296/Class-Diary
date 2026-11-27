@@ -120,7 +120,7 @@ export const StudentFinancialCardView: React.FC<StudentFinancialCardViewProps> =
 
               <div>
                 <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Per-Class Rate ({b.currency})
+                  Rate per class / Per-Class Rate ({b.currency})
                 </span>
                 <strong style={{ fontSize: 'var(--font-size-md)', fontVariantNumeric: 'tabular-nums', color: 'var(--color-text-main)' }}>
                   {renderRateDisplay(b)}

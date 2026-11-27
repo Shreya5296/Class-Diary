@@ -446,6 +446,7 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
     return { success: false, code: 'RECORD_NOT_FOUND', message: 'No package found for student ' + studentId };
   }
 
+  var isYearly = String(targetPkg.plan_type || targetPkg.package_name || '').toUpperCase().indexOf('YEARLY') !== -1;
   var classesPurchased = Number(targetPkg.classes_purchased !== undefined ? targetPkg.classes_purchased : targetPkg.total_classes) || 0;
   var dur = Number(data.duration_minutes || targetPkg.class_duration || 60) || 60;
   var pkgStart = _toYyyyMmDdHelper(data.start_date || targetPkg.start_date);
@@ -461,6 +462,28 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
     return { success: false, code: 'VALIDATION_ERROR', message: 'No schedule configured for student package' };
   }
 
+  var totalPlanClasses = 0;
+  if (isYearly && pkgStart && pkgEnd && schedEntries.length > 0) {
+    var DAY_MAP_CALC = { SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6 };
+    var spParts = pkgStart.split('-').map(Number);
+    var epParts = pkgEnd.split('-').map(Number);
+    var cDt = new Date(Date.UTC(spParts[0], spParts[1] - 1, spParts[2], 12, 0, 0));
+    var endLimit = new Date(Date.UTC(epParts[0], epParts[1] - 1, epParts[2], 12, 0, 0));
+    var saf = 0;
+    while (cDt <= endLimit && saf < 800) {
+      var dNum = cDt.getUTCDay();
+      for (var se = 0; se < schedEntries.length; se++) {
+        var dayUpper = String(schedEntries[se].day_of_week || '').toUpperCase();
+        if (DAY_MAP_CALC[dayUpper] === dNum) totalPlanClasses++;
+      }
+      cDt.setUTCDate(cDt.getUTCDate() + 1);
+      saf++;
+    }
+    if (totalPlanClasses > 0) {
+      classesPurchased = totalPlanClasses;
+    }
+  }
+
   return _runWithClassLock(function() {
     var allSessions = _clsRepo.Classes_getAll(spreadsheet) || [];
     var nowMs = data.current_time ? new Date(data.current_time).getTime() : new Date().getTime();
@@ -473,7 +496,7 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
       todayStr = new Date(nowMs + istOffset).toISOString().slice(0, 10);
     }
 
-    var effectiveStart = data.regenerate_future ? todayStr : (pkgStart || todayStr);
+    var effectiveStart = (data.start_date && _toYyyyMmDdHelper(data.start_date)) || (data.regenerate_future ? todayStr : (pkgStart || todayStr));
 
     if (data.regenerate_future) {
       var sheet = spreadsheet.getSheetByName('ClassSessions');
@@ -485,11 +508,15 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
           var sStatus = String(s.session_status || s.status || '').toUpperCase();
           var sAtt = String(s.attendance_status || '').toUpperCase();
           var sStartMs = _getSessionStartMs(s);
+          var sDate = s.schedule_date || s.class_date || (s.scheduled_start ? String(s.scheduled_start).slice(0, 10) : '');
 
-          var isFuture = !isNaN(sStartMs) && (sStartMs > nowMs);
-          var isUncompleted = (sStatus === 'SCHEDULED' || sStatus === '') && (sAtt === 'NOT_MARKED' || sAtt === '');
+          var isFuture = (!isNaN(sStartMs) && sStartMs > nowMs) || (sDate >= todayStr);
+          var isScheduled = (sStatus === 'SCHEDULED' || sStatus === '') && (sAtt === 'NOT_MARKED' || sAtt === '');
+          var hasNotes = Boolean(s.session_notes || s.notes || s.cancellation_reason);
+          var hasPaymentLink = Boolean(s.payment_link);
+          var isDeduct = (s.deduct_class === true || s.deduct_class === 'true' || s.deduct_class === 'TRUE');
 
-          if (isFuture && isUncompleted && s._rowIndex) {
+          if (isFuture && isScheduled && !hasNotes && !hasPaymentLink && !isDeduct && s._rowIndex) {
             rowsToDelete.push(s._rowIndex);
           }
         }
@@ -532,9 +559,9 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
     }
 
     var existingCount = consumingSessions.length;
-    var classesNeeded = classesPurchased - existingCount;
+    var classesNeeded = isYearly ? 9999 : (classesPurchased - existingCount);
 
-    if (classesNeeded <= 0) {
+    if (classesNeeded <= 0 && !isYearly) {
       return {
         success: true,
         count: 0,
@@ -629,6 +656,24 @@ function Classes_generateForPackage(spreadsheet, data, actor) {
       package_id: targetPkg.package_id,
       sessions: proposed
     }, actor);
+
+    if (isYearly && totalPlanClasses > 0) {
+      try {
+        var pkgSheet = spreadsheet.getSheetByName('Packages');
+        if (pkgSheet && targetPkg._rowIndex) {
+          var pData = pkgSheet.getDataRange().getValues();
+          var pHeaders = pData[0].map(function(h) { return String(h || '').trim(); });
+          var colPurchased = pHeaders.indexOf('classes_purchased');
+          var colTotal = pHeaders.indexOf('total_classes');
+          var colPerClass = pHeaders.indexOf('per_class');
+          var pPrice = Number(targetPkg.package_price !== undefined ? targetPkg.package_price : targetPkg.price) || 0;
+          var rate = pPrice > 0 ? (Math.round((pPrice / totalPlanClasses) * 100) / 100) : 0;
+          if (colPurchased !== -1) pkgSheet.getRange(targetPkg._rowIndex, colPurchased + 1).setValue(totalPlanClasses);
+          if (colTotal !== -1) pkgSheet.getRange(targetPkg._rowIndex, colTotal + 1).setValue(totalPlanClasses);
+          if (colPerClass !== -1 && rate > 0) pkgSheet.getRange(targetPkg._rowIndex, colPerClass + 1).setValue(rate);
+        }
+      } catch (pkgErr) {}
+    }
 
     return {
       success: true,
@@ -1287,6 +1332,84 @@ function Classes_deleteUntouched(spreadsheet, data, actor) {
   }, 30000);
 }
 
+function Classes_markPastAttended(spreadsheet, data, actor) {
+  var studentId = data.student_id ? String(data.student_id).trim() : '';
+  if (!studentId) {
+    return { success: false, code: 'VALIDATION_ERROR', message: 'Student ID is required' };
+  }
+  var cutoffDate = data.cutoff_date ? _toYyyyMmDdHelper(data.cutoff_date) : '';
+  if (!cutoffDate) {
+    var now = new Date();
+    try {
+      cutoffDate = Utilities.formatDate(now, 'Asia/Kolkata', 'yyyy-MM-dd');
+    } catch (e) {
+      cutoffDate = new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
+    }
+  }
+
+  return _runWithClassLock(function() {
+    var sheet = spreadsheet.getSheetByName('ClassSessions');
+    if (!sheet) {
+      return { success: false, code: 'SHEET_NOT_FOUND', message: 'ClassSessions sheet not found' };
+    }
+    var rows = sheet.getDataRange().getValues();
+    if (!rows || rows.length <= 1) {
+      return { success: true, count: 0 };
+    }
+    var headers = rows[0].map(function(h) { return String(h || '').trim(); });
+    var colSid = headers.indexOf('student_id');
+    var colDate = headers.indexOf('schedule_date');
+    if (colDate === -1) colDate = headers.indexOf('class_date');
+    var colStart = headers.indexOf('scheduled_start');
+    var colStatus = headers.indexOf('session_status');
+    if (colStatus === -1) colStatus = headers.indexOf('status');
+    var colAtt = headers.indexOf('attendance_status');
+    var colDeduct = headers.indexOf('deduct_class');
+
+    var markedCount = 0;
+    var remainingCount = 0;
+    var totalCount = 0;
+
+    for (var r = 1; r < rows.length; r++) {
+      var row = rows[r];
+      var sid = colSid !== -1 ? String(row[colSid] || '').trim() : '';
+      if (sid !== studentId) continue;
+      totalCount++;
+
+      var sDate = colDate !== -1 ? String(row[colDate] || '').slice(0, 10) : '';
+      if (!sDate && colStart !== -1) {
+        sDate = _toYyyyMmDdHelper(row[colStart]);
+      }
+      var sStatus = colStatus !== -1 ? String(row[colStatus] || '').trim().toUpperCase() : '';
+
+      if (sStatus === 'CANCELLED') continue;
+
+      if (sDate < cutoffDate) {
+        if (colStatus !== -1) row[colStatus] = 'COMPLETED';
+        if (colAtt !== -1) row[colAtt] = 'PRESENT';
+        if (colDeduct !== -1) row[colDeduct] = true;
+        markedCount++;
+      } else {
+        remainingCount++;
+      }
+    }
+
+    if (markedCount > 0) {
+      sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+    }
+    _clsSvcSafeClear(sheet);
+
+    return {
+      success: true,
+      student_id: studentId,
+      cutoff_date: cutoffDate,
+      marked_attended: markedCount,
+      remaining_scheduled: remainingCount,
+      total_classes: totalCount
+    };
+  }, 30000);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     Classes_schedule: Classes_schedule,
@@ -1298,6 +1421,7 @@ if (typeof module !== 'undefined' && module.exports) {
     Classes_update: Classes_update,
     Classes_batchUpdate: Classes_batchUpdate,
     Classes_deleteUntouched: Classes_deleteUntouched,
+    Classes_markPastAttended: Classes_markPastAttended,
     _setLockManager: function(lm) { _clsLock = lm; }
   };
 }

@@ -11,7 +11,8 @@ var _clsSvcH = typeof Classes_schedule === 'function' ? {
   Classes_restoreCredit: Classes_restoreCredit,
   Classes_update: Classes_update,
   Classes_batchUpdate: Classes_batchUpdate,
-  Classes_deleteUntouched: Classes_deleteUntouched
+  Classes_deleteUntouched: Classes_deleteUntouched,
+  Classes_markPastAttended: Classes_markPastAttended
 } : (typeof require !== 'undefined' ? require('./ClassService.gs') : null);
 var _clsRepoH = typeof Classes_repoUpdate === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_repoUpdate } : (typeof Classes_getAll === 'function' ? { Classes_getAll: Classes_getAll, Classes_update: Classes_update } : (typeof require !== 'undefined' ? require('./ClassRepository.gs') : null));
 
@@ -101,6 +102,13 @@ function registerClassOperations(router) {
   reg('classes.deleteUntouched', function(ctx) {
     var p = ctx.payload || ctx.data || {};
     return _clsSvcH.Classes_deleteUntouched(ctx.spreadsheet, p, {
+      actorId: ctx.actorId, email: ctx.verifiedEmail, requestId: ctx.requestId
+    });
+  });
+
+  reg('classes.markPastAttended', function(ctx) {
+    var p = ctx.payload || ctx.data || {};
+    return _clsSvcH.Classes_markPastAttended(ctx.spreadsheet, p, {
       actorId: ctx.actorId, email: ctx.verifiedEmail, requestId: ctx.requestId
     });
   });

@@ -7,7 +7,6 @@ import { updateStudent } from './studentApi';
 import { createPackage, updatePackage } from '../packages/packageApi';
 import { calculateEndTime } from '../classes/scheduleDurationCalculator';
 import { formatCanonicalScheduleString } from './scheduleFormatter';
-import { startAsyncScheduling } from './asyncScheduleWorker';
 import { generatePackageClasses } from '../classes/packageClassGeneratorApi';
 import { invalidateAppData } from '../../context/AppDataContext';
 
@@ -102,21 +101,24 @@ export async function submitEditStudent(params: SubmitEditStudentParams): Promis
   let successMessage = 'Student details saved successfully';
 
   if (autoSchedule && firstClassDate && schedsToSave.length > 0) {
-    startAsyncScheduling({
-      studentId: updatedStu.student_id,
-      studentName: updatedStu.student_name,
-      packageId: currentPkgId,
-      firstClassDate,
-      schedules: schedsToSave,
-      durationMinutes: durNum,
-      classesPurchased: Number(packageData.classes_purchased) || undefined,
-      token,
-    });
-    successMessage = 'Class schedule saved. Scheduling classes now…';
+    try {
+      await generatePackageClasses(student.student_id, token, {
+        regenerateFuture: true,
+        startDate: firstClassDate,
+        packageId: currentPkgId,
+      });
+      successMessage = 'Class schedule and sessions updated successfully.';
+    } catch (e) {
+      console.warn('Auto-generation of future package classes:', e);
+    }
   } else if (schedsToSave.length > 0) {
     // Automatically regenerate future package classes when schedule is added or edited
     try {
-      await generatePackageClasses(student.student_id, token, { regenerateFuture: true });
+      await generatePackageClasses(student.student_id, token, {
+        regenerateFuture: true,
+        startDate: firstClassDate || undefined,
+        packageId: currentPkgId,
+      });
     } catch (e) {
       console.warn('Auto-generation of future package classes:', e);
     }

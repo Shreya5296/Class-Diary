@@ -1,5 +1,6 @@
 import { ClassSession } from './classTypes';
 import { Package } from '../packages/packageTypes';
+import { getPackageTotalClasses } from '../packages/packagePlanCalculations';
 
 export interface SessionProgress {
   sessionNumber: number;
@@ -69,10 +70,10 @@ export function buildSessionProgressMap(
     let primaryPkg = stuPkgs[0];
     let totalPurchased = 0;
     for (const p of stuPkgs) {
-      const count = Number(p.classes_purchased !== undefined ? p.classes_purchased : p.total_classes) || 0;
+      const count = getPackageTotalClasses(p);
       totalPurchased += count;
     }
-    const pkgTotal = totalPurchased || (primaryPkg ? Number(primaryPkg.classes_purchased || primaryPkg.total_classes) || 0 : 0);
+    const pkgTotal = totalPurchased || (primaryPkg ? getPackageTotalClasses(primaryPkg) : 0);
 
     let runningPosition = 0;
 
