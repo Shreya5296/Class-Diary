@@ -1,6 +1,7 @@
 /**
  * SheetCache: In-memory sheet instance and CacheService sheet-level caching.
  * Caches sheet rows for up to 60 seconds and clears cache after writes.
+ * Preserves Date objects across CacheService JSON round-trips.
  */
 
 function SheetCache_getScriptCache() {
@@ -8,6 +9,33 @@ function SheetCache_getScriptCache() {
     return CacheService.getScriptCache();
   }
   return null;
+}
+
+function _cacheEncodeRows(rows) {
+  if (!Array.isArray(rows)) return rows;
+  return rows.map(function(row) {
+    if (!Array.isArray(row)) return row;
+    return row.map(function(cell) {
+      if (cell && (cell instanceof Date || Object.prototype.toString.call(cell) === '[object Date]') && !isNaN(cell.getTime())) {
+        return { __sheetDate: cell.toISOString() };
+      }
+      return cell;
+    });
+  });
+}
+
+function _cacheDecodeRows(rows) {
+  if (!Array.isArray(rows)) return rows;
+  return rows.map(function(row) {
+    if (!Array.isArray(row)) return row;
+    return row.map(function(cell) {
+      if (cell && typeof cell === 'object' && typeof cell.__sheetDate === 'string'
+          && Object.keys(cell).length === 1) {
+        return new Date(cell.__sheetDate);
+      }
+      return cell;
+    });
+  });
 }
 
 function SheetCache_getRows(sheet) {
@@ -28,8 +56,9 @@ function SheetCache_getRows(sheet) {
       if (cachedStr) {
         var parsed = JSON.parse(cachedStr);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          sheet._cachedRows = parsed;
-          return parsed;
+          var decoded = _cacheDecodeRows(parsed);
+          sheet._cachedRows = decoded;
+          return decoded;
         }
       }
     } catch (e) {}
@@ -60,7 +89,8 @@ function SheetCache_getRows(sheet) {
     sheet._cachedRows = rows;
     if (sc && rows.length > 0) {
       try {
-        var jsonStr = JSON.stringify(rows);
+        var encoded = _cacheEncodeRows(rows);
+        var jsonStr = JSON.stringify(encoded);
         if (jsonStr.length < 95000) {
           sc.put(cacheKey, jsonStr, 60);
         }
@@ -91,6 +121,8 @@ function SheetCache_clear(sheetOrName) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     SheetCache_getRows: SheetCache_getRows,
-    SheetCache_clear: SheetCache_clear
+    SheetCache_clear: SheetCache_clear,
+    _cacheEncodeRows: _cacheEncodeRows,
+    _cacheDecodeRows: _cacheDecodeRows
   };
 }
