@@ -47,16 +47,27 @@ export const FinanceToolbar: React.FC<FinanceToolbarProps> = ({
         />
 
         <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-          <label style={{ fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-            <span>Month:</span>
-            <input
-              type="month"
-              aria-label="Filter payments by month"
-              value={filter.selectedMonth || ''}
-              onChange={(e) => onFilterChange({ ...filter, selectedMonth: e.target.value })}
-              style={monthInputStyle}
-            />
-          </label>
+          <select
+            aria-label="Filter range type"
+            value={filter.rangeType || 'month'}
+            onChange={(e) => onFilterChange({ ...filter, rangeType: e.target.value as any })}
+            style={monthInputStyle}
+          >
+            <option value="month">Month</option>
+            <option value="financial_year">Financial year</option>
+            <option value="last_3_months">Last 3 months</option>
+          </select>
+          {(filter.rangeType || 'month') === 'month' && (
+            <label style={{ fontSize: 'var(--font-size-xs)', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+              <input
+                type="month"
+                aria-label="Filter payments by month"
+                value={filter.selectedMonth || ''}
+                onChange={(e) => onFilterChange({ ...filter, selectedMonth: e.target.value })}
+                style={monthInputStyle}
+              />
+            </label>
+          )}
         </div>
       </div>
 

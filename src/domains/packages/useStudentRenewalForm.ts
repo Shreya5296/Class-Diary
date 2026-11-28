@@ -1,10 +1,40 @@
 import { useState, useEffect } from 'react';
 import { Student } from '../students/studentTypes';
+import { Package } from './packageTypes';
 import { RenewalFormData, RenewalStudentSummary, isSessionCreditConsumed } from './packageRenewalTypes';
 import { fetchPackages } from './packageApi';
 import { fetchClasses } from '../classes/classApi';
 import { fetchPayments } from '../payments/paymentApi';
 import { parseCanonicalScheduleString } from '../students/scheduleFormatter';
+
+export function resolveLatestActivePackage(packages: Package[]): Package | null {
+  const activePkgs = packages.filter((p) => {
+    const st = String(p.status || (p as any).package_status || '').trim().toUpperCase();
+    return st !== 'VOID' && st !== 'CANCELLED';
+  });
+  if (activePkgs.length === 0) return null;
+
+  const activeStatusPkgs = activePkgs.filter((p) => String(p.status).trim().toUpperCase() === 'ACTIVE');
+  const pool = activeStatusPkgs.length > 0 ? activeStatusPkgs : activePkgs;
+
+  return pool.slice().sort((a, b) => {
+    const dateA = a.start_date || '';
+    const dateB = b.start_date || '';
+    if (dateA !== dateB) return dateB.localeCompare(dateA);
+    return String(b.package_id || '').localeCompare(String(a.package_id || ''));
+  })[0];
+}
+
+export function resolveRenewalPlanType(pkg?: Package | null, fallback = 'Per Class'): string {
+  if (!pkg?.plan_type && !pkg?.package_name) return fallback;
+  const raw = String(pkg.plan_type || pkg.package_name || '').trim();
+  const upper = raw.toUpperCase();
+  if (upper.includes('PACKAGE') || upper.includes('BLOCK')) return 'Package';
+  if (upper.includes('PER CLASS') || upper.includes('PER_CLASS')) return 'Per Class';
+  if (upper.includes('HOURLY')) return 'Hourly';
+  if (upper.includes('YEARLY') || upper.includes('ANNUAL')) return 'Yearly';
+  return raw;
+}
 
 export function useStudentRenewalForm(initialStudent: Student | null | undefined, token?: string | null) {
   const [student, setStudent] = useState<Student | null>(initialStudent || null);
@@ -44,7 +74,7 @@ export function useStudentRenewalForm(initialStudent: Student | null | undefined
       fetchPayments(student.student_id, undefined, token).catch(() => []),
     ]).then(([pkgs, cls, pays]) => {
       if (!active) return;
-      const exPkg = pkgs.length > 0 ? pkgs[0] : null;
+      const exPkg = resolveLatestActivePackage(pkgs);
       let consumed = 0;
       for (const c of cls) {
         if (c.student_id === student.student_id && isSessionCreditConsumed(c)) {
@@ -58,6 +88,7 @@ export function useStudentRenewalForm(initialStudent: Student | null | undefined
       const scheds = exPkg?.class_schedule
         ? parseCanonicalScheduleString(exPkg.class_schedule, Number(dur) || 60)
         : [];
+      const planType = resolveRenewalPlanType(exPkg, 'Per Class');
 
       setSummary({
         student, package: exPkg, cumulativePurchased: purchased,
@@ -67,7 +98,7 @@ export function useStudentRenewalForm(initialStudent: Student | null | undefined
 
       setFormData((prev) => ({
         ...prev, student, currency: cur, class_duration: dur, per_class: rate,
-        plan_type: exPkg?.plan_type || prev.plan_type, schedules: scheds.length > 0 ? scheds : prev.schedules,
+        plan_type: planType, schedules: scheds.length > 0 ? scheds : prev.schedules,
         payment: { ...prev.payment, currency: cur },
       }));
       setLoadingSummary(false);

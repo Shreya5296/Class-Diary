@@ -106,8 +106,8 @@ export async function fetchStudents(filter: StudentFilter = {}, token?: string |
   if (Array.isArray(res.data)) return (res.data as Student[]).map(enrichStudentData);
   if (res.data && typeof res.data === 'object') {
     const obj = res.data as Record<string, unknown>;
-    if (Array.isArray(obj.students)) return (obj.students as Student[]).map(enrichStudentData);
-    if (Array.isArray(obj.items)) return (obj.items as Student[]).map(enrichStudentData);
+    const list = (Array.isArray(obj.students) ? obj.students : obj.items) as Student[] | undefined;
+    if (Array.isArray(list)) return list.map(enrichStudentData);
   }
   return [];
 }
@@ -122,11 +122,7 @@ export async function createStudent(input: StudentInput, token?: string | null):
   return enrichStudentData(res.data!);
 }
 
-export async function updateStudent(
-  studentId: string,
-  input: Partial<StudentInput>,
-  token?: string | null
-): Promise<Student> {
+export async function updateStudent(studentId: string, input: Partial<StudentInput>, token?: string | null): Promise<Student> {
   const adapted = adaptStudentInput(input);
   const res = await sendApiRequest<Student>('students.update', { student_id: studentId, ...adapted }, { token });
   return enrichStudentData(res.data!);
@@ -139,5 +135,10 @@ export async function archiveStudent(studentId: string, token?: string | null): 
 
 export async function reactivateStudent(studentId: string, token?: string | null): Promise<Student> {
   const res = await sendApiRequest<Student>('students.reactivate', { student_id: studentId }, { token });
+  return res.data!;
+}
+
+export async function deleteStudent(studentId: string, token?: string | null): Promise<any> {
+  const res = await sendApiRequest<any>('students.delete', { student_id: studentId }, { token });
   return res.data!;
 }

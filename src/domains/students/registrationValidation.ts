@@ -1,6 +1,7 @@
 import { RegistrationFormData, RegistrationErrors } from './registrationTypes';
 import { isValidClassDuration, calculateEndTime } from '../classes/scheduleDurationCalculator';
 import { isValidHttpOrHttpsUrl } from '../../lib/urlSafety';
+import { validatePhoneField } from './phoneValidation';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -16,6 +17,11 @@ export function validateRegistrationForm(data: RegistrationFormData): {
   const studentErrors: Record<string, string> = {};
   if (!data.student.student_name.trim()) {
     studentErrors.student_name = 'Student name is required.';
+    valid = false;
+  }
+  const sPhoneErr = validatePhoneField(data.student.student_phone, false);
+  if (sPhoneErr) {
+    studentErrors.student_phone = sPhoneErr;
     valid = false;
   }
   if (data.student.student_email.trim() && !EMAIL_REGEX.test(data.student.student_email.trim())) {
@@ -35,8 +41,9 @@ export function validateRegistrationForm(data: RegistrationFormData): {
     parentErrors.parent_name = 'Parent name is required.';
     valid = false;
   }
-  if (!data.parent.parent_phone.trim()) {
-    parentErrors.parent_phone = 'Parent phone is required.';
+  const pPhoneErr = validatePhoneField(data.parent.parent_phone, true, 'Parent phone is required.');
+  if (pPhoneErr) {
+    parentErrors.parent_phone = pPhoneErr;
     valid = false;
   }
   if (data.parent.parent_email.trim() && !EMAIL_REGEX.test(data.parent.parent_email.trim())) {

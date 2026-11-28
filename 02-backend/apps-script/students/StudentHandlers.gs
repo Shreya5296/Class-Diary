@@ -73,6 +73,19 @@ function registerStudentOperations(router) {
       requestId: ctx.requestId
     });
   });
+
+  reg('students.delete', function(ctx) {
+    var sid = ctx.payload && (ctx.payload.studentId || ctx.payload.student_id);
+    if (!sid) {
+      return { success: false, code: 'VALIDATION_ERROR', message: 'Missing studentId in payload' };
+    }
+    var fn = typeof Students_delete === 'function' ? Students_delete : (_stuSvc && _stuSvc.Students_delete);
+    return fn(ctx.spreadsheet, sid, {
+      actorId: ctx.actorId,
+      email: ctx.verifiedEmail,
+      requestId: ctx.requestId
+    });
+  });
 }
 
 // Auto-register in global environment

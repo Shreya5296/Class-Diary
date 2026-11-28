@@ -13,6 +13,7 @@ import {
 import { handleMockRenewal } from './mockRenewalOperations';
 import { handleMockGenerateForPackage } from './mockPackageClassGenerator';
 import { handleMockCreatePackage, handleMockRecordPayment } from './mockFinancialOperations';
+import { handleMockStudentDelete } from './mockStudentOperations';
 
 export function handleMockApiRequest<T>(operation: string, payload: Record<string, unknown>, reqId: string): ApiResponse<T> {
   const meta = { requestId: reqId, timestamp: new Date().toISOString() };
@@ -136,6 +137,9 @@ export function handleMockApiRequest<T>(operation: string, payload: Record<strin
   }
   if (operation === 'packages.renew' || operation === 'students.renew') {
     return handleMockRenewal<T>(payload, reqId);
+  }
+  if (operation === 'students.delete') {
+    return handleMockStudentDelete<T>(payload, meta);
   }
   if (operation === 'system.health') {
     return { ok: true, data: { appsScriptConnected: true, schemaVersion: 2, appEnv: 'mock', activeSpreadsheetTabs: 7 } as T, meta };

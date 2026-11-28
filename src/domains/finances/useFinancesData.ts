@@ -8,6 +8,7 @@ import { getSavedTimezone } from '../../lib/userPreferences';
 import { useAppData } from '../../context/AppDataContext';
 import { fetchFinancesCombined, FinancesCombinedData } from '../../api/combinedApi';
 import { buildStudentFinancialRecords } from './studentBalanceCalculator';
+import { isPaymentInDateRange } from './financeDateRanges';
 
 export function useFinancesData(token?: string | null) {
   const activeTz = getSavedTimezone() || 'Asia/Kolkata';
@@ -79,11 +80,12 @@ export function useFinancesData(token?: string | null) {
 
   const filteredPayments = useMemo(() => {
     const q = (filter.search || '').trim().toLowerCase();
+    const rangeType = filter.rangeType || 'month';
     const targetMonth = filter.selectedMonth;
 
     const filtered = payments.filter((p) => {
       const pDate = p.payment_date ? String(p.payment_date).slice(0, 10) : '';
-      if (targetMonth && (!pDate || !pDate.startsWith(targetMonth))) return false;
+      if (!isPaymentInDateRange(pDate, rangeType, targetMonth, new Date(), activeTz)) return false;
       if (q) {
         const name = (p.student_name || '').toLowerCase();
         const sid = (p.student_id || '').toLowerCase();
@@ -93,7 +95,7 @@ export function useFinancesData(token?: string | null) {
     });
 
     return sortPaymentsByDateDescending(filtered);
-  }, [payments, filter]);
+  }, [payments, filter, activeTz]);
 
   const studentBalances = useMemo(() => {
     return buildStudentFinancialRecords(packages, payments, filter.search);

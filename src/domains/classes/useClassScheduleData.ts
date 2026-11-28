@@ -21,6 +21,7 @@ export function useClassScheduleData(
   const [pastSessions, setPastSessions] = useState<ClassSession[]>([]);
   const [pastLoaded, setPastLoaded] = useState(false);
   const [pastLoading, setPastLoading] = useState(false);
+  const [pastCount, setPastCount] = useState<number | null>(null);
   const [packages, setPackages] = useState<Package[]>(() => cached?.packages || []);
   const [students, setStudents] = useState<Student[]>(() => cached?.students || []);
   const [loading, setLoading] = useState(() => !cached);
@@ -28,14 +29,18 @@ export function useClassScheduleData(
   const loadBaseData = useCallback(async (isBg = false) => {
     if (!isBg) setLoading(true);
     try {
-      const [cls, pkgs, stuList] = await Promise.all([
+      const [cls, pkgs, stuList, pastCls] = await Promise.all([
         fetchClasses(studentId, token, { scope: 'upcoming' }).catch(() => []),
         fetchPackages(studentId, token).catch(() => []),
         studentId ? fetchStudents({ query: studentId }, token).catch(() => []) : fetchStudents({}, token).catch(() => []),
+        fetchClasses(studentId, token, { scope: 'past' }).catch(() => []),
       ]);
       setUpcomingSessions(cls);
       setPackages(pkgs);
       setStudents(stuList);
+      setPastSessions(pastCls);
+      setPastCount(pastCls.length);
+      setPastLoaded(true);
     } finally {
       setLoading(false);
     }
@@ -47,6 +52,7 @@ export function useClassScheduleData(
     try {
       const pastList = await fetchClasses(studentId, token, { scope: 'past' }).catch(() => []);
       setPastSessions(pastList);
+      setPastCount(pastList.length);
       setPastLoaded(true);
     } finally {
       setPastLoading(false);
@@ -62,12 +68,7 @@ export function useClassScheduleData(
   const refetch = useCallback(async () => {
     setPastLoaded(false);
     await loadBaseData(false);
-    if (activeTab === 'past') {
-      const pastList = await fetchClasses(studentId, token, { scope: 'past' }).catch(() => []);
-      setPastSessions(pastList);
-      setPastLoaded(true);
-    }
-  }, [loadBaseData, activeTab, studentId, token]);
+  }, [loadBaseData]);
 
   const sessions = useMemo(() => [...upcomingSessions, ...pastSessions], [upcomingSessions, pastSessions]);
 
@@ -98,7 +99,7 @@ export function useClassScheduleData(
   };
 
   return {
-    sessions, upcomingSessions, pastSessions, pastLoaded, pastLoading,
+    sessions, upcomingSessions, pastSessions, pastLoaded, pastLoading, pastCount,
     packages, students, loading: loading || (activeTab === 'past' && pastLoading && pastSessions.length === 0),
     refetch, getStudentConsumedClasses, getStudentSchedule, getStudentMeetingLink,
   };

@@ -8,8 +8,8 @@ import { WeeklyScheduleEntry, cleanTime } from '../classes/scheduleApi';
 import { MeetingLinkButton } from '../meeting-links/MeetingLinkButton';
 import { Button } from '../../components/buttons/Button';
 import { formatCurrency } from '../../lib/currencyFormat';
-import { formatDate } from '../../lib/dateFormat';
 import { formatTimeTo12Hour } from '../../lib/time12Format';
+import { computeActivePackageDateRange } from './packageDateRange';
 
 export interface StudentExpandedDetailsProps {
   student: Student;
@@ -28,6 +28,7 @@ export const StudentExpandedDetails: React.FC<StudentExpandedDetailsProps> = ({
   const primaryUrl = student.primary_meeting_link || meetingLink?.meeting_link_1 || meetingLink?.meeting_url || '';
   const remaining = Math.max(0, balance.totalPurchased - balance.totalConsumed);
   const primaryPkg = balance.packages[0];
+  const activeDateRange = computeActivePackageDateRange(balance.packages);
   const inrEquiv = financials.currency !== 'INR'
     ? (financials.inInr && financials.inInr > 0 ? formatCurrency(financials.inInr, true, 'INR') : 'Not available')
     : null;
@@ -103,9 +104,11 @@ export const StudentExpandedDetails: React.FC<StudentExpandedDetailsProps> = ({
           <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
             Classes: <strong style={{ color: 'var(--color-text-main)' }}>{balance.totalPurchased}</strong> purchased · <strong>{balance.totalConsumed}</strong> consumed · <strong style={{ color: remaining > 0 ? 'var(--color-success-text)' : 'var(--color-danger-text)' }}>{remaining} remaining</strong>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-            Dates: {primaryPkg?.start_date ? formatDate(primaryPkg.start_date) : '—'} – {primaryPkg?.end_date ? formatDate(primaryPkg.end_date) : '—'}
-          </div>
+          {activeDateRange && (
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+              {activeDateRange.formattedRange}
+            </div>
+          )}
         </div>
 
         <div className={styles.section}>

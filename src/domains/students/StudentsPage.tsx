@@ -79,7 +79,14 @@ export const StudentsPage: React.FC = () => {
     return (
       <div>
         {banner}
-        <StudentProfilePage student={selectedStudent} onBack={() => { setSelectedStudent(null); loadStudents(); }} onEdit={() => setEditingStudent(selectedStudent)} onRenew={() => { setRenewingStudent(selectedStudent); setIsRenewing(true); }} onUpdate={(u) => setSelectedStudent(u)} />
+        <StudentProfilePage
+          student={selectedStudent}
+          onBack={() => { setSelectedStudent(null); loadStudents(); }}
+          onEdit={() => setEditingStudent(selectedStudent)}
+          onRenew={() => { setRenewingStudent(selectedStudent); setIsRenewing(true); }}
+          onUpdate={(u) => setSelectedStudent(u)}
+          onDeleteSuccess={(msg) => { setSelectedStudent(null); handleFeedback(msg); }}
+        />
         {editingStudent && <EditStudentModal student={editingStudent} onSuccess={handleEditSuccess} onClose={() => setEditingStudent(null)} />}
         {isRenewing && <StudentRenewalModal initialStudent={renewingStudent} onSuccess={handleRenewalSuccess} onClose={closeRenewal} />}
       </div>

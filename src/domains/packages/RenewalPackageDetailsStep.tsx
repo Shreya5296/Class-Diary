@@ -50,10 +50,11 @@ export const RenewalPackageDetailsStep: React.FC<RenewalPackageDetailsStepProps>
         <div>
           <label style={{ fontSize: '12px', fontWeight: 600 }}>Plan Type</label>
           <select value={data.plan_type} onChange={(e) => onChange('plan_type', e.target.value)} style={inputStyle}>
+            <option value="Package">Package</option>
             <option value="Per Class">Per Class</option>
-            <option value="PACKAGE">Package</option>
-            <option value="HOURLY">Hourly</option>
-            <option value="YEARLY">Yearly</option>
+            <option value="Hourly">Hourly</option>
+            <option value="Yearly">Yearly</option>
+            {data.plan_type === 'PACKAGE' && <option value="PACKAGE">Package</option>}
           </select>
         </div>
         <div>

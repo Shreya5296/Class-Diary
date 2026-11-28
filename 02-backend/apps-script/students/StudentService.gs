@@ -314,6 +314,92 @@ function Students_list(spreadsheet, filter) {
   return { success: true, data: enrichedList, meta: { total: filtered.length } };
 }
 
+function _deleteStudentRowsFromSheet(sheet, studentId) {
+  if (!sheet) return 0;
+  var data = sheet.getDataRange ? sheet.getDataRange().getValues() : [];
+  if (!data || data.length <= 1) return 0;
+
+  var headerRow = data[0];
+  var stuIdColIndex = -1;
+  for (var c = 0; c < headerRow.length; c++) {
+    var h = String(headerRow[c]).trim().toLowerCase();
+    if (h === 'student_id' || h === 'studentid') {
+      stuIdColIndex = c;
+      break;
+    }
+  }
+  if (stuIdColIndex === -1) return 0;
+
+  var rowsToDelete = [];
+  for (var r = 1; r < data.length; r++) {
+    var val = String(data[r][stuIdColIndex] || '').trim();
+    if (val === studentId) {
+      rowsToDelete.push(r + 1);
+    }
+  }
+
+  rowsToDelete.sort(function(a, b) { return b - a; });
+  for (var i = 0; i < rowsToDelete.length; i++) {
+    if (typeof sheet.deleteRow === 'function') {
+      sheet.deleteRow(rowsToDelete[i]);
+    }
+  }
+
+  return rowsToDelete.length;
+}
+
+function Students_delete(spreadsheet, studentId, actor) {
+  var sid = String(studentId || '').trim();
+  if (!sid) {
+    return { success: false, code: 'VALIDATION_ERROR', message: 'Student ID is required' };
+  }
+
+  var lockFn = _stuLock && _stuLock.withLock ? _stuLock.withLock : function(timeout, fn) { return { success: true, result: fn() }; };
+  var lockRes = lockFn(30000, function() {
+    var sheetNames = _stuReg.SHEET_NAMES;
+    var stuSheetName = (sheetNames && sheetNames.STUDENTS) || 'Students';
+    var pkgSheetName = (sheetNames && sheetNames.PACKAGES) || 'Packages';
+    var paySheetName = (sheetNames && sheetNames.PAYMENTS) || 'Payments';
+    var clsSheetName = (sheetNames && sheetNames.CLASS_SESSIONS) || 'ClassSessions';
+    var feeSheetName = (sheetNames && sheetNames.FEE_OBLIGATIONS) || 'FeeObligations';
+
+    var stuSheet = spreadsheet.getSheetByName(stuSheetName);
+    var pkgSheet = spreadsheet.getSheetByName(pkgSheetName);
+    var paySheet = spreadsheet.getSheetByName(paySheetName);
+    var clsSheet = spreadsheet.getSheetByName(clsSheetName);
+    var feeSheet = spreadsheet.getSheetByName(feeSheetName);
+
+    var deletedClasses = _deleteStudentRowsFromSheet(clsSheet, sid);
+    var deletedPackages = _deleteStudentRowsFromSheet(pkgSheet, sid);
+    var deletedPayments = _deleteStudentRowsFromSheet(paySheet, sid);
+    var deletedFees = _deleteStudentRowsFromSheet(feeSheet, sid);
+    var deletedStudents = _deleteStudentRowsFromSheet(stuSheet, sid);
+
+    return {
+      success: true,
+      data: {
+        student_id: sid,
+        deletedStudents: deletedStudents,
+        deletedClasses: deletedClasses,
+        deletedPackages: deletedPackages,
+        deletedPayments: deletedPayments,
+        deletedFees: deletedFees
+      },
+      message: 'Student ' + sid + ' and associated records deleted successfully'
+    };
+  });
+
+  if (!lockRes.success) {
+    return {
+      success: false,
+      code: lockRes.code || 'CONFLICT',
+      message: lockRes.message || 'Could not acquire lock to delete student'
+    };
+  }
+
+  return lockRes.result;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     Students_enrich: Students_enrich,
@@ -321,6 +407,7 @@ if (typeof module !== 'undefined' && module.exports) {
     Students_update: Students_update,
     Students_archive: Students_archive,
     Students_reactivate: Students_reactivate,
+    Students_delete: Students_delete,
     Students_getById: function(spreadsheet, id) { return _stuRepo.Students_getById(spreadsheet, id); },
     Students_list: Students_list
   };

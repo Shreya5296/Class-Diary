@@ -1,5 +1,6 @@
 import { Payment } from '../payments/paymentTypes';
 import { toInputDateFormat } from '../../lib/dateFormat';
+import { FinanceRangeType, isPaymentInDateRange } from './financeDateRanges';
 
 /**
  * Checks if a payment record is valid and completed/recorded (excludes VOID, CANCELLED, REVERSED).
@@ -66,14 +67,15 @@ export interface FinanceEarningsSummary {
 }
 
 /**
- * Calculates lifetime, yearly, and monthly earnings in INR for valid recorded payments based on active timezone
- * and optional selected month (YYYY-MM).
+ * Calculates lifetime, yearly, and monthly/range earnings in INR for valid recorded payments based on active timezone
+ * and optional selected range / month.
  */
 export function calculateFinanceEarnings(
   payments: Payment[],
   timeZone: string = 'Asia/Kolkata',
   selectedMonthStr?: string,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  rangeType: FinanceRangeType = 'month'
 ): FinanceEarningsSummary {
   const todayStr = toInputDateFormat(referenceDate, timeZone);
   const currentYearStr = todayStr.slice(0, 4);
@@ -99,7 +101,7 @@ export function calculateFinanceEarnings(
       yearlyEarnings += amtInr;
     }
 
-    if (payDateInTz.startsWith(targetMonthStr)) {
+    if (isPaymentInDateRange(payDateInTz, rangeType, targetMonthStr, referenceDate, timeZone)) {
       monthlyEarnings += amtInr;
     }
   }

@@ -9,6 +9,7 @@ import { PackageList } from '../packages/PackageList';
 import { PaymentList } from '../payments/PaymentList';
 import { ClassSchedule } from '../classes/ClassSchedule';
 import { GeneratePackageClassesModal } from '../classes/GeneratePackageClassesModal';
+import { DeleteStudentModal } from './DeleteStudentModal';
 
 export interface StudentProfilePageProps {
   student: Student;
@@ -16,16 +17,18 @@ export interface StudentProfilePageProps {
   onEdit: () => void;
   onRenew?: () => void;
   onUpdate?: (updated: Student) => void;
+  onDeleteSuccess?: (message: string) => void;
 }
 
 type TabType = 'packages' | 'payments' | 'classes';
 
 export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
-  student, onBack, onEdit, onRenew,
+  student, onBack, onEdit, onRenew, onDeleteSuccess,
 }) => {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('packages');
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [scheduleVersion, setScheduleVersion] = useState(0);
 
   const tabs: { id: TabType; label: string }[] = [
@@ -94,6 +97,24 @@ export const StudentProfilePage: React.FC<StudentProfilePageProps> = ({
         token={token}
         onClose={() => setShowGenerateModal(false)}
         onGenerated={() => setScheduleVersion((v) => v + 1)}
+      />
+
+      <div style={{ marginTop: 'var(--space-8)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--color-border-subtle)', display: 'flex', justifyContent: 'flex-end' }}>
+        <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)}>
+          Delete Student
+        </Button>
+      </div>
+
+      <DeleteStudentModal
+        isOpen={showDeleteModal}
+        student={student}
+        token={token}
+        onClose={() => setShowDeleteModal(false)}
+        onSuccess={(msg) => {
+          setShowDeleteModal(false);
+          if (onDeleteSuccess) onDeleteSuccess(msg);
+          else onBack();
+        }}
       />
     </div>
   );

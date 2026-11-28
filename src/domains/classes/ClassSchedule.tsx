@@ -32,7 +32,7 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
   const [pastPage, setPastPage] = useState(1);
   const [notesSession, setNotesSession] = useState<ClassSession | null>(null);
   const {
-    sessions, packages, loading, pastLoaded, pastLoading, refetch, getStudentConsumedClasses, getStudentMeetingLink,
+    sessions, packages, loading, refetch, getStudentConsumedClasses, getStudentMeetingLink,
   } = useClassScheduleData(studentId, token, activeTab);
 
   const activeTz = 'Asia/Kolkata';
@@ -96,7 +96,7 @@ export const ClassSchedule: React.FC<ClassScheduleProps> = ({
             onClick={() => setActiveTab('past')}
           >
             <span>Past Classes</span>
-            <span className={styles.badge}>{!pastLoaded ? (pastLoading ? '...' : '-') : past.length}</span>
+            <span className={styles.badge}>{loading && past.length === 0 ? '-' : past.length}</span>
           </button>
         </div>
 

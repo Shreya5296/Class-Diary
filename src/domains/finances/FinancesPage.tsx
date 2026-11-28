@@ -69,7 +69,7 @@ export const FinancesPage: React.FC = () => {
               ℹ️ {otherAdminCount} unverified payment attempt{otherAdminCount > 1 ? 's are' : ' is'} recorded by another administrator session on this device.
             </div>
           )}
-          <FinanceSummaryCards payments={payments} selectedMonth={filter.selectedMonth} />
+          <FinanceSummaryCards payments={payments} selectedMonth={filter.selectedMonth} rangeType={filter.rangeType} />
           <FinanceToolbar filter={filter} onFilterChange={setFilter} onAddPayment={() => setIsAddPaymentOpen(true)} />
 
           <div role="tablist" aria-label="Finances ledger views" style={tabContainerStyle}>
@@ -104,7 +104,7 @@ export const FinancesPage: React.FC = () => {
           )}
 
           <AddPaymentModal
-            isOpen={isAddPaymentOpen} token={token} packages={packages}
+            isOpen={isAddPaymentOpen} token={token} packages={packages} payments={payments}
             onClose={() => setIsAddPaymentOpen(false)} onSuccess={handlePaymentSuccess}
           />
         </>

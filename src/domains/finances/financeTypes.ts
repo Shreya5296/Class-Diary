@@ -1,5 +1,6 @@
 import { Payment } from '../payments/paymentTypes';
 import { StudentPerClassRateResult } from './packageRateCalculator';
+import { FinanceRangeType } from './financeDateRanges';
 
 export interface CurrencyTotals {
   [currency: string]: number;
@@ -26,6 +27,7 @@ export interface FinanceFilter {
   selectedMonth?: string;
   startDate?: string;
   endDate?: string;
+  rangeType?: FinanceRangeType;
 }
 
 export interface StudentFinancialRecord {

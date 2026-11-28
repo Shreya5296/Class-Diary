@@ -12,6 +12,21 @@ export const DEFAULT_START_HOUR = 9;
 export const END_HOUR = 22;
 export const HOUR_ROW_HEIGHT = 56;
 
+export function computeEffectiveStartHour(
+  columns: Array<{ events: Array<{ startHour?: number }> }>,
+  defaultStart = DEFAULT_START_HOUR
+): number {
+  let earliest: number | null = null;
+  for (const col of columns) {
+    for (const evt of col.events) {
+      if (typeof evt.startHour === 'number' && evt.startHour < defaultStart) {
+        if (earliest === null || evt.startHour < earliest) earliest = evt.startHour;
+      }
+    }
+  }
+  return earliest !== null ? Math.max(0, earliest - 1) : defaultStart;
+}
+
 export function getCalendarHours(startHour = DEFAULT_START_HOUR): string[] {
   const hours: string[] = [];
   for (let h = startHour; h <= END_HOUR; h++) {
@@ -35,14 +50,7 @@ function getEventCardClass(evt: CalendarEventItem): string {
 }
 
 const WeeklyTimeGridComponent: React.FC<WeeklyTimeGridProps> = ({ dayColumns, startHour: propStartHour }) => {
-  let computedStart = DEFAULT_START_HOUR;
-  for (const col of dayColumns) {
-    for (const evt of col.events) {
-      if (typeof evt.startHour === 'number' && evt.startHour < computedStart) {
-        computedStart = Math.max(0, evt.startHour);
-      }
-    }
-  }
+  const computedStart = computeEffectiveStartHour(dayColumns, DEFAULT_START_HOUR);
   const effectiveStartHour = propStartHour !== undefined ? propStartHour : computedStart;
   const hours = getCalendarHours(effectiveStartHour);
   const baseMin = effectiveStartHour * 60;

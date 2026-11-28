@@ -1,4 +1,5 @@
 import { StudentInput } from './studentTypes';
+import { validatePhoneField } from './phoneValidation';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -23,9 +24,18 @@ export function validateStudentInput(input: Partial<StudentInput>): ValidationRe
   }
 
   const pPhone = input.parent_phone !== undefined ? String(input.parent_phone).trim() : (input.phone !== undefined ? String(input.phone).trim() : null);
-  if (pPhone !== null && !pPhone) {
-    errors.parent_phone = 'Parent phone is required.';
-    errors.phone = 'Parent phone is required.';
+  if (pPhone !== null) {
+    const err = validatePhoneField(pPhone, true, 'Parent phone is required.');
+    if (err) {
+      errors.parent_phone = err;
+      errors.phone = err;
+    }
+  }
+
+  const sPhone = input.student_phone !== undefined ? String(input.student_phone).trim() : null;
+  if (sPhone !== null && sPhone !== '' && sPhone !== '-' && sPhone !== '—') {
+    const err = validatePhoneField(sPhone, false);
+    if (err) errors.student_phone = err;
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

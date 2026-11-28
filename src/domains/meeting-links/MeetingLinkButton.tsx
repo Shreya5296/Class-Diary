@@ -25,10 +25,17 @@ export const MeetingLinkButton: React.FC<MeetingLinkButtonProps> = ({
   const platform = platformInfo?.platform || 'OTHER';
   const isCopied = parentCopied !== undefined ? parentCopied : localCopied;
 
+  // Yellow pill styling with high-contrast dark text across all platforms
+  const yellowStyles = {
+    bg: isHovered ? '#fde68a' : '#fef3c7',
+    color: '#78350f',
+    border: isHovered ? '#f59e0b' : '#fcd34d',
+  };
+
   const stylesByPlatform = {
-    GOOGLE_MEET: { bg: isHovered ? '#d1fae5' : '#ecfdf5', color: '#065f46', border: isHovered ? '#059669' : '#a7f3d0' },
-    ZOOM: { bg: isHovered ? '#dbeafe' : '#eff6ff', color: '#1d4ed8', border: isHovered ? '#2563eb' : '#bfdbfe' },
-    OTHER: { bg: isHovered ? '#ede9fe' : '#f5f3ff', color: '#6d28d9', border: isHovered ? '#7c3aed' : '#ddd6fe' },
+    GOOGLE_MEET: yellowStyles,
+    ZOOM: yellowStyles,
+    OTHER: yellowStyles,
   }[platform];
 
   const handleCopyClick = (e: React.MouseEvent) => {
