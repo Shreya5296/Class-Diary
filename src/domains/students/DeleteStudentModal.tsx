@@ -7,6 +7,7 @@ import { fetchClasses } from '../classes/classApi';
 import { fetchPackages } from '../packages/packageApi';
 import { fetchPayments } from '../payments/paymentApi';
 import { deleteStudent } from './studentApi';
+import { formatDeleteResultMessage } from './deleteStudentMessage';
 import { invalidateAppData } from '../../context/AppDataContext';
 import { Button } from '../../components/buttons/Button';
 import { formatCurrency } from '../../lib/currencyFormat';
@@ -48,19 +49,9 @@ export const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({
 
   if (!isOpen) return null;
 
-  const upcomingUnmarked = classes.filter((c) => {
-    const s = String(c.session_status || c.status || '').toUpperCase(), a = String(c.attendance_status || '').toUpperCase();
-    return s === 'SCHEDULED' && a !== 'PRESENT' && a !== 'ATTENDED';
-  }).length;
-  const pastMarked = classes.filter((c) => {
-    const s = String(c.session_status || c.status || '').toUpperCase(), a = String(c.attendance_status || '').toUpperCase();
-    return a === 'PRESENT' || a === 'ATTENDED' || s === 'COMPLETED';
-  }).length;
-  const cancelled = classes.filter((c) => {
-    const s = String(c.session_status || c.status || '').toUpperCase(), a = String(c.attendance_status || '').toUpperCase();
-    return s === 'CANCELLED' || a === 'CANCELLED';
-  }).length;
-
+  const upcomingUnmarked = classes.filter((c) => (String(c.session_status || c.status || '').toUpperCase() === 'SCHEDULED' && !['PRESENT', 'ATTENDED'].includes(String(c.attendance_status || '').toUpperCase()))).length;
+  const pastMarked = classes.filter((c) => ['PRESENT', 'ATTENDED'].includes(String(c.attendance_status || '').toUpperCase()) || String(c.session_status || c.status || '').toUpperCase() === 'COMPLETED').length;
+  const cancelled = classes.filter((c) => String(c.session_status || c.status || '').toUpperCase() === 'CANCELLED' || String(c.attendance_status || '').toUpperCase() === 'CANCELLED').length;
   const totalPaymentsAmount = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const payCurrency = payments[0]?.currency || 'INR';
   const isNameMatched = nameInput.trim() === studentName;
@@ -70,9 +61,14 @@ export const DeleteStudentModal: React.FC<DeleteStudentModalProps> = ({
     setIsDeleting(true);
     setError(null);
     try {
-      await deleteStudent(student.student_id, token);
+      const res = await deleteStudent(student.student_id, token);
       invalidateAppData('all');
-      onSuccess(`Student ${studentName} and all associated records deleted successfully.`);
+      const counts = (res && (res.data || res)) || {};
+      const { message } = formatDeleteResultMessage(
+        { classesCount: classes.length, packagesCount: packages.length, paymentsCount: payments.length },
+        counts
+      );
+      onSuccess(message);
       onClose();
     } catch (err: unknown) {
       setError((err as Error).message || 'Failed to delete student.');
