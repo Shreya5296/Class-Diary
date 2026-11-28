@@ -139,18 +139,77 @@ function Classes_getById(spreadsheet, id) {
 }
 
 function Classes_insert(spreadsheet, record) {
+  if (!record || typeof record !== 'object') return null;
+  var sId = record.student_id ? String(record.student_id).trim() : '';
+  var sDate = record.schedule_date || record.class_date || '';
+  var sTime = record.schedule_time || record.start_time || '';
+  if (sId && sDate && sTime) {
+    var normDate = String(sDate).trim().replace(/^'/, '').slice(0, 10);
+    var normTime = String(sTime).trim().replace(/^'/, '').slice(0, 5);
+    var all = Classes_getAll(spreadsheet) || [];
+    for (var i = 0; i < all.length; i++) {
+      var ex = all[i];
+      if (ex && ex.student_id === sId) {
+        var exStat = String(ex.session_status || ex.status || '').toUpperCase();
+        if (exStat !== 'CANCELLED') {
+          var exDate = String(ex.schedule_date || ex.class_date || '').trim().replace(/^'/, '').slice(0, 10);
+          var exTime = String(ex.schedule_time || ex.start_time || '').trim().replace(/^'/, '').slice(0, 5);
+          if (exDate === normDate && exTime === normTime) {
+            return ex;
+          }
+        }
+      }
+    }
+  }
   var sheet = spreadsheet.getSheetByName(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
   var headers = _clsRegistry.getExpectedHeaders(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
   return _clsRowWriter.appendRecord(sheet, _clsMapper, headers, record);
 }
 
 function Classes_insertMany(spreadsheet, records) {
+  if (!records || !Array.isArray(records) || records.length === 0) return [];
+  var all = Classes_getAll(spreadsheet) || [];
+  var existingMap = {};
+  for (var i = 0; i < all.length; i++) {
+    var ex = all[i];
+    if (ex && ex.student_id) {
+      var exStat = String(ex.session_status || ex.status || '').toUpperCase();
+      if (exStat !== 'CANCELLED') {
+        var exDate = String(ex.schedule_date || ex.class_date || '').trim().replace(/^'/, '').slice(0, 10);
+        var exTime = String(ex.schedule_time || ex.start_time || '').trim().replace(/^'/, '').slice(0, 5);
+        if (exDate && exTime) {
+          existingMap[ex.student_id + '__' + exDate + '__' + exTime] = true;
+        }
+      }
+    }
+  }
+
+  var filtered = [];
+  for (var j = 0; j < records.length; j++) {
+    var r = records[j];
+    var sId = r.student_id ? String(r.student_id).trim() : '';
+    var sDate = r.schedule_date || r.class_date || '';
+    var sTime = r.schedule_time || r.start_time || '';
+    var normDate = String(sDate).trim().replace(/^'/, '').slice(0, 10);
+    var normTime = String(sTime).trim().replace(/^'/, '').slice(0, 5);
+    var key = sId + '__' + normDate + '__' + normTime;
+    if (sId && normDate && normTime && existingMap[key]) {
+      continue;
+    }
+    if (sId && normDate && normTime) {
+      existingMap[key] = true;
+    }
+    filtered.push(r);
+  }
+
+  if (filtered.length === 0) return [];
+
   var sheet = spreadsheet.getSheetByName(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
   var headers = _clsRegistry.getExpectedHeaders(_clsRegistry.SHEET_NAMES.CLASS_SESSIONS);
   if (_clsRowWriter && typeof _clsRowWriter.appendRecords === 'function') {
-    return _clsRowWriter.appendRecords(sheet, _clsMapper, headers, records);
+    return _clsRowWriter.appendRecords(sheet, _clsMapper, headers, filtered);
   }
-  return records.map(function(r) { return Classes_insert(spreadsheet, r); });
+  return filtered.map(function(r) { return Classes_insert(spreadsheet, r); });
 }
 
 function Classes_repoUpdate(spreadsheet, id, updates) {
