@@ -36,6 +36,19 @@ export function resolveRenewalPlanType(pkg?: Package | null, fallback = 'Per Cla
   return raw;
 }
 
+export function getTodayKolkataDate(): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 export function useStudentRenewalForm(initialStudent: Student | null | undefined, token?: string | null) {
   const [student, setStudent] = useState<Student | null>(initialStudent || null);
   const [step, setStep] = useState<number>(initialStudent ? 2 : 1);
@@ -50,7 +63,7 @@ export function useStudentRenewalForm(initialStudent: Student | null | undefined
     per_class: '',
     package_price: '',
     class_duration: '60',
-    start_date: new Date().toISOString().slice(0, 10),
+    start_date: getTodayKolkataDate(),
     end_date: '',
     next_due_date: '',
     schedules: [],
@@ -59,7 +72,7 @@ export function useStudentRenewalForm(initialStudent: Student | null | undefined
       amount: '',
       currency: 'INR',
       in_inr: '',
-      payment_date: new Date().toISOString().slice(0, 10),
+      payment_date: getTodayKolkataDate(),
     },
     confirmed: false,
   });
