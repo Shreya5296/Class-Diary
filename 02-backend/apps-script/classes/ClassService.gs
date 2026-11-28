@@ -113,10 +113,10 @@ function Classes_schedule(spreadsheet, data, actor) {
   var student = _clsStuRepo ? _clsStuRepo.Students_getById(spreadsheet, normalized.student_id) : null;
   var studentName = student ? (student.student_name || student.full_name || '') : (normalized.student_name || '');
   var classDate = normalized.schedule_date || normalized.class_date || (normalized.scheduled_start ? String(normalized.scheduled_start).slice(0, 10) : '');
-  var classTime = normalized.schedule_time || normalized.start_time || (normalized.scheduled_start ? String(normalized.scheduled_start).slice(11, 16) : '00:00');
+  var classTime = _cleanTimeHelper(normalized.schedule_time || normalized.start_time, normalized.scheduled_start);
 
   var dur = Number(normalized.duration_minutes) || 60;
-  var compId = String(normalized.student_id).trim() + '__' + classDate + '__' + classTime.slice(0, 5);
+  var compId = String(normalized.student_id).trim() + '__' + classDate + '__' + classTime;
   var startIso = normalized.scheduled_start || (classDate + 'T' + classTime + ':00.000Z');
   var endIso = normalized.scheduled_end || (new Date(new Date(startIso).getTime() + dur * 60000).toISOString());
 
@@ -124,10 +124,10 @@ function Classes_schedule(spreadsheet, data, actor) {
     student_id: String(normalized.student_id).trim(),
     student_name: studentName,
     schedule_date: classDate,
-    schedule_time: classTime.slice(0, 5),
+    schedule_time: classTime,
     class_session_id: compId,
     class_date: classDate,
-    start_time: classTime.slice(0, 5),
+    start_time: classTime,
     scheduled_start: startIso,
     scheduled_end: endIso,
     attendance_status: 'NOT_MARKED',
@@ -258,21 +258,21 @@ function Classes_batchSchedule(spreadsheet, data, actor) {
     for (var j = 0; j < sessions.length; j++) {
       var item = sessions[j];
       var dateStr = item.schedule_date || item.class_date || (item.scheduled_start ? String(item.scheduled_start).slice(0, 10) : '');
-      var timeStr = item.schedule_time || item.start_time || (item.scheduled_start ? String(item.scheduled_start).slice(11, 16) : '00:00');
+      var timeStr = _cleanTimeHelper(item.schedule_time || item.start_time, item.scheduled_start);
       if (!dateStr) continue;
 
-      var timeKey = dateStr + '__' + timeStr.slice(0, 5);
+      var timeKey = dateStr + '__' + timeStr;
       if (existingKeys[timeKey]) continue; // Skip duplicates idempotently
 
       var record = {
         student_id: studentId,
         student_name: studentName,
         schedule_date: dateStr,
-        schedule_time: timeStr.slice(0, 5),
-        class_session_id: studentId + '__' + dateStr + '__' + timeStr.slice(0, 5),
+        schedule_time: timeStr,
+        class_session_id: studentId + '__' + dateStr + '__' + timeStr,
         class_date: dateStr,
-        start_time: timeStr.slice(0, 5),
-        scheduled_start: item.scheduled_start || (dateStr + 'T' + timeStr.slice(0, 5) + ':00.000Z'),
+        start_time: timeStr,
+        scheduled_start: item.scheduled_start || (dateStr + 'T' + timeStr + ':00.000Z'),
         scheduled_end: item.scheduled_end || '',
         attendance_status: 'NOT_MARKED',
         session_status: 'SCHEDULED',
@@ -282,7 +282,7 @@ function Classes_batchSchedule(spreadsheet, data, actor) {
 
       recordsToInsert.push(record);
       existingKeys[timeKey] = true;
-      var sKey = studentId + '__' + dateStr + '__' + timeStr.slice(0, 5);
+      var sKey = studentId + '__' + dateStr + '__' + timeStr;
       if (item.package_id || data.package_id) {
         if (typeof globalThis !== 'undefined') {
           globalThis.__sessionMetaMap = globalThis.__sessionMetaMap || {};
@@ -407,6 +407,34 @@ function _toYyyyMmDdHelper(val) {
     }
   }
   return '';
+}
+
+function _cleanTimeHelper(timeVal, isoVal) {
+  if (timeVal) {
+    if (timeVal instanceof Date) {
+      var hh = timeVal.getHours();
+      var mm = timeVal.getMinutes();
+      return (hh < 10 ? '0' + hh : String(hh)) + ':' + (mm < 10 ? '0' + mm : String(mm));
+    }
+    var str = String(timeVal).trim().replace(/^'/, '');
+    if (/^\d{2}:\d{2}$/.test(str)) return str;
+    var matchHhMm = str.match(/^(\d{1,2}):(\d{2})\s*(am|pm)?$/i);
+    if (matchHhMm) {
+      var h = parseInt(matchHhMm[1], 10);
+      var m = matchHhMm[2];
+      var mer = matchHhMm[3] ? matchHhMm[3].toUpperCase() : '';
+      if (mer === 'PM' && h < 12) h += 12;
+      else if (mer === 'AM' && h === 12) h = 0;
+      return (h < 10 ? '0' + h : String(h)) + ':' + m;
+    }
+    if (str.indexOf('T') !== -1) {
+      return str.slice(11, 16);
+    }
+  }
+  if (isoVal && String(isoVal).indexOf('T') !== -1) {
+    return String(isoVal).slice(11, 16);
+  }
+  return '00:00';
 }
 
 function Classes_generateForPackage(spreadsheet, data, actor) {

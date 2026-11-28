@@ -78,7 +78,10 @@ function _cancelFutureSessionsOnRenewal(spreadsheet, sessions, studentId, effect
 
 function _planRenewalSlots(existingSessions, studentId, schedules, startDate, count) {
   if (!schedules || !schedules.length || !startDate || count <= 0) return [];
-  var DAY_MAP = { SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6 };
+  var DAY_MAP = {
+    SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
+    SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6
+  };
   var sortedScheds = schedules.slice().sort(function(a, b) { return String(a.start_time || '').localeCompare(String(b.start_time || '')); });
   var occMap = {};
   for (var i = 0; i < (existingSessions || []).length; i++) {
@@ -88,14 +91,32 @@ function _planRenewalSlots(existingSessions, studentId, schedules, startDate, co
       occMap[ed + '__' + String(ex.schedule_time || ex.start_time || '').slice(0, 5)] = true;
     }
   }
-  var parts = startDate.split('-').map(Number), curr = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12, 0, 0)), slots = [], safety = 0;
+
+  var cleanStart = String(startDate || '').trim().replace(/^'/, '');
+  if (cleanStart.indexOf('T') !== -1) {
+    var sDt = new Date(cleanStart);
+    if (!isNaN(sDt.getTime())) {
+      try {
+        cleanStart = Utilities.formatDate(sDt, 'Asia/Kolkata', 'yyyy-MM-dd');
+      } catch (e) {
+        cleanStart = new Date(sDt.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);
+      }
+    } else {
+      cleanStart = cleanStart.slice(0, 10);
+    }
+  }
+
+  var parts = cleanStart.split('-').map(Number);
+  if (!parts[0] || !parts[1] || !parts[2]) return [];
+  var curr = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12, 0, 0)), slots = [], safety = 0;
   while (slots.length < count && safety < 730) {
     var dow = curr.getUTCDay(), cy = curr.getUTCFullYear(), cm = String(curr.getUTCMonth() + 1), cd = String(curr.getUTCDate());
     var dStr = cy + '-' + (cm.length < 2 ? '0' + cm : cm) + '-' + (cd.length < 2 ? '0' + cd : cd);
     for (var s = 0; s < sortedScheds.length; s++) {
       if (slots.length >= count) break;
       var entry = sortedScheds[s];
-      if (DAY_MAP[String(entry.day_of_week || '').trim().toUpperCase()] === dow) {
+      var entryDay = String(entry.day_of_week || '').trim().toUpperCase();
+      if (DAY_MAP[entryDay] === dow) {
         var tStr = String(entry.start_time || '00:00').slice(0, 5);
         if (!occMap[dStr + '__' + tStr]) { slots.push({ schedule_date: dStr, schedule_time: tStr, target_key: studentId + '__' + dStr + '__' + tStr }); occMap[dStr + '__' + tStr] = true; }
       }
