@@ -26,6 +26,7 @@ var _stuReg = {
   }
 };
 var _stuMap = typeof createHeaderMap === 'function' ? { createHeaderMap: createHeaderMap, rowToRecord: rowToRecord, recordToRow: recordToRow } : (typeof require !== 'undefined' ? require('../sheets/HeaderMapper.gs') : null);
+var _stuCacheClear = typeof SheetCache_clear === 'function' ? SheetCache_clear : (typeof require !== 'undefined' ? require('../sheets/SheetCache.gs').SheetCache_clear : null);
 
 function _hasActiveSchedulesOrSessions(spreadsheet, studentId) {
   if (_stuSchedSvc && _stuSchedSvc.Schedules_list) {
@@ -314,21 +315,31 @@ function Students_list(spreadsheet, filter) {
   return { success: true, data: enrichedList, meta: { total: filtered.length } };
 }
 
-function _deleteStudentRowsFromSheet(sheet, studentId) {
-  if (!sheet) return 0;
+function _deleteStudentRowsFromSheet(sheet, studentId, sheetName, notes) {
+  if (!sheet) {
+    if (notes && sheetName) {
+      notes.push(sheetName.toLowerCase() + ': sheet not found');
+    }
+    return 0;
+  }
   var data = sheet.getDataRange ? sheet.getDataRange().getValues() : [];
   if (!data || data.length <= 1) return 0;
 
   var headerRow = data[0];
   var stuIdColIndex = -1;
   for (var c = 0; c < headerRow.length; c++) {
-    var h = String(headerRow[c]).trim().toLowerCase();
-    if (h === 'student_id' || h === 'studentid') {
+    var h = String(headerRow[c] || '').trim().toLowerCase().replace(/[\s_]+/g, '');
+    if (h === 'studentid') {
       stuIdColIndex = c;
       break;
     }
   }
-  if (stuIdColIndex === -1) return 0;
+  if (stuIdColIndex === -1) {
+    if (notes && sheetName) {
+      notes.push(sheetName.toLowerCase() + ': no student_id column found');
+    }
+    return 0;
+  }
 
   var rowsToDelete = [];
   for (var r = 1; r < data.length; r++) {
@@ -343,6 +354,11 @@ function _deleteStudentRowsFromSheet(sheet, studentId) {
     if (typeof sheet.deleteRow === 'function') {
       sheet.deleteRow(rowsToDelete[i]);
     }
+  }
+
+  delete sheet._cachedRows;
+  if (typeof _stuCacheClear === 'function') {
+    _stuCacheClear(sheet);
   }
 
   return rowsToDelete.length;
@@ -369,11 +385,17 @@ function Students_delete(spreadsheet, studentId, actor) {
     var clsSheet = spreadsheet.getSheetByName(clsSheetName);
     var feeSheet = spreadsheet.getSheetByName(feeSheetName);
 
-    var deletedClasses = _deleteStudentRowsFromSheet(clsSheet, sid);
-    var deletedPackages = _deleteStudentRowsFromSheet(pkgSheet, sid);
-    var deletedPayments = _deleteStudentRowsFromSheet(paySheet, sid);
-    var deletedFees = _deleteStudentRowsFromSheet(feeSheet, sid);
-    var deletedStudents = _deleteStudentRowsFromSheet(stuSheet, sid);
+    var notes = [];
+    var deletedClasses = _deleteStudentRowsFromSheet(clsSheet, sid, clsSheetName, notes);
+    var deletedPackages = _deleteStudentRowsFromSheet(pkgSheet, sid, pkgSheetName, notes);
+    var deletedPayments = _deleteStudentRowsFromSheet(paySheet, sid, paySheetName, notes);
+    var deletedFees = _deleteStudentRowsFromSheet(feeSheet, sid, feeSheetName, notes);
+    var deletedStudents = _deleteStudentRowsFromSheet(stuSheet, sid, stuSheetName, notes);
+
+    var msg = 'Student ' + sid + ' and associated records deleted successfully';
+    if (notes.length > 0) {
+      msg += ' (' + notes.join('; ') + ')';
+    }
 
     return {
       success: true,
@@ -383,9 +405,10 @@ function Students_delete(spreadsheet, studentId, actor) {
         deletedClasses: deletedClasses,
         deletedPackages: deletedPackages,
         deletedPayments: deletedPayments,
-        deletedFees: deletedFees
+        deletedFees: deletedFees,
+        notes: notes
       },
-      message: 'Student ' + sid + ' and associated records deleted successfully'
+      message: msg
     };
   });
 

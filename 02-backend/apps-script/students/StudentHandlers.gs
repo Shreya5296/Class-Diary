@@ -2,7 +2,7 @@
  * StudentHandlers: Adapts API requests to StudentService calls and registers operations.
  */
 
-var _stuSvc = typeof Students_create === 'function' ? { Students_create: Students_create, Students_update: Students_update, Students_archive: Students_archive, Students_reactivate: Students_reactivate, Students_list: Students_list } : (typeof require !== 'undefined' ? require('./StudentService.gs') : null);
+var _stuSvc = typeof Students_create === 'function' ? { Students_create: Students_create, Students_update: Students_update, Students_archive: Students_archive, Students_reactivate: Students_reactivate, Students_list: Students_list, Students_delete: Students_delete } : (typeof require !== 'undefined' ? require('./StudentService.gs') : null);
 var _stuRepoH = typeof Students_getById === 'function' ? { Students_getById: Students_getById } : (typeof require !== 'undefined' ? require('./StudentRepository.gs') : null);
 
 function registerStudentOperations(router) {
